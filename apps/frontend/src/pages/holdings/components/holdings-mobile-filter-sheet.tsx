@@ -8,6 +8,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@wealthfolio/ui/components/ui/sheet";
+import { WorkspaceAccountChoices } from "@/features/workspace/workspace-filter";
 import { HOLDING_CATEGORY_FILTERS } from "@/lib/constants";
 import { Account, AccountScope, HoldingCategoryFilterId } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -30,7 +31,7 @@ interface HoldingsMobileFilterSheetProps {
   accountFilter: AccountScope;
   onAccountScopeChange: (filter: AccountScope) => void;
   accounts: Account[];
-  portfolios: { id: string; name: string }[];
+  portfolios: { id: string; name: string; accountIds?: string[] }[];
   selectedTypes: string[];
   setSelectedTypes: (types: string[]) => void;
   showAccountScope?: boolean;
@@ -46,13 +47,10 @@ interface HoldingsMobileFilterSheetProps {
   showClosedPositions?: boolean;
 }
 
+
 export const HoldingsMobileFilterSheet = ({
   open,
   onOpenChange,
-  accountFilter,
-  onAccountScopeChange,
-  accounts,
-  portfolios,
   selectedTypes,
   setSelectedTypes,
   showAccountScope = true,
@@ -197,77 +195,7 @@ export const HoldingsMobileFilterSheet = ({
                 <h4 className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
                   {t("holdings:account")}
                 </h4>
-                <div className="overflow-hidden rounded-lg border">
-                  <div
-                    className={cn(
-                      "flex cursor-pointer items-center justify-between p-3 text-sm transition-colors",
-                      accountFilter.type === "all"
-                        ? "bg-accent/50 font-medium"
-                        : "hover:bg-muted/50",
-                    )}
-                    onClick={() => {
-                      onAccountScopeChange({ type: "all" });
-                      onOpenChange(false);
-                    }}
-                  >
-                    <span className="flex items-center gap-2">
-                      <Icons.Wallet className="text-muted-foreground h-4 w-4" />
-                      {t("holdings:all_accounts")}
-                    </span>
-                    {accountFilter.type === "all" && (
-                      <Icons.Check className="text-primary h-4 w-4" />
-                    )}
-                  </div>
-                  {portfolios.map((portfolio) => (
-                    <div
-                      key={portfolio.id}
-                      className={cn(
-                        "flex cursor-pointer items-center justify-between border-t p-3 text-sm transition-colors",
-                        accountFilter.type === "portfolio" &&
-                          accountFilter.portfolioId === portfolio.id
-                          ? "bg-accent/50 font-medium"
-                          : "hover:bg-muted/50",
-                      )}
-                      onClick={() => {
-                        onAccountScopeChange({ type: "portfolio", portfolioId: portfolio.id });
-                        onOpenChange(false);
-                      }}
-                    >
-                      <span className="flex items-center gap-2">
-                        <Icons.Folder className="text-muted-foreground h-4 w-4" />
-                        {portfolio.name}
-                      </span>
-                      {accountFilter.type === "portfolio" &&
-                        accountFilter.portfolioId === portfolio.id && (
-                          <Icons.Check className="text-primary h-4 w-4" />
-                        )}
-                    </div>
-                  ))}
-                  {accounts.map((account) => (
-                    <div
-                      key={account.id}
-                      className={cn(
-                        "flex cursor-pointer items-center justify-between border-t p-3 text-sm transition-colors",
-                        accountFilter.type === "account" && accountFilter.accountId === account.id
-                          ? "bg-accent/50 font-medium"
-                          : "hover:bg-muted/50",
-                      )}
-                      onClick={() => {
-                        onAccountScopeChange({ type: "account", accountId: account.id });
-                        onOpenChange(false);
-                      }}
-                    >
-                      <span className="flex items-center gap-2">
-                        <Icons.CreditCard className="text-muted-foreground h-4 w-4" />
-                        {account.name}
-                      </span>
-                      {accountFilter.type === "account" &&
-                        accountFilter.accountId === account.id && (
-                          <Icons.Check className="text-primary h-4 w-4" />
-                        )}
-                    </div>
-                  ))}
-                </div>
+                <WorkspaceAccountChoices />
               </div>
             )}
 

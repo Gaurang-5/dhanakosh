@@ -20,6 +20,11 @@ describe("Indian company logo fallback", () => {
       "https://api.dharun.dev/v1/logos/INE467B01029?format=png&size=128",
     ]);
   });
+  it("loads a foreign stock logo from the ISIN used in total exposure", () => {
+    expect(getTickerLogoPaths("US5949181045")).toEqual([
+      "https://assets.parqet.com/logos/isin/US5949181045?format=png",
+    ]);
+  });
   it("preserves BSE identity and escapes symbols", () => {
     expect(getTickerLogoPaths("M&M", "XBOM")[0]).toBe(
       "https://api.dharun.dev/v1/logos/BSE%3AM%26M?format=png&size=128",

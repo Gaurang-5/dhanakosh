@@ -14,6 +14,12 @@ import {
   localizeActivitySubtypeName,
 } from "@/lib/activity-utils";
 import { ActivityType, getExchangeDisplayName } from "@/lib/constants";
+import {
+  getInstrumentAvatarIdentity,
+  getInstrumentPrimaryLabel,
+  getInstrumentSecondaryLabel,
+  isMutualFundInstrument,
+} from "@/lib/instrument-display";
 import { formatOptionSubtitle, parseOccSymbol } from "@/lib/occ-symbol";
 import { isRowBodyClick } from "@/lib/row-click";
 import { useSettingsContext } from "@/lib/settings-provider";
@@ -253,12 +259,28 @@ export const ActivityTable = ({
           // For cash activities, surface the payee/merchant from notes when available
           // (e.g., "AMAZON*MARKETPLACE" instead of just "Cash").
           const cashPayee = isCash ? cashPayeeLabel(row.original.comment) : "";
+          const assetName =
+            typeof row.original.assetName === "string" ? row.original.assetName : undefined;
+          const instrument = {
+            symbol,
+            name: assetName,
+            exchangeMic: row.original.exchangeMic,
+            instrumentType,
+          };
+          const avatarIdentity = getInstrumentAvatarIdentity(instrument);
           const displaySymbol = isCash
             ? cashPayee || t("activity:table.cash")
             : parsedOption
               ? parsedOption.underlying
-              : symbol;
-          const avatarSymbol = isCash ? "$CASH" : symbol;
+              : getInstrumentPrimaryLabel(instrument) || symbol;
+          const avatarSymbol = isCash
+            ? "$CASH"
+            : parsedOption
+              ? parsedOption.underlying
+              : avatarIdentity.symbol;
+          const avatarExchangeMic = parsedOption
+            ? row.original.exchangeMic
+            : avatarIdentity.exchangeMic;
           const normalizedSymbol = (parsedOption?.underlying ?? symbol).trim().toUpperCase();
           const shouldShowExchange =
             !isCash && !isOptionActivity && (symbolExchangeCountMap.get(normalizedSymbol) ?? 0) > 1;
@@ -266,7 +288,6 @@ export const ActivityTable = ({
             ? getExchangeDisplayName(row.original.exchangeMic)
             : "";
 
-          const assetName = row.getValue("assetName");
           const currency = row.getValue("currency");
 
           // Option subtitle: "Mar 29 $150.00 CALL"
@@ -282,9 +303,10 @@ export const ActivityTable = ({
             <div className="max-w-55 flex items-center gap-2">
               <TickerAvatar
                 symbol={avatarSymbol}
-                exchangeMic={row.original.exchangeMic}
+                exchangeMic={avatarExchangeMic}
                 instrumentType={row.original.instrumentType}
                 assetId={assetId}
+                fallbackName={isMutualFundInstrument(instrument) ? assetName : undefined}
                 className="h-8 w-8 shrink-0"
               />
               <div className="flex min-w-0 flex-col">
@@ -304,7 +326,9 @@ export const ActivityTable = ({
                     ? cashPayee
                       ? `${t("activity:table.cash")} · ${String(currency)}`
                       : String(currency)
-                    : (optionSubtitle ?? String(assetName ?? currency))}
+                    : (optionSubtitle ??
+                      getInstrumentSecondaryLabel(instrument) ??
+                      (isMutualFundInstrument(instrument) ? "" : String(currency)))}
                 </span>
               </div>
             </div>

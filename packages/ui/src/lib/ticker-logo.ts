@@ -182,6 +182,15 @@ export function getTickerLogoPaths(
   if (normalized && /^INE[A-Z0-9]{9}$/.test(normalized) && !isCryptoInstrument(instrumentType)) {
     return [`https://api.dharun.dev/v1/logos/${normalized}?format=png&size=128`];
   }
+  // Fund look-through names a US or other foreign stock by ISIN. Bundled logos
+  // are ticker files, so the mark is loaded from the ISIN instead.
+  if (
+    normalized &&
+    /^[A-Z]{2}[A-Z0-9]{9}\d$/.test(normalized) &&
+    !isCryptoInstrument(instrumentType)
+  ) {
+    return [`https://assets.parqet.com/logos/isin/${normalized}?format=png`];
+  }
   // Only an explicit Indian exchange identifies this provider's universe.
   // Never send an ambiguous bare ticker (e.g. NXST) to an Indian provider.
   const indian =

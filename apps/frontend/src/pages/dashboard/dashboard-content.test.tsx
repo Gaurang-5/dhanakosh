@@ -523,6 +523,6 @@ describe("DashboardContent", () => {
     const change = screen.getByTestId("portfolio-day-change");
     expect(change).toHaveTextContent("gain-amount:10");
     expect(change).toHaveTextContent("gain-percent:0.01");
-    expect(change).toHaveTextContent("Today");
+    expect(change).toHaveTextContent("past day");
   });
 });

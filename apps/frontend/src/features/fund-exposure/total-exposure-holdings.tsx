@@ -17,14 +17,22 @@ import type { AccountScope } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
-import { AmountDisplay, Button, Input, Skeleton } from "@wealthfolio/ui";
+import { AmountDisplay, Button, Skeleton } from "@wealthfolio/ui";
 import { Card } from "@wealthfolio/ui/components/ui/card";
 import { DataTable } from "@wealthfolio/ui/components/ui/data-table";
 import { DataTableColumnHeader } from "@wealthfolio/ui/components/ui/data-table/data-table-column-header";
 import { Icons } from "@wealthfolio/ui/components/ui/icons";
 import { TableCell, TableRow } from "@wealthfolio/ui/components/ui/table";
 import type { TFunction } from "i18next";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
@@ -161,11 +169,13 @@ function ExposureMobileList({
   currency,
   isHidden,
   uncoveredCount,
+  toolbarEnd,
 }: {
   rows: TotalExposureRow[];
   currency: string;
   isHidden: boolean;
   uncoveredCount: number;
+  toolbarEnd?: ReactNode;
 }) {
   const { t } = useTranslation("holdings");
   const navigate = useNavigate();
@@ -185,12 +195,15 @@ function ExposureMobileList({
 
   return (
     <div className="min-w-0 space-y-3">
-      <Input
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        placeholder={t("search_placeholder")}
-        className="bg-secondary/30 h-10 rounded-full border-none"
-      />
+      <div className="flex flex-nowrap items-center gap-2">
+        <input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder={t("search_placeholder")}
+          className="placeholder:text-muted-foreground h-10 min-w-0 flex-1 bg-transparent px-1 text-base outline-none"
+        />
+        {toolbarEnd}
+      </div>
       {uncoveredCount > 0 ? (
         <p className="text-muted-foreground text-xs">
           {t("funds_pending_expansion", { count: uncoveredCount })}
@@ -388,9 +401,11 @@ function exposureColumns(
 export function TotalExposureHoldings({
   currency,
   filter,
+  toolbarEnd,
 }: {
   currency: string;
   filter: AccountScope;
+  toolbarEnd?: ReactNode;
 }) {
   const { t } = useTranslation("holdings");
   const mobile = useIsMobileViewport();
@@ -495,6 +510,7 @@ export function TotalExposureHoldings({
             currency={currency}
             isHidden={isBalanceHidden}
             uncoveredCount={uncoveredCount}
+            toolbarEnd={toolbarEnd}
           />
         ) : (
           <DataTable

@@ -14,6 +14,12 @@ import {
   localizeActivityTypeName,
 } from "@/lib/activity-utils";
 import { ActivityType } from "@/lib/constants";
+import {
+  getInstrumentAvatarIdentity,
+  getInstrumentPrimaryLabel,
+  getInstrumentSecondaryLabel,
+  isMutualFundInstrument,
+} from "@/lib/instrument-display";
 import { formatOptionSubtitle, parseOccSymbol } from "@/lib/occ-symbol";
 import { useSettingsContext } from "@/lib/settings-provider";
 import { ActivityDetails } from "@/lib/types";
@@ -242,18 +248,31 @@ export const ActivityTableMobile = ({
     const hasAsset = Boolean(activity.assetId?.trim());
     const isOptionActivity = activity.instrumentType === "OPTION";
     const parsedOption = isOptionActivity ? parseOccSymbol(symbol) : null;
+    const instrument = {
+      symbol,
+      name: activity.assetName,
+      exchangeMic: activity.exchangeMic,
+      instrumentType: activity.instrumentType,
+    };
+    const avatarIdentity = getInstrumentAvatarIdentity(instrument);
     const displaySymbol = isCash
       ? t("activity:table.cash")
       : parsedOption
         ? parsedOption.underlying
-        : symbol;
-    const avatarSymbol = isCash ? "$CASH" : symbol;
+        : getInstrumentPrimaryLabel(instrument) || symbol;
+    const avatarSymbol = isCash
+      ? "$CASH"
+      : parsedOption
+        ? parsedOption.underlying
+        : avatarIdentity.symbol;
+    const avatarExchangeMic = parsedOption ? activity.exchangeMic : avatarIdentity.exchangeMic;
     const optionSubtitle = parsedOption
       ? formatOptionSubtitle(parsedOption, activity.assetQuoteCcy ?? activity.currency, {
           ...amountFormatting,
           ...dateFormatting,
         })
       : null;
+    const instrumentSubtitle = optionSubtitle ?? getInstrumentSecondaryLabel(instrument);
     const formattedDate = formatDateTime(activity.date, dateFormatting, appTimezone);
     // Under a day heading a card gives only the time; the heading has the date.
     const headedTime = groupByDay
@@ -287,9 +306,12 @@ export const ActivityTableMobile = ({
                 <>
                   <TickerAvatar
                     symbol={avatarSymbol}
-                    exchangeMic={activity.exchangeMic}
+                    exchangeMic={avatarExchangeMic}
                     instrumentType={activity.instrumentType}
                     assetId={activity.assetId}
+                    fallbackName={
+                      isMutualFundInstrument(instrument) ? activity.assetName : undefined
+                    }
                     className="h-10 w-10 flex-shrink-0"
                   />
                   <div className="min-w-0 flex-1">
@@ -388,9 +410,12 @@ export const ActivityTableMobile = ({
                 <>
                   <TickerAvatar
                     symbol={avatarSymbol}
-                    exchangeMic={activity.exchangeMic}
+                    exchangeMic={avatarExchangeMic}
                     instrumentType={activity.instrumentType}
                     assetId={activity.assetId}
+                    fallbackName={
+                      isMutualFundInstrument(instrument) ? activity.assetName : undefined
+                    }
                     className="h-10 w-10"
                   />
                   <div>
@@ -401,7 +426,7 @@ export const ActivityTableMobile = ({
                       {displaySymbol}
                     </p>
                     <p className="text-muted-foreground text-xs">
-                      {isCash ? activity.currency : (optionSubtitle ?? activity.assetName)}
+                      {isCash ? activity.currency : instrumentSubtitle}
                     </p>
                   </div>
                 </>

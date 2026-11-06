@@ -90,12 +90,14 @@ interface IntervalSelectorProps {
   className?: string;
   isLoading?: boolean;
   defaultValue?: TimePeriod;
-  /** Controlled selection; the parent owns persistence when provided. */
-  value?: TimePeriod;
+  /** Controlled selection. `null` clears the preset highlight. */
+  value?: TimePeriod | null;
   /** LocalStorage key to persist selection. When provided, selection is persisted. */
   storageKey?: string;
   /** Optional callback for haptic feedback */
   onHaptic?: () => void;
+  /** Sits immediately after ALL, inside the same scrolling row. */
+  trailing?: React.ReactNode;
 }
 
 const IntervalSelector: React.FC<IntervalSelectorProps> = ({
@@ -105,6 +107,7 @@ const IntervalSelector: React.FC<IntervalSelectorProps> = ({
   value,
   storageKey,
   onHaptic,
+  trailing,
 }) => {
   const { t } = useTranslation();
   const isMobile = useIsMobile();
@@ -115,7 +118,7 @@ const IntervalSelector: React.FC<IntervalSelectorProps> = ({
   );
   const [localValue, setLocalValue] = useState<TimePeriod>(defaultValue);
 
-  const currentValue = value ?? (storageKey ? persistedValue : localValue);
+  const currentValue = value === null ? null : (value ?? (storageKey ? persistedValue : localValue));
 
   const handleValueChange = useCallback(
     (nextValue: TimePeriod) => {
@@ -156,14 +159,17 @@ const IntervalSelector: React.FC<IntervalSelectorProps> = ({
           "[-webkit-overflow-scrolling:touch]",
         )}
       >
-        <AnimatedToggleGroup
-          items={items}
-          value={currentValue}
-          onValueChange={handleValueChange}
-          size={isMobile ? "compact" : "sm"}
-          variant="default"
-          className="pointer-events-auto bg-transparent"
-        />
+        <div className="pointer-events-auto flex items-center gap-1">
+          <AnimatedToggleGroup
+            items={items}
+            value={currentValue}
+            onValueChange={handleValueChange}
+            size={isMobile ? "compact" : "sm"}
+            variant="default"
+            className="bg-transparent"
+          />
+          {trailing}
+        </div>
       </div>
     </div>
   );

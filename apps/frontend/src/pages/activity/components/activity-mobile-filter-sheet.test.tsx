@@ -46,6 +46,7 @@ vi.mock("@wealthfolio/ui/components/ui/icons", () => ({
   Icons: {
     Check: () => <span data-testid="check-icon" />,
     Folder: () => <span data-testid="folder-icon" />,
+    Wallet: () => <span data-testid="wallet-icon" />,
   },
 }));
 

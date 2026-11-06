@@ -13,6 +13,7 @@ export interface ActionPaletteItem {
   testId?: string;
   variant?: "default" | "destructive";
   disabled?: boolean;
+  selected?: boolean;
 }
 
 export interface ActionPaletteGroup {
@@ -109,7 +110,7 @@ export function ActionPalette({
               )}
               <div>
                 {group.items.map((item, itemIndex) => {
-                  const IconComponent = item.icon;
+                  const IconComponent = item.selected ? Icons.Check : item.icon;
                   const isDestructive = item.variant === "destructive";
                   return (
                     <React.Fragment key={itemIndex}>
@@ -117,6 +118,7 @@ export function ActionPalette({
                       <button
                         data-testid={item.testId}
                         disabled={item.disabled}
+                        aria-checked={item.selected}
                         onClick={() => handleItemClick(item)}
                         className={cn(
                           "disabled:pointer-events-none disabled:opacity-50",
@@ -131,7 +133,11 @@ export function ActionPalette({
                         <IconComponent
                           className={cn(
                             "h-5 w-5 shrink-0",
-                            isDestructive ? "text-destructive" : "text-muted-foreground",
+                            item.selected
+                              ? "text-primary"
+                              : isDestructive
+                                ? "text-destructive"
+                                : "text-muted-foreground",
                           )}
                         />
                         <span className="text-base font-medium">{item.label}</span>

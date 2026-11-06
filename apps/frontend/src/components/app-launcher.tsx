@@ -71,6 +71,9 @@ interface LauncherActionItem {
   keywords?: string[];
   label?: string;
   disabled?: boolean;
+  section?: "add" | "navigation" | "appearance" | "tools";
+  /** Hidden until the user types, same as the latest launcher. */
+  searchOnly?: boolean;
 }
 
 const accountTypeIcons: Record<AccountType | typeof PORTFOLIO_ACCOUNT_TYPE, Icon> = {
@@ -403,7 +406,46 @@ export function AppLauncher() {
       ...(navigation.addons ?? []),
     ] as LauncherActionItem[];
 
-    return [...quickActions, ...navItems];
+    const primaryAddPaths = [
+      buildTransactionUrl("BUY"),
+      buildTransactionUrl("SELL"),
+      buildTransactionUrl(),
+      "/activities/add?tab=holdings",
+    ];
+    const groupedQuickActions = quickActions.map((action): LauncherActionItem => {
+      const isAdd = action.href.startsWith("/activities/");
+      return {
+        ...action,
+        section: isAdd
+          ? "add"
+          : action.href.startsWith("#theme-") ||
+              [
+                "#toggle-privacy",
+                "#toggle-focus-mode",
+                "#use-sidebar-navigation",
+                "#use-launchbar-navigation",
+              ].includes(action.href)
+            ? "appearance"
+            : "tools",
+        searchOnly: isAdd && !primaryAddPaths.includes(action.href),
+      };
+    });
+    const addActions = groupedQuickActions
+      .filter((action) => action.section === "add")
+      .sort((a, b) => {
+        const rank = (href: string) => {
+          if (href.includes("type=BUY")) return 0;
+          if (href.includes("type=SELL")) return 1;
+          return primaryAddPaths.includes(href) ? 2 : 3;
+        };
+        return rank(a.href) - rank(b.href);
+      });
+
+    return [
+      ...addActions,
+      ...navItems.map((action): LauncherActionItem => ({ ...action, section: "navigation" })),
+      ...groupedQuickActions.filter((action) => action.section !== "add"),
+    ];
   }, [
     isBalanceHidden,
     isLaunchBar,
@@ -596,9 +638,12 @@ export function AppLauncher() {
   // Filter items based on search
   const searchLower = search.toLowerCase();
   const filteredActions = actionItems.filter((action) => {
-    const displayText = (action.label ?? action.title).toLowerCase();
+    const displayText = (action.label ?? action.title ?? "").toLowerCase();
     const keywords = (action.keywords ?? []).map((k) => k.toLowerCase());
-    return displayText.includes(searchLower) || keywords.some((k) => k.includes(searchLower));
+    return (
+      (!action.searchOnly || !!searchLower) &&
+      (displayText.includes(searchLower) || keywords.some((k) => k.includes(searchLower)))
+    );
   });
 
   const filteredHoldings = holdingOptions.filter((holding) => {
@@ -628,6 +673,39 @@ export function AppLauncher() {
     showRecent;
 
   const renderIcon = (icon?: ReactNode) => resolveNavigationIcon(icon, iconClassName);
+  const actionKindLabel = t("common:component.launcher_kind_action");
+
+  const renderActionGroup = (section: LauncherActionItem["section"], heading: string) => {
+    const actions = filteredActions.filter((action) => action.section === section);
+    if (!actions.length) return null;
+    return (
+      <CommandGroup heading={heading}>
+        {actions.map((action, index) => {
+          const resizedIcon = renderIcon(action.icon);
+          const displayText = action.label ?? action.title;
+
+          return (
+            <CommandItem
+              key={action.href ?? index}
+              value={displayText}
+              keywords={action.keywords ?? []}
+              disabled={action.disabled}
+              onSelect={() => handleSelectAction(action.href, displayText)}
+              className={cn(isMobileViewport ? "gap-3 py-4 text-base" : undefined)}
+            >
+              {resizedIcon}
+              <span className="min-w-0 flex-1 truncate font-medium">{displayText}</span>
+              {section !== "navigation" && (
+                <span className="text-muted-foreground ms-auto shrink-0 text-xs">
+                  {actionKindLabel}
+                </span>
+              )}
+            </CommandItem>
+          );
+        })}
+      </CommandGroup>
+    );
+  };
 
   const commandContent = (
     <>
@@ -680,28 +758,10 @@ export function AppLauncher() {
             })}
           </CommandGroup>
         )}
-        {filteredActions.length > 0 && (
-          <CommandGroup heading={t("common:actions")}>
-            {filteredActions.map((action, index) => {
-              const resizedIcon = renderIcon(action.icon);
-              const displayText = action.label ?? action.title;
-
-              return (
-                <CommandItem
-                  key={action.href ?? index}
-                  value={displayText}
-                  keywords={action.keywords ?? []}
-                  disabled={action.disabled}
-                  onSelect={() => handleSelectAction(action.href, displayText)}
-                  className={cn(isMobileViewport ? "gap-3 py-4 text-base" : undefined)}
-                >
-                  {resizedIcon}
-                  <span className="font-medium">{displayText}</span>
-                </CommandItem>
-              );
-            })}
-          </CommandGroup>
-        )}
+        {renderActionGroup("add", t("common:add"))}
+        {renderActionGroup("appearance", t("common:component.launcher_appearance"))}
+        {renderActionGroup("tools", t("common:component.launcher_tools"))}
+        {renderActionGroup("navigation", t("common:component.launcher_navigation"))}
         {(isHoldingsLoading || filteredHoldings.length > 0) && (
           <CommandGroup heading={t("common:component.holdings")}>
             {isHoldingsLoading ? (
@@ -782,6 +842,7 @@ export function AppLauncher() {
             <SheetTitle>{t("common:component.quick_launch")}</SheetTitle>
           </SheetHeader>
           <Command
+            shouldFilter={false}
             className={cn(
               "flex flex-1 flex-col bg-transparent",
               "[&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group-heading]]:px-4 [&_[cmdk-group-heading]]:font-medium",
@@ -802,6 +863,7 @@ export function AppLauncher() {
     <CommandDialog
       open={open}
       onOpenChange={setOpen}
+      shouldFilter={false}
       title={t("common:component.command_palette")}
       description={t("common:component.command_palette_description")}
       contentClassName="w-[calc(100%_-_2rem)] max-w-180 rounded-[1.75rem] [&>button]:top-6 [&_[cmdk-item]]:rounded-xl [&_[data-cmdk-input-wrapper]]:h-16 [&_[data-cmdk-input-wrapper]]:px-5"

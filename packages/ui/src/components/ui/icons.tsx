@@ -73,6 +73,7 @@ import {
   History,
   Home,
   Info,
+  Layers,
   LayoutDashboard,
   Link,
   List,
@@ -232,6 +233,7 @@ const IconsInternal = {
   Cloud: Cloud,
   CloudSync: CloudCog,
   ListChecks: ListChecks,
+  Layers: Layers,
   LayoutDashboard: LayoutDashboard,
   HandCoins: HandCoins,
   Home: Home,
@@ -851,6 +853,7 @@ export type IconName =
   | "Cloud"
   | "CloudSync"
   | "ListChecks"
+  | "Layers"
   | "LayoutDashboard"
   | "HandCoins"
   | "Home"

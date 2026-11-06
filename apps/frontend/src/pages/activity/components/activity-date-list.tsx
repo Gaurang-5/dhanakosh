@@ -11,6 +11,11 @@ import {
   localizeActivityTypeName,
 } from "@/lib/activity-utils";
 import { ActivityType } from "@/lib/constants";
+import {
+  getInstrumentAvatarIdentity,
+  getInstrumentPrimaryLabel,
+  isMutualFundInstrument,
+} from "@/lib/instrument-display";
 import { formatOptionSubtitle, parseOccSymbol } from "@/lib/occ-symbol";
 import { useSettingsContext } from "@/lib/settings-provider";
 import type { ActivityDetails } from "@/lib/types";
@@ -196,12 +201,24 @@ function ActivityDateListItem({
     : isCashActivity(activityType) && !isAssetBackedIncome;
   const isOptionActivity = activity.instrumentType === "OPTION";
   const parsedOption = isOptionActivity ? parseOccSymbol(symbol) : null;
+  const instrument = {
+    symbol,
+    name: activity.assetName,
+    exchangeMic: activity.exchangeMic,
+    instrumentType: activity.instrumentType,
+  };
+  const avatarIdentity = getInstrumentAvatarIdentity(instrument);
   const displaySymbol = isCash
     ? t("activity:date_list.cash")
     : parsedOption
       ? parsedOption.underlying
-      : symbol;
-  const avatarSymbol = isCash ? "$CASH" : symbol;
+      : getInstrumentPrimaryLabel(instrument) || symbol;
+  const avatarSymbol = isCash
+    ? "$CASH"
+    : parsedOption
+      ? parsedOption.underlying
+      : avatarIdentity.symbol;
+  const avatarExchangeMic = parsedOption ? activity.exchangeMic : avatarIdentity.exchangeMic;
   const optionSubtitle = parsedOption
     ? formatOptionSubtitle(parsedOption, activity.assetQuoteCcy ?? activity.currency, {
         ...formatting,
@@ -227,9 +244,10 @@ function ActivityDateListItem({
       <div className="flex min-w-0 flex-1 items-center gap-3">
         <TickerAvatar
           symbol={avatarSymbol}
-          exchangeMic={activity.exchangeMic}
+          exchangeMic={avatarExchangeMic}
           instrumentType={activity.instrumentType}
           assetId={activity.assetId}
+          fallbackName={isMutualFundInstrument(instrument) ? activity.assetName : undefined}
           className="h-10 w-10 flex-shrink-0"
         />
         <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] gap-x-3">

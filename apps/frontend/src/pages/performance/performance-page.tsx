@@ -1,6 +1,5 @@
 import { formatZonedDateKey } from "@/features/spending/lib/timezone";
 import { useSettingsContext } from "@/lib/settings-provider";
-import { AccountScopeSelector } from "@/components/account-filter-selector";
 import { BenchmarkSymbolSelector } from "@/components/benchmark-symbol-selector";
 import {
   ANNUALIZED_RETURN_INFO as annualizedReturnInfo,
@@ -1196,7 +1195,6 @@ export default function PerformancePage({
   const { holdings, isLoading: isDayChangeLoading } = useHoldings(accountScope);
   const dayChange = useMemo(() => portfolioDayChange(holdings), [holdings]);
   const dayChangeCurrency = settings?.baseCurrency ?? "USD";
-  const setAccountScope = useAccountScopeStore((state) => state.setScope);
   const releaseBridgedItem = useAccountScopeStore((state) => state.releaseBridgedItem);
 
   usePerformanceScopeBridge({
@@ -1527,22 +1525,14 @@ export default function PerformancePage({
 
   const toolbarActions = useMemo(
     () => (
-      <>
-        <AccountScopeSelector
-          value={accountScope}
-          onChange={setAccountScope}
-          triggerVariant="input"
-          className="w-auto"
-        />
-        <DateRangeSelector
-          asOf={today}
-          value={dateRange}
-          onChange={setDateRange}
-          hiddenRanges={PERFORMANCE_HIDDEN_DATE_RANGES}
-        />
-      </>
+      <DateRangeSelector
+        asOf={today}
+        value={dateRange}
+        onChange={setDateRange}
+        hiddenRanges={PERFORMANCE_HIDDEN_DATE_RANGES}
+      />
     ),
-    [accountScope, dateRange, setAccountScope, setDateRange, today],
+    [dateRange, setDateRange, today],
   );
 
   useEffect(() => {
@@ -1556,12 +1546,6 @@ export default function PerformancePage({
       <div className="flex h-full flex-col space-y-4">
         {!onToolbarActionsChange && (
           <div className="flex items-center justify-end gap-2">
-            <AccountScopeSelector
-              value={accountScope}
-              onChange={setAccountScope}
-              triggerVariant="input"
-              className="w-auto"
-            />
             <DateRangeSelector
               asOf={today}
               value={dateRange}

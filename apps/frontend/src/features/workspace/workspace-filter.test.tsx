@@ -46,7 +46,10 @@ describe("WorkspaceFilter", () => {
 
     await user.click(screen.getByRole("checkbox", { name: "Deepa Stock's" }));
 
-    expect(screen.getByRole("checkbox", { name: "Deepa" })).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Deepa" })).toHaveAttribute(
+      "aria-checked",
+      "mixed",
+    );
     expect(screen.getByRole("checkbox", { name: "Deepa MF's" })).toBeChecked();
     expect(screen.getByRole("button", { name: "1 account selected" })).toBeInTheDocument();
   });

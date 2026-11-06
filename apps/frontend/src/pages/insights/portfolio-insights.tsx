@@ -1,5 +1,4 @@
 import { useHouseholdReport } from "@/features/household/household-report-context";
-import { AccountScopeSelector } from "@/components/account-filter-selector";
 import { SwipablePage, SwipablePageView } from "@/components/page";
 
 import { useAccountScopeStore } from "@/lib/account-scope-store";
@@ -56,6 +55,7 @@ export default function PortfolioInsightsPage() {
   const [performanceToolbarActions, setPerformanceToolbarActions] = useState<ReactNode | null>(
     null,
   );
+  const [incomeToolbarActions, setIncomeToolbarActions] = useState<ReactNode | null>(null);
   const [currencyAction, setCurrencyAction] = useState<ReactNode | null>(null);
   const [stockOnly, setStockOnly] = useState(false);
 
@@ -65,7 +65,6 @@ export default function PortfolioInsightsPage() {
     () =>
       overviewToolbarActions ?? (
         <div className="flex items-center gap-2">
-          {!family && <AccountScopeSelector value={accountFilter} onChange={setAccountScope} />}
           {currencyAction}
           {!family && (
             <Button
@@ -76,22 +75,13 @@ export default function PortfolioInsightsPage() {
               aria-pressed={stockOnly}
               onClick={() => setStockOnly((value) => !value)}
             >
-              <Icons.Holdings className="size-4" />
+              <Icons.Layers className="size-4" />
             </Button>
           )}
           {customizeAction}
         </div>
       ),
-    [
-      accountFilter,
-      overviewToolbarActions,
-      currencyAction,
-      customizeAction,
-      setAccountScope,
-      family,
-      stockOnly,
-      t,
-    ],
+    [overviewToolbarActions, currencyAction, customizeAction, family, stockOnly, t],
   );
 
   // Define the views with icons
@@ -129,6 +119,7 @@ export default function PortfolioInsightsPage() {
           </Suspense>
         ),
         actions: performanceToolbarActions,
+        workspaceFilterSide: "start",
       },
       {
         value: "income",
@@ -136,15 +127,19 @@ export default function PortfolioInsightsPage() {
         icon: Icons.HandCoins,
         content: (
           <Suspense fallback={<DashboardLoader />}>
-            <IncomePage />
+            <IncomePage
+              onToolbarActionsChange={activeTab === "income" ? setIncomeToolbarActions : undefined}
+            />
           </Suspense>
         ),
+        actions: incomeToolbarActions,
       },
     ],
     [
       accountFilter,
       activeTab,
       holdingsActions,
+      incomeToolbarActions,
       performanceToolbarActions,
       setAccountScope,
       stockOnly,

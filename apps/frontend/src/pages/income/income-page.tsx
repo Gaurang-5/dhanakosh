@@ -33,7 +33,7 @@ import {
   PrivacyAmount,
   useAmountFormatting,
 } from "@wealthfolio/ui";
-import React, { useState } from "react";
+import React, { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Cell, Pie, PieChart } from "recharts";
 import { IncomeHistoryChart } from "./income-history-chart";
@@ -83,13 +83,39 @@ const IncomePeriodSelector: React.FC<{
   );
 };
 
-export default function IncomePage() {
+export default function IncomePage({
+  onToolbarActionsChange,
+}: {
+  /** Phone header slot. When set, the short period chips render there, left of the filter. */
+  onToolbarActionsChange?: (actions: ReactNode | null) => void;
+} = {}) {
   const { t } = useTranslation();
   const family = useHouseholdReport();
   const scope = useHouseholdScope();
   const memberIds = family ? scope?.memberIds : undefined;
   const familyCurrency = family?.currentValuation.summary.baseCurrency;
   const [selectedPeriod, setSelectedPeriod] = useState<IncomePeriod>("ALL");
+
+  useEffect(() => {
+    if (!onToolbarActionsChange) return;
+    const mobilePeriods = [
+      { value: "YTD" as const, label: t("income:ytd") },
+      { value: "LAST_YEAR" as const, label: t("income:last_yr") },
+      { value: "ALL" as const, label: t("income:all") },
+    ];
+    onToolbarActionsChange(
+      <div className="shrink-0">
+        <AnimatedToggleGroup
+          variant="secondary"
+          size="xs"
+          items={mobilePeriods}
+          value={selectedPeriod}
+          onValueChange={setSelectedPeriod}
+        />
+      </div>,
+    );
+    return () => onToolbarActionsChange(null);
+  }, [onToolbarActionsChange, selectedPeriod, t]);
   const { isBalanceHidden } = useBalancePrivacy();
   const amountFormatting = useAmountFormatting();
 
@@ -116,10 +142,15 @@ export default function IncomePage() {
         {!family && <AccountScopeSelector value={accountFilter} onChange={setAccountScope} />}
         <IncomePeriodSelector selectedPeriod={selectedPeriod} onPeriodSelect={setSelectedPeriod} />
       </div>
-      <div className="mb-6 flex items-center justify-end gap-2 md:hidden">
-        <IncomePeriodSelector selectedPeriod={selectedPeriod} onPeriodSelect={setSelectedPeriod} />
-        {!family && <AccountScopeSelector value={accountFilter} onChange={setAccountScope} />}
-      </div>
+      {!onToolbarActionsChange && (
+        <div className="mb-6 flex items-center justify-end gap-2 md:hidden">
+          <IncomePeriodSelector
+            selectedPeriod={selectedPeriod}
+            onPeriodSelect={setSelectedPeriod}
+          />
+          {!family && <AccountScopeSelector value={accountFilter} onChange={setAccountScope} />}
+        </div>
+      )}
     </>
   );
 

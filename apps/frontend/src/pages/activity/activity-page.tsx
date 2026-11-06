@@ -773,12 +773,7 @@ const ActivityPage = () => {
 
   // Spending keeps Investments | Spending in the page header. Otherwise this
   // toolbar is the only header, so the portfolio menu and add button live here.
-  const pageActions = isSpendingEnabled ? undefined : (
-    <>
-      <WorkspaceFilterHost />
-      {investmentActions}
-    </>
-  );
+  const pageActions = isSpendingEnabled ? undefined : investmentActions;
 
   const investmentContent = (
     // No clipping here: the table's card scrolls sideways itself when it is
@@ -988,6 +983,7 @@ const ActivityPage = () => {
   if (!isSpendingEnabled) {
     return (
       <Page>
+        <WorkspaceFilterHost hidden />
         <PageContent className="pb-2 md:pb-4 lg:pb-5">{investmentContent}</PageContent>
         {sharedModals}
       </Page>
@@ -1001,6 +997,7 @@ const ActivityPage = () => {
       icon: Icons.TrendingUp,
       content: investmentContent,
       actions: investmentActions,
+      showWorkspaceFilter: false,
     },
     {
       value: "spending",
@@ -1008,6 +1005,7 @@ const ActivityPage = () => {
       icon: Icons.Wallet,
       content: <SpendingTransactionsTab ref={spendingTabRef} />,
       actions: spendingActions,
+      showWorkspaceFilter: false,
     },
   ];
 

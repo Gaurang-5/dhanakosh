@@ -49,9 +49,22 @@ function accountIdsForScope(scope: AccountScope, portfolios: PortfolioWithAccoun
   return [];
 }
 
-function scopeFromAccountIds(accountIds: string[]): AccountScope {
+function scopeFromAccountIds(
+  accountIds: string[],
+  portfolios: PortfolioWithAccounts[],
+): AccountScope {
   if (accountIds.length === 0) return { type: "all" };
   if (accountIds.length === 1) return { type: "account", accountId: accountIds[0] };
+  for (const portfolio of portfolios) {
+    const members = portfolio.accountIds;
+    if (
+      members.length > 0 &&
+      members.length === accountIds.length &&
+      members.every((id) => accountIds.includes(id))
+    ) {
+      return { type: "portfolio", portfolioId: portfolio.id };
+    }
+  }
   return { type: "accounts", accountIds };
 }
 
@@ -65,10 +78,12 @@ function scopeFromAccountIds(accountIds: string[]): AccountScope {
 function FilterOptionRow({
   selected,
   onSelect,
+  nested = false,
   children,
 }: {
   selected: boolean;
   onSelect: () => void;
+  nested?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -80,6 +95,7 @@ function FilterOptionRow({
         className={cn(
           "flex w-full cursor-pointer items-center justify-between rounded-md p-2 text-start text-sm",
           "focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2",
+          nested && "ps-8",
           selected ? "bg-accent" : "hover:bg-accent/50",
         )}
       >
@@ -155,7 +171,32 @@ export const ActivityMobileFilterSheet = ({
     const next = localAccountIds.includes(accountId)
       ? localAccountIds.filter((id) => id !== accountId)
       : [...localAccountIds, accountId];
-    setLocalAccountScope(scopeFromAccountIds(next));
+    setLocalAccountScope(scopeFromAccountIds(next, portfolios));
+  };
+
+  const activeAccounts = accounts.filter((account) => account.isActive);
+  const groupedIds = new Set(portfolios.flatMap((portfolio) => portfolio.accountIds));
+  const ungroupedAccounts = activeAccounts.filter((account) => !groupedIds.has(account.id));
+
+  const togglePortfolio = (portfolio: PortfolioWithAccounts) => {
+    const members = portfolio.accountIds.filter((id) =>
+      activeAccounts.some((account) => account.id === id),
+    );
+    if (members.length === 0) {
+      const selected =
+        localAccountScope.type === "portfolio" && localAccountScope.portfolioId === portfolio.id;
+      setLocalAccountScope(
+        selected ? { type: "all" } : { type: "portfolio", portfolioId: portfolio.id },
+      );
+      return;
+    }
+    const next = new Set(localAccountIds);
+    const allOn = members.every((id) => next.has(id));
+    for (const id of members) {
+      if (allOn) next.delete(id);
+      else next.add(id);
+    }
+    setLocalAccountScope(scopeFromAccountIds([...next], portfolios));
   };
 
   const activityTypeOptions = Object.keys(ActivityTypeNames).map((value) => ({
@@ -208,40 +249,71 @@ export const ActivityMobileFilterSheet = ({
                   selected={localAccountScope.type === "all"}
                   onSelect={() => setLocalAccountScope({ type: "all" })}
                 >
-                  <span>{t("activity:all_accounts")}</span>
+                  <span className="flex items-center gap-2">
+                    <Icons.Wallet className="h-4 w-4" />
+                    {t("activity:all_accounts")}
+                  </span>
                 </FilterOptionRow>
                 {portfolios.map((portfolio) => {
-                  const isSelected =
-                    localAccountScope.type === "portfolio" &&
-                    localAccountScope.portfolioId === portfolio.id;
+                  const members = portfolio.accountIds.filter((id) =>
+                    activeAccounts.some((account) => account.id === id),
+                  );
+                  const nested = activeAccounts.filter((account) => members.includes(account.id));
+                  const selected =
+                    members.length > 0
+                      ? members.every((id) => localAccountIds.includes(id))
+                      : localAccountScope.type === "portfolio" &&
+                        localAccountScope.portfolioId === portfolio.id;
                   return (
-                    <FilterOptionRow
-                      key={portfolio.id}
-                      selected={isSelected}
-                      onSelect={() =>
-                        setLocalAccountScope({ type: "portfolio", portfolioId: portfolio.id })
-                      }
-                    >
-                      <span className="flex items-center gap-2">
-                        <Icons.Folder className="h-4 w-4" />
-                        {portfolio.name}
-                      </span>
-                    </FilterOptionRow>
+                    <li key={portfolio.id} className="space-y-1">
+                      <button
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => togglePortfolio(portfolio)}
+                        className={cn(
+                          "flex w-full cursor-pointer items-center justify-between rounded-md p-2 text-start text-sm",
+                          "focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2",
+                          selected ? "bg-accent" : "hover:bg-accent/50",
+                        )}
+                      >
+                        <span className="flex items-center gap-2">
+                          <Icons.Folder className="h-4 w-4" />
+                          {portfolio.name}
+                        </span>
+                        {selected && <Icons.Check className="h-4 w-4 shrink-0" />}
+                      </button>
+                      {nested.length > 0 && (
+                        <ul className="space-y-1">
+                          {nested.map((account) => (
+                            <FilterOptionRow
+                              key={account.id}
+                              nested
+                              selected={localAccountIds.includes(account.id)}
+                              onSelect={() => handleAccountToggle(account.id)}
+                            >
+                              <span className="flex items-center gap-2">
+                                <Icons.Wallet className="h-4 w-4" />
+                                {account.name} ({account.currency})
+                              </span>
+                            </FilterOptionRow>
+                          ))}
+                        </ul>
+                      )}
+                    </li>
                   );
                 })}
-                {accounts
-                  .filter((account) => account.isActive)
-                  .map((account) => (
-                    <FilterOptionRow
-                      key={account.id}
-                      selected={localAccountIds.includes(account.id)}
-                      onSelect={() => handleAccountToggle(account.id)}
-                    >
-                      <span>
-                        {account.name} ({account.currency})
-                      </span>
-                    </FilterOptionRow>
-                  ))}
+                {ungroupedAccounts.map((account) => (
+                  <FilterOptionRow
+                    key={account.id}
+                    selected={localAccountIds.includes(account.id)}
+                    onSelect={() => handleAccountToggle(account.id)}
+                  >
+                    <span className="flex items-center gap-2">
+                      <Icons.Wallet className="h-4 w-4" />
+                      {account.name} ({account.currency})
+                    </span>
+                  </FilterOptionRow>
+                ))}
               </ul>
             </div>
 

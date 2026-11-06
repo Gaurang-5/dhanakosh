@@ -1,7 +1,6 @@
 import { formatZonedDateKey } from "@/features/spending/lib/timezone";
 import { parseLocalDate } from "@/lib/utils";
 import { HistoryChart } from "@/components/history-chart";
-import { PortfolioDayChangeText } from "@/components/portfolio-day-change";
 import { useHapticFeedback } from "@/hooks";
 import { useCurrentValuation } from "@/hooks/use-current-account-valuations";
 import { useHoldings } from "@/hooks/use-holdings";
@@ -13,13 +12,17 @@ import { PortfolioUpdateTrigger } from "@/pages/dashboard/portfolio-update-trigg
 import type { TimePeriod as UITimePeriod } from "@wealthfolio/ui";
 import { getInitialIntervalData, IntervalSelector } from "@wealthfolio/ui";
 import { usePersistentState } from "@/hooks/use-persistent-state";
-import { useMemo } from "react";
-import { useBalancePrivacy } from "@/hooks/use-balance-privacy";
-import { AmountDisplay } from "@wealthfolio/ui";
+import { useMemo, useState } from "react";
+import { GainAmount, GainPercent, Skeleton } from "@wealthfolio/ui";
 import { PrivacyToggle } from "@/components/privacy-toggle";
 import type { AccountScope } from "@/lib/types";
 import { useTranslation } from "react-i18next";
 import { AccountsSummary } from "./accounts-summary";
+import {
+  DashboardIntervalCalendar,
+  formatDashboardRange,
+  type DashboardDateRange,
+} from "./dashboard-interval-calendar";
 import Balance from "./balance";
 import SavingGoals from "./goals";
 import TopHoldings from "./top-holdings";
@@ -79,18 +82,20 @@ export function DashboardContent({
   accountIds,
 }: DashboardContentProps) {
   const { t } = useTranslation();
-  const { isBalanceHidden } = useBalancePrivacy();
   const { settings } = useSettingsContext();
   const todayISO = formatZonedDateKey(new Date(), settings?.timezone);
   const [selectedInterval, setSelectedInterval] = usePersistentState<UITimePeriod>(
     INTERVAL_STORAGE_KEY,
     DEFAULT_INTERVAL,
   );
-  const dateRange = useMemo(
+  const [customRange, setCustomRange] = useState<DashboardDateRange | undefined>();
+  const presetRange = useMemo(
     () => getInitialIntervalData(selectedInterval, parseLocalDate(todayISO)).range,
     [selectedInterval, todayISO],
   );
-  const isAllTime = selectedInterval === "ALL";
+  const dateRange = customRange ?? presetRange;
+  const isAllTime = !customRange && selectedInterval === "ALL";
+  const chartPeriod = customRange ? "1Y" : selectedInterval;
 
   const { holdings: allHoldings, isLoading: isHoldingsLoading } = useHoldings(scope);
   const {
@@ -151,20 +156,20 @@ export function DashboardContent({
     () => investmentValueChange(chartData.map((point) => point.totalValue)),
     [chartData],
   );
-  const periodChange = selectedInterval === "1D" ? dayChange : rangeChange;
-  const periodLabel =
-    selectedInterval === "1D"
-      ? t("performance:metric.today")
-      : t(`ui:interval.${selectedInterval}`);
-  const periodLoading = selectedInterval === "1D" ? isHoldingsLoading : isValuationHistoryLoading;
+  const periodChange = !customRange && selectedInterval === "1D" ? dayChange : rangeChange;
+  const periodLabel = customRange
+    ? formatDashboardRange(customRange)
+    : t(`ui:interval.${selectedInterval}`);
+  const periodLoading =
+    !customRange && selectedInterval === "1D" ? isHoldingsLoading : isValuationHistoryLoading;
 
   const chartMinDomainSpanRatio = useMemo(
-    () => getDashboardChartMinDomainSpanRatio(selectedInterval),
-    [selectedInterval],
+    () => getDashboardChartMinDomainSpanRatio(chartPeriod),
+    [chartPeriod],
   );
   const chartNetContributionMaxDomainSpanRatio = useMemo(
-    () => getDashboardNetContributionMaxDomainSpanRatio(selectedInterval),
-    [selectedInterval],
+    () => getDashboardNetContributionMaxDomainSpanRatio(chartPeriod),
+    [chartPeriod],
   );
 
   const isNegative = totalValue < 0;
@@ -178,7 +183,6 @@ export function DashboardContent({
               {scopeLabel}
             </p>
           )}
-          <p className="text-muted-foreground text-sm">{t("holdings:investments")}</p>
           <div className="flex flex-wrap items-center gap-2">
             <PortfolioUpdateTrigger
               lastCalculatedAt={portfolioSourceDataAsOf}
@@ -194,38 +198,42 @@ export function DashboardContent({
             </PortfolioUpdateTrigger>
             <PrivacyToggle className="hover:bg-muted/50 bg-transparent" />
           </div>
-          <PortfolioDayChangeText
-            dayChange={periodChange}
-            currency={baseCurrency}
-            label={periodLabel}
-            isLoading={periodLoading}
-          />
-          {portfolioCurrentValuation && (
-            <div
-              className="my-3 grid grid-cols-1 gap-3 sm:grid-cols-2"
-              data-testid="investment-cash-breakdown"
-            >
-              <div className="rounded-lg border p-3">
-                <p className="text-muted-foreground text-sm">{t("holdings:investments")}</p>
-                <AmountDisplay
-                  value={portfolioCurrentValuation.summary.investmentMarketValueBase}
-                  currency={baseCurrency}
-                  isHidden={isBalanceHidden}
-                />
+          <div
+            className="text-md flex min-h-5 flex-wrap items-center gap-x-3"
+            data-testid="portfolio-day-change"
+          >
+            {periodLoading ? (
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-4 w-24" />
+                <div className="border-secondary my-1 self-stretch border-e pe-2" />
+                <Skeleton className="h-4 w-16" />
               </div>
-              <div className="rounded-lg border p-3">
-                <p className="text-muted-foreground text-sm">{t("holdings:cash_balances")}</p>
-                <AmountDisplay
-                  value={portfolioCurrentValuation.summary.cashBalanceBase}
-                  currency={baseCurrency}
-                  isHidden={isBalanceHidden}
-                />
-                <p className="text-muted-foreground mt-1 text-xs">
-                  {t("holdings:cash_ledger_explanation")}
-                </p>
-              </div>
-            </div>
-          )}
+            ) : (
+              <>
+                {periodChange.amount == null ? (
+                  <span className="text-muted-foreground text-sm font-light">
+                    {t("performance:not_available")}
+                  </span>
+                ) : (
+                  <GainAmount
+                    className="text-sm font-light"
+                    value={periodChange.amount}
+                    currency={baseCurrency}
+                    displayCurrency={false}
+                  />
+                )}
+                <div className="border-secondary my-1 self-stretch border-e pe-2" />
+                {periodChange.percent == null ? (
+                  <span className="text-muted-foreground text-sm font-light">
+                    {t("performance:not_available")}
+                  </span>
+                ) : (
+                  <GainPercent className="text-sm font-light" value={periodChange.percent} />
+                )}
+              </>
+            )}
+            <span className="text-muted-foreground ms-1 text-sm font-light">{periodLabel}</span>
+          </div>
         </div>
       </div>
 
@@ -251,10 +259,16 @@ export function DashboardContent({
             <div className="flex w-full justify-center">
               <IntervalSelector
                 className="pointer-events-auto relative z-20 w-full max-w-screen-sm sm:max-w-screen-md md:max-w-2xl lg:max-w-3xl"
-                onIntervalSelect={setSelectedInterval}
+                onIntervalSelect={(code) => {
+                  setCustomRange(undefined);
+                  setSelectedInterval(code);
+                }}
                 onHaptic={triggerHaptic}
                 isLoading={isValuationHistoryLoading}
-                value={selectedInterval}
+                value={customRange ? undefined : selectedInterval}
+                trailing={
+                  <DashboardIntervalCalendar value={customRange} onChange={setCustomRange} />
+                }
               />
             </div>
           )}

@@ -1,4 +1,11 @@
+import { TickerAvatar } from "@/components/ticker-avatar";
 import { localizeActivitySubtypeName, localizeActivityTypeName } from "@/lib/activity-utils";
+import {
+  getInstrumentAvatarIdentity,
+  getInstrumentPrimaryLabel,
+  getInstrumentSecondaryLabel,
+  isMutualFundInstrument,
+} from "@/lib/instrument-display";
 import { ActivityStatus, ActivityType } from "@/lib/constants";
 import { formatOptionExpiration, formatOptionSubtitle, parseOccSymbol } from "@/lib/occ-symbol";
 import type { ActivityDetails } from "@/lib/types";
@@ -198,6 +205,17 @@ export function ActivityDetailSheet({ activity, open, onOpenChange }: ActivityDe
   // Parse OCC symbol for option activities
   const isOption = activity.instrumentType === "OPTION";
   const parsedOption = isOption ? parseOccSymbol(activity.assetSymbol ?? "") : null;
+  const instrument = {
+    symbol: activity.assetSymbol,
+    name: activity.assetName,
+    exchangeMic: activity.exchangeMic,
+    instrumentType: activity.instrumentType,
+  };
+  const avatarIdentity = getInstrumentAvatarIdentity(instrument);
+  const instrumentLabel = parsedOption
+    ? parsedOption.underlying
+    : getInstrumentPrimaryLabel(instrument) || activity.assetSymbol;
+  const instrumentSubtitle = parsedOption ? null : getInstrumentSecondaryLabel(instrument);
   // The strike is in the option's quote currency, which can differ from the activity's.
   const optionCurrency = activity.assetQuoteCcy ?? activity.currency;
 
@@ -217,9 +235,7 @@ export function ActivityDetailSheet({ activity, open, onOpenChange }: ActivityDe
             <div className="flex flex-col items-start">
               <span>{t("activity:activity_details")}</span>
               <span className="text-muted-foreground text-xs font-normal">
-                {parsedOption
-                  ? parsedOption.underlying
-                  : activity.assetSymbol || t("activity:detail.cash_transaction")}
+                {instrumentLabel || t("activity:detail.cash_transaction")}
               </span>
             </div>
           </SheetTitle>
@@ -244,14 +260,28 @@ export function ActivityDetailSheet({ activity, open, onOpenChange }: ActivityDe
                     </div>
                   </>
                 ) : (
-                  <>
+                  <div className="flex items-center gap-3">
                     {activity.assetSymbol && (
-                      <div className="text-xl font-bold">{activity.assetSymbol}</div>
+                      <TickerAvatar
+                        symbol={avatarIdentity.symbol || activity.assetSymbol}
+                        exchangeMic={avatarIdentity.exchangeMic}
+                        instrumentType={activity.instrumentType}
+                        assetId={activity.assetId}
+                        fallbackName={
+                          isMutualFundInstrument(instrument) ? activity.assetName : undefined
+                        }
+                        className="h-10 w-10 shrink-0"
+                      />
                     )}
-                    {activity.assetName && (
-                      <div className="text-muted-foreground text-sm">{activity.assetName}</div>
-                    )}
-                  </>
+                    <div className="min-w-0">
+                      {instrumentLabel && (
+                        <div className="text-xl font-bold">{instrumentLabel}</div>
+                      )}
+                      {instrumentSubtitle && (
+                        <div className="text-muted-foreground text-sm">{instrumentSubtitle}</div>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
               <div className="flex flex-col items-end gap-2">

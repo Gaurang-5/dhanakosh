@@ -14,6 +14,10 @@ export interface SwipablePageView {
   content: React.ReactNode;
   /** Optional actions to display in the header when this view is active */
   actions?: React.ReactNode;
+  /** Pages with their own account control hide the shared portfolio filter. */
+  showWorkspaceFilter?: boolean;
+  /** Performance puts the filter before its time range. Income keeps it after. */
+  workspaceFilterSide?: "start" | "end";
 }
 
 interface SwipablePageProps {
@@ -197,6 +201,9 @@ export function SwipablePage({
     return idx === -1 ? 0 : idx;
   }, [currentView, views]);
   const currentActions = views.find((v) => v.value === currentView)?.actions;
+  const currentPage = views.find((v) => v.value === currentView);
+  const showWorkspaceFilter = currentPage?.showWorkspaceFilter !== false;
+  const workspaceFilterFirst = currentPage?.workspaceFilterSide === "start";
   const mobileActionsInHeader = mobileActionsPlacement === "header";
 
   const handleViewChange = React.useCallback(
@@ -239,9 +246,10 @@ export function SwipablePage({
             {/* Mobile Navigation at top */}
             <div className="pt-safe flex shrink-0 flex-col gap-2 px-3 pb-2">
               {mobileActionsInHeader ? (
-                <div className="xs:grid-cols-[2.5rem_minmax(0,1fr)_auto] grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
-                  <div className="xs:block hidden w-10" />
-                  <div className="xs:justify-center flex min-w-0 justify-end">
+                // One row: the open tab is a labeled pill, the others are icons,
+                // and the portfolio filter sits with the page actions on the right.
+                <div className="flex w-full min-w-0 items-center gap-2">
+                  <div className="min-w-0">
                     <MobileNavigation
                       views={views}
                       currentView={currentView}
@@ -249,9 +257,10 @@ export function SwipablePage({
                       compact
                     />
                   </div>
-                  <div className="flex min-w-0 shrink-0 items-center justify-end gap-2">
-                    <WorkspaceFilterHost />
+                  <div className="ms-auto flex shrink-0 items-center gap-2">
+                    {workspaceFilterFirst && <WorkspaceFilterHost hidden={!showWorkspaceFilter} />}
                     {currentActions}
+                    {!workspaceFilterFirst && <WorkspaceFilterHost hidden={!showWorkspaceFilter} />}
                   </div>
                 </div>
               ) : (
@@ -263,14 +272,17 @@ export function SwipablePage({
                       onViewChange={handleViewChange}
                     />
                   </div>
-                  <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <div className="flex min-w-0 max-w-full">
-                      <WorkspaceFilterHost />
-                    </div>
-                    <div className="ms-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
+                  {(currentActions || true) && (
+                    <div className="flex min-w-0 flex-nowrap items-center gap-2">
+                      {workspaceFilterFirst && (
+                        <WorkspaceFilterHost hidden={!showWorkspaceFilter} />
+                      )}
                       {currentActions}
+                      {!workspaceFilterFirst && (
+                        <WorkspaceFilterHost hidden={!showWorkspaceFilter} />
+                      )}
                     </div>
-                  </div>
+                  )}
                 </>
               )}
             </div>
@@ -317,8 +329,9 @@ export function SwipablePage({
               </div>
               {/* Actions slot - renders current view's actions */}
               <div className="flex items-center gap-2">
-                <WorkspaceFilterHost />
+                {workspaceFilterFirst && <WorkspaceFilterHost hidden={!showWorkspaceFilter} />}
                 {currentActions}
+                {!workspaceFilterFirst && <WorkspaceFilterHost hidden={!showWorkspaceFilter} />}
               </div>
             </div>
 

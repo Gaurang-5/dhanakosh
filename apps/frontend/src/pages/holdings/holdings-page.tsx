@@ -4,7 +4,6 @@ import { useHouseholdReport } from "@/features/household/household-report-contex
 import { MemberPortfolioRequired } from "@/features/household/member-portfolio-required";
 import { Button } from "@wealthfolio/ui/components/ui/button";
 import { Icons } from "@wealthfolio/ui/components/ui/icons";
-import { AnimatedToggleGroup } from "@wealthfolio/ui/components/ui/animated-toggle-group";
 import {
   Empty,
   EmptyHeader,
@@ -46,6 +45,7 @@ import {
 import { canAddHoldings } from "@/lib/activity-restrictions";
 import { useIsMobileViewport } from "@/hooks/use-platform";
 import { HoldingsTable } from "./components/holdings-table";
+import { HoldingsMobileFilterSheet } from "./components/holdings-mobile-filter-sheet";
 import { HoldingsTableMobile } from "./components/holdings-table-mobile";
 import { AlternativeHoldingsTable } from "./components/alternative-holdings-table";
 import { LiabilityOverview } from "./components/liability-overview";
@@ -56,6 +56,7 @@ import {
   HOLDINGS_VISIBILITY_STORAGE_KEY,
   filterHoldingsByVisibility,
   getEffectiveHoldingsVisibility,
+  hasNonDefaultHoldingsVisibility,
   isClosedPosition,
   type HoldingsVisibilityFilter,
 } from "./components/holdings-visibility";
@@ -191,6 +192,7 @@ export const HoldingsPage = () => {
 
   // Action palette state
   const [isActionPaletteOpen, setIsActionPaletteOpen] = useState(false);
+  const [isHoldingsFilterOpen, setIsHoldingsFilterOpen] = useState(false);
   const [modalDefaultKind, setModalDefaultKind] = useState<AlternativeAssetKind | undefined>(
     undefined,
   );
@@ -468,6 +470,22 @@ export const HoldingsPage = () => {
       {
         items: [
           {
+            icon: Icons.Eye,
+            label: t("holdings:direct_holdings"),
+            selected: exposureMode === "direct",
+            onClick: () => setExposureMode("direct"),
+          },
+          {
+            icon: Icons.PieChart,
+            label: t("holdings:total_exposure"),
+            selected: exposureMode === "total",
+            onClick: () => setExposureMode("total"),
+          },
+        ],
+      },
+      {
+        items: [
+          {
             icon: Icons.Wallet,
             label: t("holdings:add_asset"),
             onClick: () => {
@@ -496,7 +514,7 @@ export const HoldingsPage = () => {
         ],
       },
     ],
-    [navigate, updatePortfolioMutation, t],
+    [exposureMode, navigate, setExposureMode, updatePortfolioMutation, t],
   );
 
   // Investments content
@@ -568,7 +586,63 @@ export const HoldingsPage = () => {
       ) : (
         <>
           {exposureMode === "total" ? (
-            <TotalExposureHoldings currency={baseCurrency} filter={accountFilter} />
+            <>
+              <TotalExposureHoldings
+                currency={baseCurrency}
+                filter={accountFilter}
+                toolbarEnd={
+                  <div className="flex shrink-0 items-center gap-2 md:hidden">
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="relative size-10 shrink-0 rounded-full border-none shadow-none"
+                      onClick={() => setIsHoldingsFilterOpen(true)}
+                      aria-label={t("holdings:open_holdings_filters")}
+                    >
+                      <Icons.ListFilter className="h-4 w-4" />
+                      {(accountFilter.type !== "all" ||
+                        selectedTypes.length > 0 ||
+                        hasNonDefaultHoldingsVisibility(effectiveVisibilityFilters)) && (
+                        <span className="bg-destructive absolute end-0 top-0.5 h-2 w-2 rounded-full" />
+                      )}
+                    </Button>
+                    <ActionPalette
+                      open={isActionPaletteOpen}
+                      onOpenChange={setIsActionPaletteOpen}
+                      groups={actionPaletteGroups}
+                      trigger={
+                        <Button
+                          variant="secondary"
+                          size="icon"
+                          className="size-10 shrink-0 rounded-full border-none shadow-none"
+                          aria-label={t("holdings:open_actions")}
+                        >
+                          <Icons.DotsThreeVertical className="h-5 w-5" weight="fill" />
+                        </Button>
+                      }
+                    />
+                  </div>
+                }
+              />
+              <HoldingsMobileFilterSheet
+                open={isHoldingsFilterOpen}
+                onOpenChange={setIsHoldingsFilterOpen}
+                accountFilter={accountFilter}
+                onAccountScopeChange={handleAccountScopeChange}
+                accounts={accounts ?? []}
+                portfolios={portfolios}
+                selectedTypes={selectedTypes}
+                setSelectedTypes={setSelectedTypes}
+                sortBy={sortBy}
+                setSortBy={setSortBy}
+                performanceMode={performanceMode}
+                setPerformanceMode={setPerformanceMode}
+                typeOptions={availableTypeOptions}
+                visibilityFilters={effectiveVisibilityFilters}
+                setVisibilityFilters={handleVisibilityFiltersChange}
+                showClosedPositions={showClosedPositions}
+              />
+            </>
           ) : (
             <>
               {/* Desktop View */}
@@ -615,9 +689,9 @@ export const HoldingsPage = () => {
                         groups={actionPaletteGroups}
                         trigger={
                           <Button
-                            variant="outline"
+                            variant="secondary"
                             size="icon"
-                            className="size-10 shrink-0 rounded-full"
+                            className="size-10 shrink-0 rounded-full border-none shadow-none"
                             aria-label={t("holdings:open_actions")}
                           >
                             <Icons.DotsThreeVertical className="h-5 w-5" weight="fill" />
@@ -729,18 +803,6 @@ export const HoldingsPage = () => {
   const sharedActions = useMemo(
     () => (
       <>
-        {currentTab === "investments" && (
-          <AnimatedToggleGroup<"direct" | "total">
-            value={exposureMode}
-            onValueChange={setExposureMode}
-            size="sm"
-            aria-label={t("holdings:exposure_view")}
-            items={[
-              { value: "direct", label: t("holdings:direct_holdings") },
-              { value: "total", label: t("holdings:total_exposure") },
-            ]}
-          />
-        )}
         {!hasMobileInvestmentsToolbar && (
           <AccountScopeSelector value={accountFilter} onChange={handleAccountScopeChange} />
         )}
@@ -769,8 +831,6 @@ export const HoldingsPage = () => {
       currentTab,
       isActionPaletteOpen,
       actionPaletteGroups,
-      exposureMode,
-      setExposureMode,
       t,
     ],
   );
@@ -784,6 +844,7 @@ export const HoldingsPage = () => {
         icon: Icons.TrendingUp,
         content: investmentsContent,
         actions: sharedActions,
+        showWorkspaceFilter: false,
       },
       {
         value: "assets",
@@ -791,6 +852,7 @@ export const HoldingsPage = () => {
         icon: Icons.Wallet,
         content: assetsContent,
         actions: sharedActions,
+        showWorkspaceFilter: false,
       },
       {
         value: "liabilities",
@@ -798,6 +860,7 @@ export const HoldingsPage = () => {
         icon: Icons.CreditCard,
         content: liabilitiesContent,
         actions: sharedActions,
+        showWorkspaceFilter: false,
       },
     ],
     [investmentsContent, assetsContent, liabilitiesContent, sharedActions, t],

@@ -13,7 +13,6 @@ import {
   AmountDisplay,
   Badge,
   GainPercent,
-  Input,
   Separator,
   useAmountFormatting,
   useDateFormatting,
@@ -164,20 +163,20 @@ export const HoldingsTableMobile = ({
   return (
     <div className="space-y-3">
       {(showSearch || showFilterButton) && (
-        <div className="flex items-center gap-2">
+        <div className="flex flex-nowrap items-center gap-2">
           {showSearch && (
-            <Input
+            <input
               placeholder={t("holdings:search_placeholder")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-secondary/30 h-10 min-w-0 flex-1 rounded-full border-none"
+              className="placeholder:text-muted-foreground h-10 min-w-0 flex-1 bg-transparent px-1 text-base outline-none"
             />
           )}
           {showFilterButton && (
             <Button
-              variant="outline"
+              variant="secondary"
               size="icon"
-              className="relative size-10 shrink-0 rounded-full"
+              className="relative size-10 shrink-0 rounded-full border-none shadow-none"
               onClick={() => setIsFilterSheetOpen(true)}
               aria-label={t("holdings:open_holdings_filters")}
             >
