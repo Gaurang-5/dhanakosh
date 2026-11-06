@@ -937,8 +937,16 @@ export interface Settings {
   insightsOverviewLayout?: Record<string, unknown> | null;
   /** Read-only restore state, absent on older backends. */
   restoreReconnectRequired?: boolean;
+  /** Theme ID (palette and shape); absent on older backends, which show Classic. */
+  themeId?: string;
+  /** Gain and loss colours (green-up, red-up, red-up-blue-down), synced across devices;
+   * absent on older backends, which show green up. */
+  gainColors?: string;
+  /** Appearance mode: light, dark or system. */
   theme: string;
   font: string;
+  /** Text size name; absent on older backends, which show the default size. */
+  textSize?: string;
   language: string;
   formattingRegion: string;
   /** Formatting regions for amounts in specific currencies, keyed by currency code. */
@@ -1477,7 +1485,13 @@ export interface Platform {
 
 export type ImportRunType = "SYNC" | "IMPORT";
 export type ImportRunMode = "INITIAL" | "INCREMENTAL" | "BACKFILL" | "REPAIR";
-export type ImportRunStatus = "RUNNING" | "APPLIED" | "NEEDS_REVIEW" | "FAILED" | "CANCELLED";
+export type ImportRunStatus =
+  | "RUNNING"
+  | "APPLIED"
+  | "NEEDS_REVIEW"
+  | "FAILED"
+  | "CANCELLED"
+  | "REVERTED";
 export type ReviewMode = "NEVER" | "ALWAYS" | "IF_WARNINGS";
 
 export interface ImportRunSummary {
@@ -1487,6 +1501,13 @@ export interface ImportRunSummary {
   skipped: number;
   warnings: number;
   errors: number;
+  removed: number;
+  assetsCreated?: number;
+  fileName?: string;
+}
+
+export interface UndoActivityImportResult {
+  importRun: ImportRun;
   removed: number;
 }
 

@@ -9,6 +9,32 @@ use crate::errors::Result;
 /// Trait defining the contract for net worth service operations.
 #[async_trait]
 pub trait NetWorthServiceTrait: Send + Sync {
+    async fn get_scoped_net_worth(
+        &self,
+        date: NaiveDate,
+        account_ids: Option<Vec<String>>,
+    ) -> Result<NetWorthResponse> {
+        if account_ids.is_some() {
+            return Err(crate::Error::InvalidConfigValue(
+                "Scoped net worth unsupported".into(),
+            ));
+        }
+        self.get_net_worth(date).await
+    }
+    async fn get_scoped_net_worth_history(
+        &self,
+        start: NaiveDate,
+        end: NaiveDate,
+        account_ids: Option<Vec<String>>,
+    ) -> Result<Vec<NetWorthHistoryPoint>> {
+        if account_ids.is_some() {
+            return Err(crate::Error::InvalidConfigValue(
+                "Scoped net worth unsupported".into(),
+            ));
+        }
+        self.get_net_worth_history(start, end).await
+    }
+
     /// Calculate net worth as of a specific date.
     ///
     /// For each asset, uses the latest valuation on or before the target date.

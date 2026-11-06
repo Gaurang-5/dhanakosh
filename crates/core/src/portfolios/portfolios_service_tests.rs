@@ -227,14 +227,10 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn create_rejects_empty_account_list() {
+    async fn create_accepts_empty_portfolio_before_accounts_are_added() {
         let svc = make_service_with(MockPortfolioRepo::default(), &[]);
-        let err = svc
-            .create_portfolio(valid_new("P", vec![]))
-            .await
-            .unwrap_err();
-        assert!(matches!(err, Error::Validation(_)));
-        assert!(err.to_string().contains("at least one account"));
+        let portfolio = svc.create_portfolio(valid_new("P", vec![])).await.unwrap();
+        assert!(portfolio.account_ids.is_empty());
     }
 
     #[tokio::test]

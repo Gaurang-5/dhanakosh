@@ -1,14 +1,16 @@
+import { useHouseholdReport } from "@/features/household/household-report-context";
 import { AccountScopeSelector } from "@/components/account-filter-selector";
 import { SwipablePage, SwipablePageView } from "@/components/page";
 
 import { useAccountScopeStore } from "@/lib/account-scope-store";
 import IncomePage from "@/pages/income/income-page";
 import PerformancePage from "@/pages/performance/performance-page";
-import { Icons } from "@wealthfolio/ui";
+import { Button, Icons } from "@wealthfolio/ui";
 import { Card, CardContent, CardHeader } from "@wealthfolio/ui/components/ui/card";
 import { Skeleton } from "@wealthfolio/ui/components/ui/skeleton";
 import { Suspense, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 import { OverviewPage } from "./overview/overview-page";
 
 // Loading skeleton to show while the dashboard is loading
@@ -41,9 +43,21 @@ const DashboardLoader = () => {
 
 export default function PortfolioInsightsPage() {
   const { t } = useTranslation();
-  const accountFilter = useAccountScopeStore((state) => state.scope);
+  const family = useHouseholdReport();
+  const storedAccountFilter = useAccountScopeStore((state) => state.scope);
+  const accountFilter = useMemo(
+    () => (family ? ({ type: "all" } as const) : storedAccountFilter),
+    [family, storedAccountFilter],
+  );
   const setAccountScope = useAccountScopeStore((state) => state.setScope);
+  const [searchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") ?? "overview";
   const [overviewToolbarActions, setOverviewToolbarActions] = useState<ReactNode | null>(null);
+  const [performanceToolbarActions, setPerformanceToolbarActions] = useState<ReactNode | null>(
+    null,
+  );
+  const [currencyAction, setCurrencyAction] = useState<ReactNode | null>(null);
+  const [stockOnly, setStockOnly] = useState(false);
 
   const [customizeAction, setCustomizeAction] = useState<ReactNode | null>(null);
 
@@ -51,11 +65,33 @@ export default function PortfolioInsightsPage() {
     () =>
       overviewToolbarActions ?? (
         <div className="flex items-center gap-2">
-          <AccountScopeSelector value={accountFilter} onChange={setAccountScope} />
+          {!family && <AccountScopeSelector value={accountFilter} onChange={setAccountScope} />}
+          {currencyAction}
+          {!family && (
+            <Button
+              variant={stockOnly ? "default" : "outline"}
+              size="icon-sm"
+              aria-label={t("insights:exposure.stock_only")}
+              title={t("insights:exposure.stock_only")}
+              aria-pressed={stockOnly}
+              onClick={() => setStockOnly((value) => !value)}
+            >
+              <Icons.Holdings className="size-4" />
+            </Button>
+          )}
           {customizeAction}
         </div>
       ),
-    [accountFilter, overviewToolbarActions, customizeAction, setAccountScope],
+    [
+      accountFilter,
+      overviewToolbarActions,
+      currencyAction,
+      customizeAction,
+      setAccountScope,
+      family,
+      stockOnly,
+      t,
+    ],
   );
 
   // Define the views with icons
@@ -69,9 +105,11 @@ export default function PortfolioInsightsPage() {
           <Suspense fallback={<DashboardLoader />}>
             <OverviewPage
               filter={accountFilter}
+              stockOnly={stockOnly}
               onFilterChange={setAccountScope}
               onToolbarActionsChange={setOverviewToolbarActions}
               onCustomizeActionChange={setCustomizeAction}
+              onCurrencyActionChange={setCurrencyAction}
             />
           </Suspense>
         ),
@@ -83,9 +121,14 @@ export default function PortfolioInsightsPage() {
         icon: Icons.TrendingUp,
         content: (
           <Suspense fallback={<DashboardLoader />}>
-            <PerformancePage />
+            <PerformancePage
+              onToolbarActionsChange={
+                activeTab === "performance" ? setPerformanceToolbarActions : undefined
+              }
+            />
           </Suspense>
         ),
+        actions: performanceToolbarActions,
       },
       {
         value: "income",
@@ -98,7 +141,15 @@ export default function PortfolioInsightsPage() {
         ),
       },
     ],
-    [accountFilter, holdingsActions, setAccountScope, t],
+    [
+      accountFilter,
+      activeTab,
+      holdingsActions,
+      performanceToolbarActions,
+      setAccountScope,
+      stockOnly,
+      t,
+    ],
   );
 
   return <SwipablePage views={views} defaultView="overview" withPadding={true} />;

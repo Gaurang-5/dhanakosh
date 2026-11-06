@@ -1,8 +1,15 @@
-import { render } from "@testing-library/react";
 import type { ReactNode } from "react";
+import { render } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AppLayout } from "./app-layout";
+
+// The real menu reads accounts through React Query. These tests only care
+// whether the floating strip is mounted.
+vi.mock("@/features/workspace/workspace-filter", () => ({
+  WorkspaceFilter: () => null,
+  WorkspaceFilterHost: () => null,
+}));
 
 interface PlatformState {
   isTauri: boolean;
@@ -37,7 +44,6 @@ vi.mock("./navigation/floating-navigation-bar", () => ({ FloatingNavigationBar: 
 vi.mock("./navigation/mobile-navbar", () => ({ MobileNavBar: () => null }));
 vi.mock("./mobile-navigation-container", () => ({ MobileNavigationContainer: () => null }));
 vi.mock("@/components/app-launcher", () => ({ default: () => null }));
-vi.mock("@/components/update-dialog", () => ({ UpdateDialog: () => null }));
 vi.mock("@/components/mobile-loading-indicator", () => ({ MobileLoadingIndicator: () => null }));
 vi.mock("@/use-global-event-listener", () => ({ default: () => true }));
 vi.mock("@/features/devices-sync/hooks/use-active-app-sync-trigger", () => ({
@@ -47,18 +53,25 @@ vi.mock("@/features/wealthfolio-connect/hooks", () => ({
   usePostLoginConnectSync: () => undefined,
 }));
 
-const dragStrip = () => {
-  const { container } = render(
-    <MemoryRouter initialEntries={["/dashboard"]}>
+function renderAt(path: string) {
+  return render(
+    <MemoryRouter initialEntries={[path]}>
       <Routes>
         <Route element={<AppLayout />}>
-          <Route path="/dashboard" element={<p>Dashboard</p>} />
+          <Route path={path} element={<p>Page</p>} />
         </Route>
       </Routes>
     </MemoryRouter>,
   );
+}
+
+const dragStrip = () => {
+  const { container } = renderAt("/dashboard");
   return container.querySelector("main > [data-tauri-drag-region]");
 };
+
+const filterOverlay = (container: HTMLElement) =>
+  container.querySelector("[data-workspace-filter-overlay]");
 
 const desktop = { is_mobile: false, is_desktop: true };
 const phone = { is_mobile: true, is_desktop: false };
@@ -83,5 +96,27 @@ describe("AppLayout window drag strip", () => {
   it("is rendered in the desktop app", () => {
     Object.assign(state, { isTauri: true, info: desktop });
     expect(dragStrip()).toBeInTheDocument();
+  });
+});
+
+describe("AppLayout portfolio menu overlay", () => {
+  beforeEach(() => Object.assign(state, { isTauri: false, info: desktop }));
+
+  it("floats over pages that do not host the menu", () => {
+    const { container } = renderAt("/dashboard");
+    expect(filterOverlay(container)).not.toBeNull();
+  });
+
+  it("stays off settings", () => {
+    const { container } = renderAt("/settings");
+    expect(filterOverlay(container)).toBeNull();
+  });
+
+  it("stays off addon routes, which overlay the menu on the title line", () => {
+    const { container: singular } = renderAt("/addon/fees-tracker");
+    expect(filterOverlay(singular)).toBeNull();
+
+    const { container: plural } = renderAt("/addons/dividends-importer");
+    expect(filterOverlay(plural)).toBeNull();
   });
 });

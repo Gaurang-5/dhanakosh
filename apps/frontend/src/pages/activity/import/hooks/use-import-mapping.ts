@@ -8,6 +8,7 @@ import { QueryKeys } from "@/lib/query-keys";
 import { toast } from "@wealthfolio/ui/components/ui/use-toast";
 import { createDefaultActivityMapping } from "../utils/default-activity-template";
 import { normalizeActivityLabel } from "../utils/activity-type-mapping";
+import { detectInvestmentTable } from "../utils/investment-table";
 import {
   DEFAULT_ACTIVITY_IMPORT_PROFILE,
   isTransactionImportProfile,
@@ -57,6 +58,7 @@ const COLUMN_ALIASES: Record<string, string[]> = {
     "operation",
     "trade type",
     "tradetype",
+    "trade_type",
   ],
   [ImportFormat.SYMBOL]: [
     "symbol",
@@ -411,7 +413,16 @@ export function computeFieldMappings(
   savedFieldMappings?: Record<string, string | string[]>,
   profile: ActivityImportProfile = DEFAULT_ACTIVITY_IMPORT_PROFILE,
 ): Record<string, string | string[]> {
-  const autoDetected = initializeColumnMapping(headers, profile);
+  const table = profile.kind === "investment" ? detectInvestmentTable([headers]) : null;
+  const autoDetected = {
+    ...initializeColumnMapping(headers, profile),
+    ...table?.fieldMappings,
+  };
+  if (table && !table.fieldMappings.amount) {
+    // A net cash effect is not the gross trade amount. Leave it for review
+    // rather than pairing a fuzzy "Net Amount" match with a separate fee.
+    delete autoDetected[ImportFormat.AMOUNT];
+  }
   const headerSet = new Set(headers);
 
   // Start with auto-detected (all values are defined)

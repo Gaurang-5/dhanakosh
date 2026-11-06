@@ -12,6 +12,7 @@ import type {
   ImportAssetCandidate,
   ImportAssetPreviewItem,
   ImportActivitiesResult,
+  UndoActivityImportResult,
   ImportMappingData,
   ImportTemplateData,
   InternalTransferPairRequest,
@@ -270,13 +271,28 @@ export const unlinkTransferActivities = async (
  */
 export const importActivities = async ({
   activities,
+  fileName,
 }: {
   activities: ActivityImport[];
+  fileName?: string;
 }): Promise<ImportActivitiesResult> => {
   try {
-    return await invoke<ImportActivitiesResult>("import_activities", { activities });
+    return await invoke<ImportActivitiesResult>("import_activities", { activities, fileName });
   } catch (err) {
     logger.error(`Error importing activities: ${err}`);
+    throw err;
+  }
+};
+
+export const undoActivityImport = async (
+  importRunId: string,
+): Promise<UndoActivityImportResult> => {
+  try {
+    return await invoke<UndoActivityImportResult>("undo_activity_import", {
+      importRunId,
+    });
+  } catch (err) {
+    logger.error(`Error undoing activity import: ${err}`);
     throw err;
   }
 };

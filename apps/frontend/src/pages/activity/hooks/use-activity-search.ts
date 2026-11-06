@@ -1,3 +1,5 @@
+import { useHouseholdScope } from "@/features/household/household-scope";
+import { searchHouseholdActivities } from "@/features/household/household-activity-search";
 import { searchActivities } from "@/adapters";
 import { QueryKeys } from "@/lib/query-keys";
 import { ActivityType } from "@/lib/constants";
@@ -82,6 +84,8 @@ export function useActivitySearch(
   options: UseActivitySearchPaginatedOptions,
 ): UseActivitySearchPaginatedResult;
 export function useActivitySearch(options: UseActivitySearchOptions): UseActivitySearchResult {
+  const scope = useHouseholdScope();
+  const memberIds = scope?.isFamily ? scope.memberIds : undefined;
   const {
     filters,
     searchQuery,
@@ -137,6 +141,7 @@ export function useActivitySearch(options: UseActivitySearchOptions): UseActivit
   const infiniteQuery = useInfiniteQuery<ActivitySearchResponse, Error>({
     queryKey: [
       QueryKeys.ACTIVITY_DATA,
+      memberIds,
       "infinite",
       normalizedFilters,
       searchQuery,
@@ -149,6 +154,16 @@ export function useActivitySearch(options: UseActivitySearchOptions): UseActivit
     queryFn: async ({ pageParam }) => {
       if (hasClosedAccountScope) return EMPTY_RESPONSE;
       const page = typeof pageParam === "number" ? pageParam : 0;
+      if (memberIds)
+        return searchHouseholdActivities(
+          memberIds,
+          page,
+          pageSize,
+          normalizedFilters,
+          searchQuery,
+          primarySort,
+          includeCashBalances,
+        );
       return searchActivities(page, pageSize, normalizedFilters, searchQuery, primarySort, {
         includeCashBalances,
       });
@@ -164,6 +179,7 @@ export function useActivitySearch(options: UseActivitySearchOptions): UseActivit
   const paginatedQuery = useQuery<ActivitySearchResponse, Error>({
     queryKey: [
       QueryKeys.ACTIVITY_DATA,
+      memberIds,
       "paginated",
       normalizedFilters,
       searchQuery,
@@ -175,6 +191,16 @@ export function useActivitySearch(options: UseActivitySearchOptions): UseActivit
     ],
     queryFn: async () => {
       if (hasClosedAccountScope) return EMPTY_RESPONSE;
+      if (memberIds)
+        return searchHouseholdActivities(
+          memberIds,
+          pageIndex,
+          pageSize,
+          normalizedFilters,
+          searchQuery,
+          primarySort,
+          includeCashBalances,
+        );
       return searchActivities(pageIndex, pageSize, normalizedFilters, searchQuery, primarySort, {
         includeCashBalances,
       });

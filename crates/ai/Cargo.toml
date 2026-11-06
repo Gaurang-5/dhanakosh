@@ -29,6 +29,7 @@ futures = { workspace = true }
 log = { workspace = true }
 reqwest = { workspace = true }
 sha2 = { workspace = true }
+base64 = "0.22"
 
 # LLM orchestration facade (portable contracts + agent runtime)
 rig = { version = "0.44.0", default-features = false, features = ["agent", "reqwest"] }
@@ -42,6 +43,7 @@ csv = "1.3"
 
 # Streaming
 tokio-stream = "0.1"
+tempfile = "3"
 
 # Numbers (for Decimal to f64 conversion)
 rust_decimal = { workspace = true }

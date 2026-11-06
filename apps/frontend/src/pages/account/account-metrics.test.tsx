@@ -116,6 +116,74 @@ function createPerformance(overrides: Partial<PerformanceResult> = {}): Performa
 }
 
 describe("AccountMetrics", () => {
+  it("separates native USD cash, INR value and currency impact for a foreign account", () => {
+    render(
+      <AccountMetrics
+        valuation={createValuation({
+          accountCurrency: "USD",
+          baseCurrency: "INR",
+          fxRateToBase: 84,
+          cashBalance: 125,
+          cashBalanceBase: 10_500,
+          investmentMarketValue: 1_000,
+          investmentMarketValueBase: 84_000,
+        })}
+        performance={createPerformance({
+          scope: { id: "account-1", currency: "INR" },
+          attribution: {
+            contributions: 0,
+            distributions: 0,
+            income: 0,
+            realizedPnl: 0,
+            unrealizedPnlChange: 4_000,
+            fxEffect: 2_500,
+            fees: 0,
+            taxes: 0,
+            residual: 0,
+          },
+          summary: {
+            amount: 6_500,
+            percent: 0.08,
+            method: "valueReturn",
+            basis: "bookBasis",
+            quality: "ok",
+            amountStatus: "complete",
+            percentStatus: "complete",
+            basisStatus: "complete",
+            reasons: [],
+          },
+        })}
+        cashCurrencySplit={[
+          { currency: "USD", valueLocal: 125, valueBase: 10_500, percentage: 100 },
+        ]}
+      />,
+    );
+
+    expect(screen.getByTestId("account-cash-balance-value")).toHaveTextContent("value:USD:125");
+    expect(screen.getByText("Cash Balance · INR").parentElement).toHaveTextContent(
+      "value:INR:10500",
+    );
+    expect(screen.getByText("Period P&L · INR").parentElement).toHaveTextContent(
+      "gain-amount:6500",
+    );
+    expect(screen.getByText("FX effect · USD/INR").parentElement).toHaveTextContent(
+      "gain-amount:2500",
+    );
+  });
+
+  it("does not add redundant FX rows when the account and base currencies match", () => {
+    render(
+      <AccountMetrics
+        valuation={createValuation({ accountCurrency: "INR", baseCurrency: "INR" })}
+        performance={createPerformance({ scope: { id: "account-1", currency: "INR" } })}
+        cashCurrencySplit={[]}
+      />,
+    );
+
+    expect(screen.queryByText("Cash Balance · INR")).not.toBeInTheDocument();
+    expect(screen.queryByText(/FX effect/)).not.toBeInTheDocument();
+  });
+
   it("shows unrealized P&L after cost basis for transaction accounts with complete basis", () => {
     render(
       <AccountMetrics

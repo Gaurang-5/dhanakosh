@@ -93,12 +93,50 @@ function DetailSection({ title, icon, children }: DetailSectionProps) {
 export function ActivityReviewReasons({
   activity,
 }: {
-  activity: Pick<ActivityDetails, "metadata" | "needsReview">;
+  activity: Pick<ActivityDetails, "metadata" | "needsReview"> &
+    Partial<
+      Pick<
+        ActivityDetails,
+        | "activityType"
+        | "quantity"
+        | "unitPrice"
+        | "amount"
+        | "fee"
+        | "tax"
+        | "currency"
+        | "instrumentType"
+      >
+    >;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const reviewReasons = getProviderMappingReasons(activity);
+  const quantity = Number(activity.quantity);
+  const unitPrice = Number(activity.unitPrice);
+  const amount = Number(activity.amount);
+  const fee = Number(activity.fee ?? 0);
+  const tax = Number(activity.tax ?? 0);
+  const isTrade = activity.activityType === "BUY" || activity.activityType === "SELL";
+  const gross = Math.abs(quantity * unitPrice);
+  const calculated =
+    activity.activityType === "BUY"
+      ? gross + Math.abs(fee) + Math.abs(tax)
+      : gross - Math.abs(fee) - Math.abs(tax);
+  const hasAmountMismatch =
+    isTrade &&
+    activity.instrumentType !== "OPTION" &&
+    activity.quantity != null &&
+    activity.unitPrice != null &&
+    activity.amount != null &&
+    activity.currency != null &&
+    [quantity, unitPrice, amount, fee, tax, calculated].every(Number.isFinite) &&
+    Math.abs(Math.abs(amount) - Math.abs(calculated)) > 0.005;
+  const formatAmount = (value: number) =>
+    new Intl.NumberFormat(i18n.language, {
+      style: "currency",
+      currency: activity.currency ?? "USD",
+    }).format(value);
 
-  if (!activity.needsReview || reviewReasons.length === 0) {
+  if (!activity.needsReview) {
     return null;
   }
 
@@ -108,9 +146,18 @@ export function ActivityReviewReasons({
       icon={<Icons.AlertCircle className="text-warning h-4 w-4" />}
     >
       <ul className="list-disc space-y-1 ps-5 text-sm">
-        {reviewReasons.map((reason) => (
-          <li key={reason}>{reason}</li>
-        ))}
+        {reviewReasons.length > 0 ? (
+          reviewReasons.map((reason) => <li key={reason}>{reason}</li>)
+        ) : hasAmountMismatch ? (
+          <li>
+            {t("activity:needs_review_alert.amountMismatch", {
+              recorded: formatAmount(Math.abs(amount)),
+              calculated: formatAmount(Math.abs(calculated)),
+            })}
+          </li>
+        ) : (
+          <li>{t("activity:needs_review_alert.description")}</li>
+        )}
       </ul>
     </DetailSection>
   );

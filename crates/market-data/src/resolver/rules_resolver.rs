@@ -276,6 +276,26 @@ impl Resolver for RulesResolver {
         provider: &ProviderId,
         context: &QuoteContext,
     ) -> Option<Result<ResolvedInstrument, MarketDataError>> {
+        if provider.as_ref() == "AMFI" {
+            let InstrumentId::Equity { ticker, .. } = &context.instrument else {
+                return None;
+            };
+            let code = ticker.strip_prefix("AMFI-")?;
+            if !(5..=8).contains(&code.len()) || !code.bytes().all(|b| b.is_ascii_digit()) {
+                return None;
+            }
+            return Some(Ok(ResolvedInstrument {
+                instrument: ProviderInstrument::EquitySymbol {
+                    symbol: code.into(),
+                },
+                source: ResolutionSource::Rules,
+            }));
+        }
+        // Never route an AMFI scheme code to a stock provider's guessed ticker.
+        if matches!(&context.instrument, InstrumentId::Equity { ticker, .. } if ticker.starts_with("AMFI-"))
+        {
+            return None;
+        }
         // CUSTOM_SCRAPER: extract symbol from any instrument variant
         if provider.as_ref() == "CUSTOM_SCRAPER" {
             let symbol = match &context.instrument {
@@ -390,6 +410,19 @@ mod tests {
             bond_metadata: None,
             custom_provider_code: None,
         }
+    }
+
+    #[test]
+    fn amfi_scheme_identity_never_falls_back_to_stock_symbols() {
+        let resolver = RulesResolver::new();
+        let context = make_equity_context("AMFI-120503", None);
+        assert!(resolver.resolve(&"AMFI".into(), &context).is_some());
+        for provider in ["YAHOO", "ALPHA_VANTAGE", "CUSTOM_SCRAPER"] {
+            assert!(resolver.resolve(&provider.into(), &context).is_none());
+        }
+        assert!(resolver
+            .resolve(&"AMFI".into(), &make_equity_context("AAPL", None))
+            .is_none());
     }
 
     #[test]
@@ -790,6 +823,31 @@ mod tests {
             .unwrap();
 
         assert_eq!(resolved.source, ResolutionSource::RulesFallback);
+    }
+
+    #[test]
+    fn family_india_us_and_ucits_listings_keep_exchange_identity() {
+        let resolver = RulesResolver::new();
+        for (ticker, mic, expected_symbol, expected_currency) in [
+            ("RELIANCE", "XNSE", "RELIANCE.NS", "INR"),
+            ("500325", "XBOM", "500325.BO", "INR"),
+            ("NIFTYBEES", "XNSE", "NIFTYBEES.NS", "INR"),
+            ("AAPL", "XNAS", "AAPL", "USD"),
+            ("VWRP", "XLON", "VWRP.L", "GBp"),
+        ] {
+            let context = make_equity_context(ticker, Some(mic));
+            let resolved = resolver
+                .resolve(&"YAHOO".into(), &context)
+                .expect("supported exchange")
+                .expect("valid listing");
+            assert_eq!(resolved.instrument.to_symbol_string(), expected_symbol);
+            assert_eq!(
+                resolver
+                    .get_equity_currency(&Some(mic.into()), &"YAHOO".into())
+                    .as_deref(),
+                Some(expected_currency)
+            );
+        }
     }
 
     #[test]

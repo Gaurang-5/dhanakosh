@@ -32,7 +32,7 @@ vi.mock("@/lib/settings-provider", () => ({
 vi.mock("@tanstack/react-query", () => ({
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
 }));
-vi.mock("@/adapters", () => ({ updateAlternativeAssetMetadata: vi.fn() }));
+vi.mock("@/adapters", () => ({ isWeb: false, updateAlternativeAssetMetadata: vi.fn() }));
 
 // Render only the active view's actions + content, as SwipablePage does on desktop.
 vi.mock("@/components/page", () => ({

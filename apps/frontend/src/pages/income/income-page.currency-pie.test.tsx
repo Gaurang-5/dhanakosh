@@ -21,7 +21,7 @@ const mocks = vi.hoisted(() => ({
   pie: undefined as PieProps | undefined,
 }));
 
-vi.mock("@/adapters", () => ({ getIncomeSummary: vi.fn() }));
+vi.mock("@/adapters", () => ({ isWeb: false, getIncomeSummary: vi.fn() }));
 vi.mock("@tanstack/react-query", () => ({ useQuery: mocks.useQuery }));
 vi.mock("@/hooks/use-balance-privacy", () => ({
   useBalancePrivacy: () => ({ isBalanceHidden: false }),

@@ -399,6 +399,7 @@ impl<P: SyncProgressReporter> SyncOrchestrator<P> {
             errors: 0,
             removed: 0,
             assets_created: outcome.assets_created,
+            file_name: None,
         };
 
         let should_advance_cursor = should_advance_activity_cursor(

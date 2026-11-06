@@ -11,6 +11,8 @@ import { useIsMobileViewport } from "@/hooks/use-platform";
 import { useQuoteHistory } from "@/hooks/use-quote-history";
 import { useSyncMarketDataMutation } from "@/hooks/use-sync-market-data";
 import { useAssetTaxonomyAssignments, useTaxonomy } from "@/hooks/use-taxonomies";
+import { HoldingLookThrough } from "@/features/fund-exposure/holding-look-through";
+import { useAccountScopeStore } from "@/lib/account-scope-store";
 import { getActivityRestrictionLevel } from "@/lib/activity-restrictions";
 import { generateId } from "@/lib/id";
 import { QueryKeys } from "@/lib/query-keys";
@@ -277,6 +279,7 @@ export const AssetProfilePage = () => {
   const { t } = useTranslation();
   const { settings } = useSettingsContext();
   const baseCurrency = settings?.baseCurrency ?? "USD";
+  const accountScope = useAccountScopeStore((state) => state.scope);
   const { assetId: encodedAssetId = "" } = useParams<{ assetId: string }>();
   const assetId = decodeURIComponent(encodedAssetId);
   const location = useLocation();
@@ -952,18 +955,21 @@ export const AssetProfilePage = () => {
 
     const lotsContent =
       profile && assetLots.length > 0 ? (
-        <AssetLotsTable
-          lots={assetLots}
-          currency={
-            holding?.localCurrency ?? symbolHolding?.currency ?? profile.currency ?? baseCurrency
-          }
-          marketPrice={Number(holding?.price ?? profile.marketPrice)}
-          contractMultiplier={Number(holding?.contractMultiplier ?? 1)}
-          dayChangeAmount={
-            holding?.dayChange?.local != null ? Number(holding.dayChange.local) : null
-          }
-          dayChangePct={holding?.dayChangePct ?? null}
-        />
+        <div className="space-y-4">
+          <HoldingLookThrough assetId={assetId} currency={baseCurrency} filter={accountScope} />
+          <AssetLotsTable
+            lots={assetLots}
+            currency={
+              holding?.localCurrency ?? symbolHolding?.currency ?? profile.currency ?? baseCurrency
+            }
+            marketPrice={Number(holding?.price ?? profile.marketPrice)}
+            contractMultiplier={Number(holding?.contractMultiplier ?? 1)}
+            dayChangeAmount={
+              holding?.dayChange?.local != null ? Number(holding.dayChange.local) : null
+            }
+            dayChangePct={holding?.dayChangePct ?? null}
+          />
+        </div>
       ) : null;
 
     const quotesContent = (
@@ -1013,6 +1019,7 @@ export const AssetProfilePage = () => {
     };
   }, [
     assetId,
+    accountScope,
     baseCurrency,
     profile,
     holding,

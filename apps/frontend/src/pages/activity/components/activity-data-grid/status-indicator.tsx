@@ -1,5 +1,4 @@
 import { NeedsReviewIcon } from "@/components/needs-review";
-import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { LocalTransaction } from "./types";
 import { getProviderMappingReasons, isPendingReview } from "./types";
@@ -11,13 +10,7 @@ interface StatusIndicatorProps {
 /** What review means, for a row whose source gave no reasons. */
 export function useReviewExplanation(): string[] {
   const { t } = useTranslation();
-  return useMemo(
-    () => [
-      t("activity:datagrid.status_tooltip_line1"),
-      t("activity:datagrid.status_tooltip_line2"),
-    ],
-    [t],
-  );
+  return [t("activity:needs_review_alert.description")];
 }
 
 /**

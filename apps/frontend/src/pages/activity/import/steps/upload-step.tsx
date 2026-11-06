@@ -1,3 +1,5 @@
+import { accountLabel } from "@/lib/account-label";
+import { usePortfolios } from "@/hooks/use-portfolios";
 import {
   parseCsv,
   listImportTemplates,
@@ -39,7 +41,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { CSVFileViewer, type CSVLine } from "../components/csv-file-viewer";
-import { FileDropzone } from "../components/file-dropzone";
+import { CasImport } from "../components/cas-import";
+import { InvestmentFileUpload } from "../components/investment-file-upload";
 import { HelpTooltip } from "../components/help-tooltip";
 import {
   setAccountId,
@@ -56,6 +59,7 @@ import {
   createDefaultActivityTemplate,
   createEmptyHoldingsMapping,
   isDefaultActivityTemplateId,
+  isBuiltinActivityTemplateId,
   prependDefaultActivityTemplate,
 } from "../utils/default-activity-template";
 import {
@@ -559,6 +563,7 @@ export function UploadStep() {
   const { t } = useTranslation();
   const [parseError, setParseError] = useState<string | null>(null);
   const { accounts } = useAccounts();
+  const { data: portfolios = [] } = usePortfolios();
   const { isMobile } = usePlatform();
 
   // Derive import type from the selected account's tracking mode
@@ -666,13 +671,13 @@ export function UploadStep() {
       if (!template) return;
       dispatch(setSuppressLinkedTemplate(false));
       await applyTemplate(template);
-      if (state.accountId && !isDefaultActivityTemplateId(template.id)) {
+      if (state.accountId && !isBuiltinActivityTemplateId(template.id)) {
         linkAccountTemplate(state.accountId, templateId, importType).catch(() => {
           /* non-critical */
         });
       }
     },
-    [applyTemplate, importType, state.accountId, templates],
+    [applyTemplate, dispatch, importType, state.accountId, templates],
   );
 
   const handleTemplateClear = useCallback(() => {
@@ -752,7 +757,10 @@ export function UploadStep() {
     }
     getAccountImportMapping(state.accountId, importType)
       .then((mapping) => {
-        setPendingLinkedTemplateId(mapping?.templateId ?? null);
+        // Ignore a saved template response for an account the user has left.
+        if (prevAccountIdRef.current === state.accountId) {
+          setPendingLinkedTemplateId(mapping?.templateId ?? null);
+        }
       })
       .catch(() => {
         /* no saved mapping — ignore */
@@ -896,7 +904,9 @@ export function UploadStep() {
                     <div className="flex items-center gap-2">
                       <Icons.Briefcase className="text-primary h-5 w-5" />
                       <div className="text-center">
-                        <p className="text-sm font-medium">{selectedAccount.name}</p>
+                        <p className="text-sm font-medium">
+                          {accountLabel(selectedAccount, portfolios)}
+                        </p>
                         <p className="text-muted-foreground text-xs">{selectedAccount.currency}</p>
                       </div>
                     </div>
@@ -936,18 +946,28 @@ export function UploadStep() {
             <h2 className="text-sm font-semibold">{t("activity:import.upload.uploadCsv")}</h2>
             <HelpTooltip content={t("activity:import.upload.uploadCsvHelp")} />
           </div>
-          <div className="h-29">
-            <FileDropzone
+          <div>
+            <InvestmentFileUpload
+              detectTransactionTable={
+                importProfile.kind === "investment" &&
+                (!state.selectedTemplateId ||
+                  isDefaultActivityTemplateId(state.selectedTemplateId)) &&
+                state.parseConfig.hasHeaderRow &&
+                state.parseConfig.headerRowIndex === 0 &&
+                state.parseConfig.skipTopRows === 0 &&
+                state.parseConfig.skipEmptyRows
+              }
               file={state.file}
               onFileChange={handleFileSelect}
               isLoading={isPending}
-              accept=".csv"
               isValid={!hasParseErrors}
               error={parseError}
             />
           </div>
         </div>
       </div>
+
+      <CasImport onConverted={handleFileSelect} />
 
       {/* Select Format */}
       <div className="flex flex-col gap-2">

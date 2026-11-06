@@ -14,12 +14,12 @@ export function toneClass(value: number): string {
 
 /** Semantic fill color for bars/meters: green for positive/zero, red for negative. */
 export function toneColor(value: number): string {
-  return value < -0.005 ? "var(--destructive)" : "var(--success)";
+  return value < -0.005 ? "var(--loss)" : "var(--gain)";
 }
 
 /** Softened semantic fill for chart bars/areas (dimmer than the text tone). */
 export function toneFill(value: number): string {
-  const base = value < -0.005 ? "var(--destructive)" : "var(--success)";
+  const base = value < -0.005 ? "var(--loss)" : "var(--gain)";
   return `color-mix(in srgb, ${base} 60%, transparent)`;
 }
 

@@ -354,6 +354,33 @@ pub struct Account {
 }
 
 impl Account {
+    /// Whether investment trades settle outside this account's cash ledger.
+    ///
+    /// Securities and crypto accounts preserve the manual-cash default used by
+    /// tradebook-only imports. An account can opt into a complete funded ledger
+    /// with `accounting.settingsJson.tradeSettlements = true`; then buys, sells,
+    /// income, fees, and taxes change its available cash through the portfolio
+    /// engine. Keeping the policy inside accounting settings also makes the
+    /// projection trigger rebuild this account when the policy changes.
+    pub fn tracks_cash_separately(&self) -> bool {
+        let is_investment_account = matches!(
+            self.account_type.as_str(),
+            account_types::SECURITIES | account_types::CRYPTOCURRENCY
+        );
+        if !is_investment_account {
+            return false;
+        }
+
+        let trades_update_cash = self
+            .accounting_settings()
+            .ok()
+            .and_then(|settings| serde_json::from_str::<Value>(&settings.settings_json).ok())
+            .and_then(|settings| settings.get("tradeSettlements")?.as_bool())
+            .unwrap_or(false);
+
+        !trades_update_cash
+    }
+
     pub fn cash_allocation_category_id(&self) -> Option<String> {
         let meta = self.meta.as_deref()?.trim();
         if meta.is_empty() {
@@ -366,6 +393,24 @@ impl Account {
             .as_str()
             .filter(|s| !s.is_empty())
             .map(String::from)
+    }
+
+    /// PPF is persisted as a transaction-tracked securities account whose
+    /// balance lives in the cash ledger, but it represents a fixed-income
+    /// investment rather than spendable cash.
+    pub fn is_ppf_investment(&self) -> bool {
+        if self.account_type != account_types::SECURITIES
+            || self.currency != "INR"
+            || self.tracking_mode != TrackingMode::Transactions
+        {
+            return false;
+        }
+
+        self.meta
+            .as_deref()
+            .and_then(|meta| serde_json::from_str::<serde_json::Value>(meta).ok())
+            .and_then(|meta| meta.get("investmentProduct")?.as_str().map(str::to_owned))
+            .is_some_and(|product| product == "PPF")
     }
 
     /// The account's accounting settings, read from its `meta` (engine rules
@@ -498,5 +543,59 @@ impl AccountUpdate {
             )));
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod separate_cash_tests {
+    use super::*;
+
+    #[test]
+    fn separate_cash_is_an_investment_account_rule() {
+        for (kind, separate) in [
+            (account_types::SECURITIES, true),
+            (account_types::CRYPTOCURRENCY, true),
+            (account_types::CASH, false),
+            (account_types::CREDIT_CARD, false),
+        ] {
+            let account = Account {
+                account_type: kind.into(),
+                ..Default::default()
+            };
+            assert_eq!(account.tracks_cash_separately(), separate);
+        }
+    }
+
+    #[test]
+    fn one_investment_account_can_book_trades_into_its_cash_ledger() {
+        let account = Account {
+            account_type: account_types::SECURITIES.into(),
+            currency: "USD".into(),
+            meta: Some(
+                r#"{"accounting":{"settingsJson":{"tradeSettlements":true}},"country":"US"}"#
+                    .into(),
+            ),
+            ..Default::default()
+        };
+
+        assert!(!account.tracks_cash_separately());
+    }
+
+    #[test]
+    fn malformed_or_unrelated_meta_keeps_manual_cash_behavior() {
+        for meta in [
+            Some("not json".to_string()),
+            Some(r#"{"accounting":{"settingsJson":{"tradeSettlements":false}}}"#.to_string()),
+            Some(r#"{"country":"US"}"#.to_string()),
+            None,
+        ] {
+            let account = Account {
+                account_type: account_types::SECURITIES.into(),
+                meta,
+                ..Default::default()
+            };
+
+            assert!(account.tracks_cash_separately());
+        }
     }
 }

@@ -666,6 +666,7 @@ mod tests {
                                     accounts: ["a1", "a2"]
                                         .into_iter()
                                         .map(|id| RawAccount {
+                                            separate_cash_ledger: false,
                                             id: id.into(),
                                             currency: "USD".into(),
                                             account_type: "SECURITIES".into(),

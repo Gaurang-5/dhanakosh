@@ -1,3 +1,4 @@
+import { getInstrumentPrimaryLabel, getInstrumentSecondaryLabel } from "@/lib/instrument-display";
 import { useBalancePrivacy } from "@/hooks/use-balance-privacy";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { useSettingsContext } from "@/lib/settings-provider";
@@ -341,7 +342,7 @@ const TreemapTooltip: FC<TreemapTooltipProps> = ({ active, payload, currency = "
           </div>
           <div className="flex items-center justify-between gap-4 text-xs">
             <span className="text-muted-foreground">{t("ai:holdings.today")}</span>
-            <span className={cn("font-medium", isPositive ? "text-success" : "text-destructive")}>
+            <span className={cn("font-medium", isPositive ? "text-gain" : "text-loss")}>
               {isPositive ? "+" : ""}
               {numberFormatting.formatPercent(gain)}
             </span>
@@ -590,8 +591,8 @@ function HoldingsContentImpl({ args, result, status }: HoldingsContentProps) {
                 portfolioChange == null
                   ? "text-muted-foreground"
                   : portfolioChange >= 0
-                    ? "text-success"
-                    : "text-destructive",
+                    ? "text-gain"
+                    : "text-loss",
               )}
             >
               {portfolioChange == null ? (
@@ -709,10 +710,10 @@ function HoldingsContentImpl({ args, result, status }: HoldingsContentProps) {
                   <TableRow key={`${holding.account}-${holding.symbol}`} className="text-xs">
                     <TableCell className="py-2 ps-4">
                       <div>
-                        <div className="font-medium">{holding.symbol}</div>
-                        {holding.name && (
+                        <div className="font-medium">{getInstrumentPrimaryLabel(holding)}</div>
+                        {getInstrumentSecondaryLabel(holding) && (
                           <div className="text-muted-foreground text-2xs max-w-30 sm:max-w-50 truncate">
-                            {holding.name}
+                            {getInstrumentSecondaryLabel(holding)}
                           </div>
                         )}
                       </div>
@@ -729,7 +730,7 @@ function HoldingsContentImpl({ args, result, status }: HoldingsContentProps) {
                         <span
                           className={cn(
                             "tabular-nums",
-                            tableGainPct >= 0 ? "text-success" : "text-destructive",
+                            tableGainPct >= 0 ? "text-gain" : "text-loss",
                           )}
                         >
                           {tableGainPct > 0 ? "+" : ""}

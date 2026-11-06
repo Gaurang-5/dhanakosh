@@ -60,7 +60,7 @@ it("renders the opening screen during migration and mounts providers after readi
     .mockResolvedValue({ ready: true, error: null, canRecover: false });
   mount();
   await waitFor(() => expect(mocks.status).toHaveBeenCalledOnce());
-  expect(screen.getByRole("status")).toHaveTextContent("Opening Wealthfolio");
+  expect(screen.getByRole("status")).toHaveTextContent("Opening Dhanakosh");
   expect(screen.queryByText("Portfolio mounted")).not.toBeInTheDocument();
   expect(screen.queryByRole("button", { name: copy.recovery_retry })).not.toBeInTheDocument();
   await act(async () => mocks.changed());
@@ -189,7 +189,7 @@ it("observes an owned recovery after the webview reloads", async () => {
     .mockResolvedValue({ ready: true, maintenance: false, error: null, canRecover: false });
   mount();
   await waitFor(() => expect(mocks.status).toHaveBeenCalledOnce());
-  expect(screen.getByRole("status")).toHaveTextContent("Opening Wealthfolio");
+  expect(screen.getByRole("status")).toHaveTextContent("Opening Dhanakosh");
   expect(screen.queryByRole("button", { name: copy.recovery_retry })).not.toBeInTheDocument();
   await act(async () => mocks.changed());
   await screen.findByText("Portfolio mounted");

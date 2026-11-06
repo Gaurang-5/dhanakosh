@@ -4007,3 +4007,9 @@ seq,filename,symbol,name,market,category,index,shared_icon,priority,fallback,rev
 4006,crypto/ZIL,ZIL,ZIL,CRYPTO,crypto,,,1,n/a,2026-09-04
 4007,crypto/ZILLA,ZILLA,ZILLA,CRYPTO,crypto,,,1,n/a,2026-09-04
 4008,crypto/ZRX,ZRX,ZRX,CRYPTO,crypto,,,1,n/a,2026-09-04
+4009,RELIANCE-XNSE,RELIANCE,Reliance Industries,XNSE,equity,,,1,n/a,2026-10-25
+4010,TCS-XNSE,TCS,Tata Consultancy Services,XNSE,equity,,,1,n/a,2026-10-25
+4011,HDFCBANK-XNSE,HDFCBANK,HDFC Bank,XNSE,equity,,HDB,1,n/a,2026-10-25
+4012,ICICIBANK-XNSE,ICICIBANK,ICICI Bank,XNSE,equity,,IBN,1,n/a,2026-10-25
+4013,INFY-XNSE,INFY,Infosys,XNSE,equity,,INFY,1,n/a,2026-10-25
+4014,WIPRO-XNSE,WIPRO,Wipro,XNSE,equity,,WIT,1,n/a,2026-10-25

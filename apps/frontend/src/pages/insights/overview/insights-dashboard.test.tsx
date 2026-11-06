@@ -265,8 +265,8 @@ describe("insights dashboard editing", () => {
     const ids = [...container.querySelectorAll("[data-widget-id]")].map((item) =>
       item.getAttribute("data-widget-id"),
     );
-    expect(ids.indexOf("classes")).toBeLessThan(ids.indexOf("accounts"));
-    expect(ids.indexOf("sectors")).toBeLessThan(ids.indexOf("regions"));
+    expect(ids.indexOf("accounts")).toBeLessThan(ids.indexOf("classes"));
+    expect(ids.indexOf("regions")).toBeLessThan(ids.indexOf("sectors"));
   });
 
   it("pairs adjacent mobile metrics even when saved on separate rows", () => {
@@ -294,8 +294,8 @@ describe("insights dashboard editing", () => {
     );
     expect(state.gridProps.layouts.mobile.find((item) => item.i === "pnl")).toMatchObject({
       x: 0,
-      w: 2,
-      maxW: 2,
+      y: state.gridProps.layouts.mobile.find((item) => item.i === "daily")?.y,
+      w: 1,
     });
     expect(state.gridProps.layouts.mobile.find((item) => item.i === "cash")?.w).toBe(1);
     act(() => state.gridProps.onLayoutChange([], { mobile: state.gridProps.layouts.mobile }));
@@ -322,7 +322,7 @@ describe("insights dashboard editing", () => {
       expect(screen.getByRole("button", { name: "insights:customize.edit" })).toBeTruthy(),
     );
     expect(state.updateSettings.mock.calls[0][0].insightsOverviewLayout).toMatchObject({
-      version: 6,
+      version: 7,
       hiddenWidgets: ["regions"],
     });
     view.unmount();

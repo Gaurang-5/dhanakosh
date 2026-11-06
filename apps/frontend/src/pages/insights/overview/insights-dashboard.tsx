@@ -124,6 +124,7 @@ export function InsightsDashboard({ widgets, onCustomizeActionChange }: Insights
     invested: t("insights:insights.value_strip.invested"),
     bookCost: t("insights:insights.value_strip.book_cost"),
     pnl: t("holdings:unrealized_pnl"),
+    daily: t("insights:insights.value_strip.daily_change"),
     accounts: t("insights:insights.explorer.lens_accounts"),
     classes: t("insights:insights.chart_classes"),
     regions: t("insights:insights.chart_regions"),

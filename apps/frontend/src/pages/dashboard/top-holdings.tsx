@@ -4,6 +4,7 @@ import { TickerAvatar } from "@/components/ticker-avatar";
 import { useBalancePrivacy } from "@/hooks/use-balance-privacy";
 import { HoldingType, isAlternativeAssetKind } from "@/lib/constants";
 import { getBaseHoldingPerformancePercentForMode } from "@/lib/holding-performance";
+import { getInstrumentAvatarIdentity, getInstrumentPrimaryLabel } from "@/lib/instrument-display";
 import { formatOptionSubtitle, parseOccSymbol } from "@/lib/occ-symbol";
 import { Holding } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -56,8 +57,11 @@ function HoldingRow({
   const formatting = useNumberFormatting();
   const { t } = useTranslation();
   const symbol = holding.instrument?.symbol ?? holding.id;
+  const avatarIdentity = getInstrumentAvatarIdentity(holding.instrument);
   const parsedOption = parseOccSymbol(symbol);
-  const symbolLabel = parsedOption ? parsedOption.underlying : symbol.split(".")[0];
+  const symbolLabel = parsedOption
+    ? parsedOption.underlying
+    : getInstrumentPrimaryLabel(holding.instrument) || symbol.split(".")[0];
   const nameLabel = holding.instrument?.name?.trim() || symbolLabel;
   const title = showName ? nameLabel : symbolLabel;
   const subtitle = parsedOption
@@ -74,7 +78,7 @@ function HoldingRow({
               maximumFractionDigits: 3,
             }),
       });
-  const avatarSymbol = parsedOption ? parsedOption.underlying : symbol;
+  const avatarSymbol = parsedOption ? parsedOption.underlying : avatarIdentity.symbol;
   const marketValue = holding.marketValue?.base ?? 0;
   const gainAmount =
     performanceMode === "return"
@@ -97,7 +101,7 @@ function HoldingRow({
       <div className="flex min-w-0 flex-1 items-center gap-3">
         <TickerAvatar
           symbol={avatarSymbol}
-          exchangeMic={holding.instrument?.exchangeMic}
+          exchangeMic={parsedOption ? holding.instrument?.exchangeMic : avatarIdentity.exchangeMic}
           instrumentType={holding.instrument?.instrumentType}
           assetId={holding.instrument?.id}
           className="size-9 shrink-0"
@@ -155,7 +159,8 @@ function StackedAvatars({ holdings, totalRemaining, onClick }: StackedAvatarsPro
         {displayedHoldings.map((holding, index) => {
           const symbol = holding.instrument?.symbol ?? holding.id;
           const parsed = parseOccSymbol(symbol);
-          const avatarSym = parsed ? parsed.underlying : symbol;
+          const avatarIdentity = getInstrumentAvatarIdentity(holding.instrument);
+          const avatarSym = parsed ? parsed.underlying : avatarIdentity.symbol;
           return (
             <div
               key={holding.id}
@@ -164,7 +169,7 @@ function StackedAvatars({ holdings, totalRemaining, onClick }: StackedAvatarsPro
             >
               <TickerAvatar
                 symbol={avatarSym}
-                exchangeMic={holding.instrument?.exchangeMic}
+                exchangeMic={parsed ? holding.instrument?.exchangeMic : avatarIdentity.exchangeMic}
                 instrumentType={holding.instrument?.instrumentType}
                 assetId={holding.instrument?.id}
                 className="ring-background size-8 ring-2"

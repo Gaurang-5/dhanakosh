@@ -1,4 +1,7 @@
+import { usePortfolios } from "@/hooks/use-portfolios";
+import { useAccountScopeStore } from "@/lib/account-scope-store";
 import { getPlatforms } from "@/features/wealthfolio-connect";
+import { HOUSEHOLD_MODE } from "@/features/household/household-config";
 import { connectPagePath } from "@/features/wealthfolio-connect/lib/connect-url";
 import { useShowConnectAccountLink } from "@/features/wealthfolio-connect/hooks/use-show-connect-account-link";
 import { useAccounts } from "@/hooks/use-accounts";
@@ -33,12 +36,15 @@ type FilterType = "all" | "active" | "archived" | "hidden";
 
 const SettingsAccountsPage = () => {
   const { t } = useTranslation();
+  const scope = useAccountScopeStore((s) => s.scope);
+  const { data: portfolios = [] } = usePortfolios();
   const { accounts, isLoading } = useAccounts({ filterActive: false, includeArchived: true });
   const showConnectLink = useShowConnectAccountLink();
 
   const { data: platforms } = useQuery<Platform[], Error>({
     queryKey: [QueryKeys.PLATFORMS],
     queryFn: getPlatforms,
+    enabled: !HOUSEHOLD_MODE,
   });
 
   // Create a map of platform ID to platform for quick lookup
@@ -82,10 +88,21 @@ const SettingsAccountsPage = () => {
     });
   };
 
+  const scopedAccounts = useMemo(
+    () =>
+      accounts.filter((a) =>
+        scope.type === "accounts"
+          ? scope.accountIds.includes(a.id)
+          : scope.type === "account"
+            ? a.id === scope.accountId
+            : true,
+      ),
+    [accounts, scope],
+  );
+
   // Filter and search accounts
   const filteredAccounts = useMemo(() => {
-    let result = accounts;
-
+    let result = scopedAccounts;
     // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
@@ -113,7 +130,7 @@ const SettingsAccountsPage = () => {
     }
 
     return result;
-  }, [accounts, searchQuery, filter]);
+  }, [scopedAccounts, searchQuery, filter]);
 
   // Split accounts into active and hidden/archived sections
   const { activeAccounts, inactiveAccounts } = useMemo(() => {
@@ -133,11 +150,11 @@ const SettingsAccountsPage = () => {
   // Counts for section headers
   const counts = useMemo(
     () => ({
-      active: accounts.filter((a) => a.isActive && !a.isArchived).length,
-      hidden: accounts.filter((a) => !a.isActive && !a.isArchived).length,
-      archived: accounts.filter((a) => a.isArchived).length,
+      active: scopedAccounts.filter((a) => a.isActive && !a.isArchived).length,
+      hidden: scopedAccounts.filter((a) => !a.isActive && !a.isArchived).length,
+      archived: scopedAccounts.filter((a) => a.isArchived).length,
     }),
-    [accounts],
+    [scopedAccounts],
   );
 
   if (isLoading) {
@@ -153,6 +170,7 @@ const SettingsAccountsPage = () => {
     <AccountItem
       key={account.id}
       account={account}
+      portfolioName={portfolios.find((p) => p.accountIds.includes(account.id))?.name}
       platform={account.platformId ? platformMap.get(account.platformId) : undefined}
       onEdit={handleEditAccount}
       onDelete={handleDeleteAccount}
@@ -169,6 +187,7 @@ const SettingsAccountsPage = () => {
         <SettingsHeader
           heading={t("settings:accounts_title")}
           text={t("settings:accounts_description")}
+          backTo="/settings"
           actionsInline
         >
           {/* Mobile: icon button; Desktop: full button */}
@@ -247,7 +266,7 @@ const SettingsAccountsPage = () => {
                   <Icons.Plus className="me-2 h-4 w-4" />
                   {t("settings:accounts_add_first")}
                 </Button>
-                {showConnectLink && (
+                {showConnectLink && !HOUSEHOLD_MODE && (
                   <Link
                     to={connectPagePath("settings_accounts")}
                     className={buttonVariants({ variant: "link" })}

@@ -289,6 +289,40 @@ fn current_account_valuation_includes_security_and_cash_excludes_asset_kind_alte
 }
 
 #[test]
+fn current_portfolio_summary_classifies_ppf_ledger_balance_as_investment() {
+    let mut ppf = account("ppf", "INR");
+    ppf.meta = Some(r#"{"investmentProduct":"PPF"}"#.to_string());
+    let calculated_at = DateTime::<Utc>::from_timestamp(1_776_480_000, 0).unwrap();
+    let snapshots = HashMap::from([(
+        "ppf".to_string(),
+        snapshot(
+            "ppf",
+            "INR",
+            HashMap::new(),
+            HashMap::from([("INR".to_string(), dec!(3066442))]),
+        ),
+    )]);
+
+    let response = calculate_current_valuation_response_from_snapshots(
+        "accounts:ppf",
+        &[ppf],
+        &snapshots,
+        &HashMap::new(),
+        &HashMap::new(),
+        "INR",
+        calculated_at,
+        true,
+        latest_rate,
+    );
+
+    assert_eq!(response.summary.cash_balance_base, Decimal::ZERO);
+    assert_eq!(response.summary.investment_market_value_base, dec!(3066442));
+    assert_eq!(response.summary.total_value_base, dec!(3066442));
+    assert!(response.summary.cash_currency_split.is_empty());
+    assert_eq!(response.accounts[0].cash_balance_base, dec!(3066442));
+}
+
+#[test]
 fn current_valuation_response_excludes_expired_options() {
     let account = account("acc-1", "USD");
     let calculated_at = DateTime::<Utc>::from_timestamp(1_776_480_000, 0).unwrap();

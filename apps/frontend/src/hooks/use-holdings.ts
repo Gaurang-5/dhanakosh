@@ -1,3 +1,4 @@
+import { useHouseholdReport } from "@/features/household/household-report-context";
 import { useQuery } from "@tanstack/react-query";
 import { AccountScope, Holding } from "@/lib/types";
 import { getHoldingsList } from "@/adapters";
@@ -14,6 +15,7 @@ interface UseHoldingsWithClosedProbeOptions {
 }
 
 export function useHoldings(accountFilter: AccountScope, options: UseHoldingsOptions = {}) {
+  const family = useHouseholdReport();
   const includeClosed = options.includeClosed ?? false;
   const hasValidScope = (() => {
     switch (accountFilter.type) {
@@ -40,9 +42,25 @@ export function useHoldings(accountFilter: AccountScope, options: UseHoldingsOpt
   } = useQuery<Holding[], Error>({
     queryKey: [QueryKeys.HOLDINGS, accountFilter, { includeClosed }],
     queryFn: () => getHoldingsList(accountFilter, { includeClosed }),
-    enabled: isEnabled,
+    enabled: isEnabled && !family,
   });
 
+  if (family)
+    return {
+      holdings: family.holdings.filter(
+        (h) =>
+          (includeClosed || !h.isClosed) &&
+          (accountFilter.type === "account"
+            ? h.accountId === accountFilter.accountId
+            : accountFilter.type === "accounts"
+              ? accountFilter.accountIds.includes(h.accountId)
+              : true),
+      ),
+      dataUpdatedAt: 0,
+      isLoading: false,
+      isError: false,
+      error: null,
+    };
   return { holdings, dataUpdatedAt, isLoading, isError, error };
 }
 

@@ -94,7 +94,9 @@
     "annualized_return": "Rendement annualisé",
     "annualized_short": "Annualisé",
     "gain_loss": "Gain / perte",
-    "gain_loss_info": "Profit ou perte total sur la période sélectionnée. Ouvrez la métrique pour les détails d'attribution."
+    "gain_loss_info": "Profit ou perte total sur la période sélectionnée. Ouvrez la métrique pour les détails d'attribution.",
+    "today": "Aujourd'hui",
+    "today_info": "Variation depuis la clôture précédente pour les positions qui ont un cours du jour. Le cash n'est pas inclus."
   },
   "section": {
     "returns": "Rendements",

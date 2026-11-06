@@ -133,8 +133,29 @@ fn compile_leg(leg: &Leg, account: &AccountFacts, facts: &CanonicalFacts) -> Eco
         tax: activity.tax,
     };
     let action = action_for(activity, &mut diagnostics);
-    let contribution = contribution_for(activity, facts);
-    let flow = flow_for(activity, facts, multiplier, cash.as_ref(), &mut diagnostics);
+    let mut contribution = contribution_for(activity, facts);
+    let mut flow = flow_for(activity, facts, multiplier, cash.as_ref(), &mut diagnostics);
+    // A reinvestment's paired income and buy still settle against one another.
+    if account.separate_cash_ledger
+        && leg.event_id.as_str() == activity.id.as_str()
+        && (matches!(activity.kind, ActivityKind::Buy | ActivityKind::Sell)
+            || (activity.asset.is_some()
+                && matches!(
+                    activity.kind,
+                    ActivityKind::Dividend
+                        | ActivityKind::Interest
+                        | ActivityKind::Fee
+                        | ActivityKind::Tax
+                )))
+    {
+        if let Some(cash) = &cash {
+            contribution = Contribution::ExternalSettlement;
+            flow = Flow {
+                boundary: Boundary::External,
+                value: FlowValue::Cash(cash.amount.abs()),
+            };
+        }
+    }
     let attribution = attribution_for(activity, account, &action);
 
     EconomicEvent {
@@ -592,6 +613,7 @@ mod tests {
                 NaiveDate::from_ymd_opt(2025, 3, 5).unwrap(),
             ),
             accounts: vec![RawAccount {
+                separate_cash_ledger: false,
                 id: "a1".into(),
                 currency: "USD".into(),
                 account_type: account_type.into(),

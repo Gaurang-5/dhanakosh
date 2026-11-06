@@ -162,5 +162,12 @@
     "twr_hover_hint": " 값 위에 마우스를 올리면 누적 TWR을 볼 수 있습니다.",
     "irr_hover_hint": " 값 위에 마우스를 올리면 선택한 기간의 IRR을 볼 수 있습니다."
   },
-  "more_count_other": "+{{count}}개 더보기"
+  "more_count_other": "+{{count}}개 더보기",
+  "ppf_title": "Public Provident Fund (PPF)",
+  "ppf_description": "Track your actual PPF statement balance. Contributions add to the balance, credited interest records income, and withdrawals reduce it. Interest is not estimated or posted automatically.",
+  "ppf_deposit": "Add contribution",
+  "ppf_interest": "Record credited interest",
+  "ppf_withdrawal": "Record withdrawal",
+  "ppf_transfer_in": "Transfer from another account",
+  "ppf_opening_balance": "Starting midway? Record your statement opening balance as a deposit on the starting date, then add only later transactions. For money already tracked in another account, use a transfer to avoid counting the contribution twice."
 }

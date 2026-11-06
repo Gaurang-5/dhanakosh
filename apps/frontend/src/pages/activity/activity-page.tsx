@@ -1,4 +1,9 @@
-import { getAccounts } from "@/adapters";
+import { WorkspaceFilterHost } from "@/features/workspace/workspace-filter";
+import { useAccountScopeStore } from "@/lib/account-scope-store";
+import { HOUSEHOLD_MODE } from "@/features/household/household-config";
+import { useAccounts } from "@/hooks/use-accounts";
+import { useHouseholdScope } from "@/features/household/household-scope";
+import { MemberPortfolioRequired } from "@/features/household/member-portfolio-required";
 import { ActionPalette, type ActionPaletteGroup } from "@/components/action-palette";
 import { SwipablePage, type SwipablePageView } from "@/components/page";
 import {
@@ -15,13 +20,11 @@ import { useIsCompactTableViewport, useIsMobileViewport } from "@/hooks/use-plat
 import { getActivityRestrictionLevel } from "@/lib/activity-restrictions";
 import { ActivityType } from "@/lib/constants";
 import { debounce } from "@/lib/debounce";
-import { QueryKeys } from "@/lib/query-keys";
 import { Account, AccountScope, ActivityDetails } from "@/lib/types";
 import { formatDateISO } from "@/lib/utils";
 import { AlternativeAssetQuickAddModal } from "@/pages/asset/alternative-assets";
-import { useQuery } from "@tanstack/react-query";
 import type { SortingState } from "@tanstack/react-table";
-import { Button, Icons, Page, PageContent, PageHeader, buttonVariants } from "@wealthfolio/ui";
+import { Button, Icons, Page, PageContent, buttonVariants } from "@wealthfolio/ui";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DateRange } from "react-day-picker";
 import { useTranslation } from "react-i18next";
@@ -86,6 +89,9 @@ function fromDateRange(range: DateRange | undefined): ActivityDateRangeFilter {
 
 const ActivityPage = () => {
   const { t } = useTranslation();
+  const familyScope = useHouseholdScope();
+  const isFamily = familyScope?.isFamily ?? false;
+  const [chooseOwner, setChooseOwner] = useState(false);
   const [showBulkHoldingsForm, setShowBulkHoldingsForm] = useState(false);
   const [showAlternativeAssetModal, setShowAlternativeAssetModal] = useState(false);
   const [transferMatchDialog, setTransferMatchDialog] = useState<{
@@ -102,14 +108,43 @@ const ActivityPage = () => {
     formOpen: showForm,
     deleteDialogOpen: showDeleteAlert,
     isDeleting,
-    openForm: handleEdit,
+    openForm: openMemberForm,
     closeForm: handleFormClose,
-    requestDelete: handleDelete,
+    requestDelete: deleteMemberActivity,
     cancelDelete: handleDeleteCancel,
     confirmDelete: handleDeleteConfirm,
-    duplicateActivity: handleDuplicate,
+    duplicateActivity: duplicateMemberActivity,
   } = useActivityActionDialogs();
   const navigate = useNavigate();
+  const openOwner = useCallback(
+    (activity?: ActivityDetails) => {
+      const separator = activity?.id.indexOf("::") ?? -1;
+      if (activity && separator > 0) {
+        familyScope?.selectMember(
+          activity.id.slice(0, separator),
+          `/activities?activity=${encodeURIComponent(activity.id.slice(separator + 2))}`,
+        );
+      } else {
+        setChooseOwner(true);
+      }
+    },
+    [familyScope],
+  );
+  const handleEdit = useCallback(
+    (activity?: ActivityDetails) => {
+      if (isFamily) openOwner(activity);
+      else openMemberForm(activity);
+    },
+    [isFamily, openOwner, openMemberForm],
+  );
+  const handleDelete = (activity: ActivityDetails) => {
+    if (isFamily) openOwner(activity);
+    else deleteMemberActivity(activity);
+  };
+  const handleDuplicate = async (activity: ActivityDetails) => {
+    if (isFamily) openOwner(activity);
+    else await duplicateMemberActivity(activity);
+  };
   const showConnectAccountLink = useShowConnectAccountLink();
   const [searchParams, setSearchParams] = useSearchParams();
   const activityUrlFilterKey = searchParams.toString();
@@ -119,10 +154,8 @@ const ActivityPage = () => {
   );
 
   // Filter and search state
-  const [persistedAccountScope, setPersistedAccountScope] = usePersistentState<AccountScope>(
-    "activity-filter-scope",
-    { type: "all" },
-  );
+  const persistedAccountScope = useAccountScopeStore((s) => s.scope);
+  const setPersistedAccountScope = useAccountScopeStore((s) => s.setScope);
   const { data: portfolios = [] } = usePortfolios();
   const [selectedActivityTypes, setSelectedActivityTypes] = usePersistentState<ActivityType[]>(
     "activity-filter-types",
@@ -132,8 +165,9 @@ const ActivityPage = () => {
     "activity-filter-instrument-types",
     [],
   );
-  const [persistedStatusFilter, setPersistedStatusFilter] =
-    usePersistentState<ActivityStatusFilter>("activity-filter-status", "all");
+  // Review status is a temporary workflow filter. Persisting it made a later
+  // account selection look empty even when that account had completed trades.
+  const [persistedStatusFilter, setPersistedStatusFilter] = useState<ActivityStatusFilter>("all");
   const [selectedDateRange, setSelectedDateRange] = usePersistentState<ActivityDateRangeFilter>(
     "activity-filter-date-range",
     {},
@@ -156,10 +190,11 @@ const ActivityPage = () => {
   const [pageSize, setPageSize] = usePersistentState("activity-datagrid-page-size", 50);
 
   const {
-    isEnabled: isSpendingEnabled,
+    isEnabled: spendingEnabled,
     accountIds: spendingAccountIds,
     isLoading: isSpendingSettingsLoading,
   } = useSpendingSettings();
+  const isSpendingEnabled = spendingEnabled && !HOUSEHOLD_MODE;
 
   const hasActivityUrlFilters =
     searchParams.has("account") ||
@@ -245,7 +280,7 @@ const ActivityPage = () => {
 
   const setAccountScope = useCallback(
     (scope: AccountScope) => {
-      materializeInvestmentFilters({ accountScope: scope });
+      materializeInvestmentFilters({ accountScope: scope, statusFilter: "all" });
     },
     [materializeInvestmentFilters],
   );
@@ -259,8 +294,14 @@ const ActivityPage = () => {
 
   const handleReviewActivities = useCallback(() => {
     setViewMode("datagrid");
-    setStatusFilter("pending");
-  }, [setStatusFilter, setViewMode]);
+    materializeInvestmentFilters({
+      statusFilter: "pending",
+      activityTypes: [],
+      instrumentTypes: [],
+      dateRange: {},
+      searchQuery: "",
+    });
+  }, [materializeInvestmentFilters, setViewMode]);
 
   const setInvestmentDateRange = useCallback(
     (range: DateRange | undefined) => {
@@ -366,11 +407,8 @@ const ActivityPage = () => {
     };
   }, [debouncedUpdateSearch]);
 
-  const { data: accounts = [] } = useQuery<Account[], Error>({
-    queryKey: [QueryKeys.ACCOUNTS],
-    queryFn: () => getAccounts(),
-  });
-  const isDatagridView = viewMode === "datagrid";
+  const { accounts = [] } = useAccounts({ filterActive: false });
+  const isDatagridView = !isFamily && viewMode === "datagrid";
   const shouldUseDatagridView = isDatagridView && !isCompactTableViewport;
 
   // Resolve the typed scope to a flat account ID list for the activity search.
@@ -533,13 +571,27 @@ const ActivityPage = () => {
     ? paginatedSearch.totalRowCount
     : infiniteSearch.totalRowCount;
 
-  const handleLinkTransfer = useCallback((activity: ActivityDetails) => {
-    setTransferMatchDialog({ open: true, mode: "link", activity });
-  }, []);
+  const handleLinkTransfer = useCallback(
+    (activity: ActivityDetails) => {
+      if (isFamily) {
+        openOwner(activity);
+        return;
+      }
+      setTransferMatchDialog({ open: true, mode: "link", activity });
+    },
+    [isFamily, openOwner],
+  );
 
-  const handleUnlinkTransfer = useCallback((activity: ActivityDetails) => {
-    setTransferMatchDialog({ open: true, mode: "unlink", activity });
-  }, []);
+  const handleUnlinkTransfer = useCallback(
+    (activity: ActivityDetails) => {
+      if (isFamily) {
+        openOwner(activity);
+        return;
+      }
+      setTransferMatchDialog({ open: true, mode: "unlink", activity });
+    },
+    [isFamily, openOwner],
+  );
 
   const investmentsFiltersActive =
     accountScope.type !== "all" ||
@@ -719,6 +771,15 @@ const ActivityPage = () => {
     </div>
   );
 
+  // Spending keeps Investments | Spending in the page header. Otherwise this
+  // toolbar is the only header, so the portfolio menu and add button live here.
+  const pageActions = isSpendingEnabled ? undefined : (
+    <>
+      <WorkspaceFilterHost />
+      {investmentActions}
+    </>
+  );
+
   const investmentContent = (
     // No clipping here: the table's card scrolls sideways itself when it is
     // too wide, a clip would cut off the card's edge and shadow, and a scroll
@@ -761,6 +822,7 @@ const ActivityPage = () => {
           isCompactView={isCompactView}
           onCompactViewChange={setIsCompactView}
           onFilterChange={setMobileFilters}
+          trailing={pageActions}
         />
       ) : (
         <ActivityViewControls
@@ -779,13 +841,17 @@ const ActivityPage = () => {
           dateRange={effectiveDateRange}
           onDateRangeChange={setInvestmentDateRange}
           onResetFilters={clearInvestmentsFilters}
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
+          viewMode={isFamily ? "table" : viewMode}
+          onViewModeChange={(mode) => {
+            setViewMode(mode);
+            if (isFamily && mode === "datagrid") setChooseOwner(true);
+          }}
           totalFetched={shouldUseDatagridView ? undefined : totalFetched}
           totalRowCount={shouldUseDatagridView ? undefined : totalRowCount}
           isFetching={
             shouldUseDatagridView ? paginatedSearch.isFetching : infiniteSearch.isFetching
           }
+          trailing={pageActions}
         />
       )}
 
@@ -914,11 +980,14 @@ const ActivityPage = () => {
     </>
   );
 
-  // When spending is disabled, keep the classic Activity page header — no pills.
+  if (isFamily && (chooseOwner || showBulkHoldingsForm || showAlternativeAssetModal)) {
+    return <MemberPortfolioRequired>{null}</MemberPortfolioRequired>;
+  }
+
+  // When spending is disabled, the search toolbar is the page header.
   if (!isSpendingEnabled) {
     return (
       <Page>
-        <PageHeader actions={investmentActions} />
         <PageContent className="pb-2 md:pb-4 lg:pb-5">{investmentContent}</PageContent>
         {sharedModals}
       </Page>

@@ -1,3 +1,4 @@
+import { getInstrumentPrimaryLabel, getInstrumentSecondaryLabel } from "@/lib/instrument-display";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Icons } from "@wealthfolio/ui";
@@ -134,11 +135,11 @@ export function EligibleHoldingsSelector({
                         <SelectionMark selected={selected} />
                         <span className="min-w-0 flex-1">
                           <span className="block font-mono text-xs font-semibold">
-                            {holding.symbol}
+                            {getInstrumentPrimaryLabel(holding)}
                           </span>
-                          {holding.name && (
+                          {getInstrumentSecondaryLabel(holding) && (
                             <span className="text-muted-foreground block truncate text-xs">
-                              {holding.name}
+                              {getInstrumentSecondaryLabel(holding)}
                             </span>
                           )}
                           <span className="text-muted-foreground/80 text-2xs block truncate font-mono">

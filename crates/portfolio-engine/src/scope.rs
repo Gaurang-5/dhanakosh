@@ -142,6 +142,7 @@ mod tests {
 
     fn account(id: &str) -> RawAccount {
         RawAccount {
+            separate_cash_ledger: false,
             id: id.into(),
             currency: "USD".into(),
             account_type: "SECURITIES".into(),

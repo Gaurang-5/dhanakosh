@@ -144,7 +144,7 @@ async function seedHistory(context: BrowserContext, scope: string) {
 
 async function switchProfile(page: Page, current: string, next: string) {
   await page.getByRole("button", { name: `Profile menu for ${current}` }).click();
-  await page.getByRole("menuitem", { name: "Switch profile", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Switch family member", exact: true }).click();
   await page.getByRole("button", { name: next, exact: true }).click();
   await expect(page.getByRole("button", { name: `Profile menu for ${next}` })).toBeVisible();
 }

@@ -1,3 +1,4 @@
+import { accountLabel } from "@/lib/account-label";
 import { Button } from "@wealthfolio/ui/components/ui/button";
 import {
   Command,
@@ -310,7 +311,9 @@ export const AccountSelector = forwardRef<HTMLButtonElement, AccountSelectorProp
                         transition={{ duration: 0.2 }}
                         className="space-y-0"
                       >
-                        <p className="text-xs font-medium">{selectedAccount.name}</p>
+                        <p className="text-xs font-medium">
+                          {accountLabel(selectedAccount, portfolios)}
+                        </p>
                         <p className="text-muted-foreground text-xs">
                           {selectedAccount.accountType}
                         </p>
@@ -370,7 +373,7 @@ export const AccountSelector = forwardRef<HTMLButtonElement, AccountSelectorProp
                             accountTypeIcons[selectedAccount.accountType] ?? Icons.CreditCard;
                           return <IconComponent className="h-4 w-4 shrink-0 opacity-70" />;
                         })()}
-                        <span>{selectedAccount.name}</span>
+                        <span>{accountLabel(selectedAccount, portfolios)}</span>
                       </>
                     ) : (
                       <span className="text-muted-foreground">
@@ -404,7 +407,7 @@ export const AccountSelector = forwardRef<HTMLButtonElement, AccountSelectorProp
                         accountTypeIcons[selectedAccount.accountType] ?? Icons.CreditCard;
                       return <IconComponent className="h-4 w-4 shrink-0 opacity-70" />;
                     })()}
-                    <span className="truncate">{selectedAccount.name}</span>
+                    <span className="truncate">{accountLabel(selectedAccount, portfolios)}</span>
                   </>
                 ) : (
                   <span className="text-muted-foreground">
@@ -511,7 +514,11 @@ export const AccountSelector = forwardRef<HTMLButtonElement, AccountSelectorProp
                                   <CommandItem
                                     key={account.id}
                                     value={account.id}
-                                    keywords={[account.name, account.currency, account.accountType]}
+                                    keywords={[
+                                      accountLabel(account, portfolios),
+                                      account.currency,
+                                      account.accountType,
+                                    ]}
                                     onSelect={() => {
                                       setSelectedAccount(account);
                                       setOpen(false);
@@ -521,7 +528,7 @@ export const AccountSelector = forwardRef<HTMLButtonElement, AccountSelectorProp
                                     <div className="flex flex-1 items-center">
                                       <IconComponent className="me-2 h-4 w-4" />
                                       <span>
-                                        {account.name} ({account.currency})
+                                        {accountLabel(account, portfolios)} ({account.currency})
                                       </span>
                                     </div>
                                     <Icons.Check

@@ -33,6 +33,7 @@ const STALENESS_THRESHOLD_DAYS: i64 = 90;
 /// Service for calculating net worth.
 #[derive(Clone)]
 pub struct NetWorthService {
+    account_scope: Option<Vec<String>>,
     base_currency: Arc<RwLock<String>>,
     account_repository: Arc<dyn AccountRepositoryTrait>,
     asset_repository: Arc<dyn AssetRepositoryTrait>,
@@ -72,6 +73,7 @@ impl NetWorthService {
             valuation_repository,
             fx_service,
             loan_payments: None,
+            account_scope: None,
         }
     }
 
@@ -411,6 +413,26 @@ impl NetWorthService {
 
 #[async_trait]
 impl NetWorthServiceTrait for NetWorthService {
+    async fn get_scoped_net_worth(
+        &self,
+        date: NaiveDate,
+        account_ids: Option<Vec<String>>,
+    ) -> Result<NetWorthResponse> {
+        let mut scoped = self.clone();
+        scoped.account_scope = account_ids;
+        scoped.get_net_worth(date).await
+    }
+    async fn get_scoped_net_worth_history(
+        &self,
+        start: NaiveDate,
+        end: NaiveDate,
+        account_ids: Option<Vec<String>>,
+    ) -> Result<Vec<NetWorthHistoryPoint>> {
+        let mut scoped = self.clone();
+        scoped.account_scope = account_ids;
+        scoped.get_net_worth_history(start, end).await
+    }
+
     async fn get_net_worth(&self, date: NaiveDate) -> Result<NetWorthResponse> {
         let base_currency = self
             .base_currency
@@ -421,7 +443,9 @@ impl NetWorthServiceTrait for NetWorthService {
         debug!("Calculating net worth as of {} in {}", date, base_currency);
 
         // Get all non-archived accounts (includes closed accounts for historical net worth)
-        let accounts = self.account_repository.list(None, Some(false), None)?;
+        let accounts =
+            self.account_repository
+                .list(None, Some(false), self.account_scope.as_deref())?;
 
         // Get account IDs
         let account_ids: Vec<String> = accounts.iter().map(|a| a.id.clone()).collect();
@@ -465,16 +489,20 @@ impl NetWorthServiceTrait for NetWorthService {
             };
 
             if let Some(account_valuation) = stored_account_valuation {
-                if !account_valuation.investment_market_value_base.is_zero() {
+                let investment_value = account_valuation.investment_market_value_base
+                    + if account.is_ppf_investment() {
+                        account_valuation.cash_balance_base
+                    } else {
+                        Decimal::ZERO
+                    };
+                if !investment_value.is_zero() {
                     valuations.push(ValuationInfo {
                         asset_id: format!("INVESTMENTS:{}", account.id),
                         name: Some(account.name.clone()),
-                        market_value_base: account_valuation
-                            .investment_market_value_base
-                            .round_dp(DECIMAL_PRECISION),
+                        market_value_base: investment_value.round_dp(DECIMAL_PRECISION),
                         valuation_date: account_valuation.valuation_date,
                         category: AssetCategory::Investment,
-                        is_cash_like: false,
+                        is_cash_like: account.is_ppf_investment(),
                     });
                 }
 
@@ -483,7 +511,7 @@ impl NetWorthServiceTrait for NetWorthService {
                 let cash_base = account_valuation
                     .cash_balance_base
                     .round_dp(DECIMAL_PRECISION);
-                if !cash_base.is_zero() {
+                if !account.is_ppf_investment() && !cash_base.is_zero() {
                     valuations.push(ValuationInfo {
                         asset_id: format!("CASH:{}", account.id),
                         name: Some(account.name.clone()),
@@ -659,11 +687,21 @@ impl NetWorthServiceTrait for NetWorthService {
 
                 // Name by account (with currency suffix) so the Cash drill-down
                 // lists each account distinctly instead of repeating "Cash (USD)".
+                let is_ppf = account.is_ppf_investment();
                 let (asset_id, name, market_value_base, category) = (
-                    format!("CASH:{}:{}", account.id, currency),
+                    format!(
+                        "{}:{}:{}",
+                        if is_ppf { "PPF" } else { "CASH" },
+                        account.id,
+                        currency
+                    ),
                     Some(format!("{} ({})", account.name, currency)),
                     cash_base,
-                    AssetCategory::Cash,
+                    if is_ppf {
+                        AssetCategory::Investment
+                    } else {
+                        AssetCategory::Cash
+                    },
                 );
 
                 valuations.push(ValuationInfo {
@@ -684,6 +722,15 @@ impl NetWorthServiceTrait for NetWorthService {
         let alternative_assets: Vec<_> = all_assets
             .iter()
             .filter(|a| a.kind.is_alternative())
+            .filter(|a| {
+                self.account_scope.as_ref().is_none_or(|ids| {
+                    a.metadata
+                        .as_ref()
+                        .and_then(|m| m.get("accountId"))
+                        .and_then(|id| id.as_str())
+                        .is_some_and(|id| ids.iter().any(|v| v == id))
+                })
+            })
             .collect();
 
         let mut loan_payments = self.loan_payments(&alternative_assets, self.timezone())?;
@@ -852,7 +899,9 @@ impl NetWorthService {
         }
 
         let mut portfolio_by_date: BTreeMap<NaiveDate, PortfolioState> = BTreeMap::new();
-        let accounts = self.account_repository.list(None, Some(false), None)?;
+        let accounts =
+            self.account_repository
+                .list(None, Some(false), self.account_scope.as_deref())?;
         for account in accounts {
             // Liability accounts (e.g. credit cards) are tracked separately as
             // liabilities/cash assets below; excluding them here avoids double-counting.
@@ -875,8 +924,12 @@ impl NetWorthService {
                     });
                 entry.value += val.total_value_base;
                 entry.net_contribution += val.net_contribution_base;
-                entry.cash += val.cash_balance_base;
-                entry.investments += val.investment_market_value_base;
+                if account.is_ppf_investment() {
+                    entry.investments += val.investment_market_value_base + val.cash_balance_base;
+                } else {
+                    entry.cash += val.cash_balance_base;
+                    entry.investments += val.investment_market_value_base;
+                }
             }
         }
         let first_portfolio_date = portfolio_by_date.keys().next().copied();
@@ -889,6 +942,15 @@ impl NetWorthService {
         let alternative_assets: Vec<_> = all_assets
             .iter()
             .filter(|a| a.kind.is_alternative())
+            .filter(|a| {
+                self.account_scope.as_ref().is_none_or(|ids| {
+                    a.metadata
+                        .as_ref()
+                        .and_then(|m| m.get("accountId"))
+                        .and_then(|id| id.as_str())
+                        .is_some_and(|id| ids.iter().any(|v| v == id))
+                })
+            })
             .collect();
 
         // Separate assets from liabilities
@@ -1023,7 +1085,9 @@ impl NetWorthService {
         // =====================================================================
         // 5. Load credit card liability valuations
         // =====================================================================
-        let accounts = self.account_repository.list(None, Some(false), None)?;
+        let accounts =
+            self.account_repository
+                .list(None, Some(false), self.account_scope.as_deref())?;
         let credit_card_account_ids: Vec<String> = accounts
             .iter()
             .filter(|account| is_liability_account_type(&account.account_type))

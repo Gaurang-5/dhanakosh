@@ -1346,6 +1346,27 @@ async fn test_cash_included_in_investments() {
 }
 
 #[tokio::test]
+async fn test_ppf_ledger_balance_is_an_investment_not_cash() {
+    let mut account = create_test_account("ppf", "SECURITIES", "INR");
+    account.tracking_mode = crate::accounts::TrackingMode::Transactions;
+    account.meta = Some(r#"{"investmentProduct":"PPF"}"#.to_string());
+    let snapshot = create_test_snapshot(
+        "ppf",
+        vec![],
+        HashMap::from([("INR".to_string(), dec!(3066442))]),
+    );
+
+    let service = create_net_worth_service(vec![account], vec![], vec![snapshot], vec![]);
+    let date = NaiveDate::from_ymd_opt(2024, 1, 15).unwrap();
+    let result = service.get_net_worth(date).await.unwrap();
+
+    assert_eq!(result.net_worth, dec!(3066442));
+    assert_eq!(get_category_value(&result, "investments"), dec!(3066442));
+    assert_eq!(get_category_value(&result, "cash"), Decimal::ZERO);
+    assert!(result.stale_assets.is_empty());
+}
+
+#[tokio::test]
 async fn test_credit_card_negative_balance_is_liability() {
     let account = create_test_account("card1", "CREDIT_CARD", "USD");
     let mut cash = HashMap::new();

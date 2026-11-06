@@ -93,7 +93,9 @@
     "annualized_return": "年率リターン",
     "annualized_short": "年率",
     "gain_loss": "損益",
-    "gain_loss_info": "選択した期間の損益合計です。指標を開くと要因の内訳を確認できます。"
+    "gain_loss_info": "選択した期間の損益合計です。指標を開くと要因の内訳を確認できます。",
+    "today": "本日",
+    "today_info": "日次価格がある保有の、前日終値からの値動きです。現金は含みません。"
   },
   "section": {
     "returns": "リターン",

@@ -1,11 +1,10 @@
-# Brand Assets (Trademarks)
+# Brand Assets
 
-This directory contains Wealthfolio brand assets (names, logos, wordmarks,
-icons).
+This directory contains the Dhanakosh mark used by this fork. It is not the
+Wealthfolio logo.
 
-These assets are **not** licensed under the project's software license
-(AGPL-3.0). No trademark rights are granted to use these assets except as
-permitted by [TRADEMARKS.md](../../TRADEMARKS.md).
+Wealthfolio names and logos remain trademarks of Teymz Inc. They are **not**
+licensed under AGPL-3.0. See [TRADEMARKS.md](../../TRADEMARKS.md).
 
 ## For Forks and Modified Distributions
 

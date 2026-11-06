@@ -2,6 +2,7 @@ import { profilePreferenceKey, readProfilePreference } from "@/hooks/use-persist
 import { useHapticFeedback, useIsMobileViewport } from "@/hooks";
 import { cn } from "@/lib/utils";
 import { Page, SwipableView, type Icon } from "@wealthfolio/ui";
+import { WorkspaceFilterHost } from "@/features/workspace/workspace-filter";
 import { motion } from "motion/react";
 import * as React from "react";
 import { useSearchParams } from "react-router-dom";
@@ -237,38 +238,40 @@ export function SwipablePage({
           <div className="flex h-full flex-col md:hidden">
             {/* Mobile Navigation at top */}
             <div className="pt-safe flex shrink-0 flex-col gap-2 px-3 pb-2">
-              <div
-                className={cn(
-                  "grid w-full items-center gap-2",
-                  mobileActionsInHeader
-                    ? "xs:grid-cols-[2.5rem_minmax(0,1fr)_auto] grid-cols-[minmax(0,1fr)_auto]"
-                    : "grid-cols-[1fr_auto_1fr]",
-                )}
-              >
-                <div className={mobileActionsInHeader ? "xs:block hidden w-10" : "w-10"} />
-                <div
-                  className={cn(
-                    "min-w-0",
-                    mobileActionsInHeader && "xs:justify-center flex justify-end",
-                  )}
-                >
-                  <MobileNavigation
-                    views={views}
-                    currentView={currentView}
-                    onViewChange={handleViewChange}
-                    compact={mobileActionsInHeader}
-                  />
-                </div>
-                {mobileActionsInHeader ? (
+              {mobileActionsInHeader ? (
+                <div className="xs:grid-cols-[2.5rem_minmax(0,1fr)_auto] grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+                  <div className="xs:block hidden w-10" />
+                  <div className="xs:justify-center flex min-w-0 justify-end">
+                    <MobileNavigation
+                      views={views}
+                      currentView={currentView}
+                      onViewChange={handleViewChange}
+                      compact
+                    />
+                  </div>
                   <div className="flex min-w-0 shrink-0 items-center justify-end gap-2">
+                    <WorkspaceFilterHost />
                     {currentActions}
                   </div>
-                ) : (
-                  <div />
-                )}
-              </div>
-              {currentActions && !mobileActionsInHeader && (
-                <div className="flex min-w-0 items-center justify-end gap-2">{currentActions}</div>
+                </div>
+              ) : (
+                <>
+                  <div className="flex w-full min-w-0 justify-center">
+                    <MobileNavigation
+                      views={views}
+                      currentView={currentView}
+                      onViewChange={handleViewChange}
+                    />
+                  </div>
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <div className="flex min-w-0 max-w-full">
+                      <WorkspaceFilterHost />
+                    </div>
+                    <div className="ms-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
+                      {currentActions}
+                    </div>
+                  </div>
+                </>
               )}
             </div>
 
@@ -313,7 +316,10 @@ export function SwipablePage({
                 />
               </div>
               {/* Actions slot - renders current view's actions */}
-              <div className="flex items-center gap-2">{currentActions}</div>
+              <div className="flex items-center gap-2">
+                <WorkspaceFilterHost />
+                {currentActions}
+              </div>
             </div>
 
             {/* Content - relative for absolute positioned actions within */}

@@ -15,6 +15,7 @@ pub struct BondProfile {
 /// Asset profile data from market data providers
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct AssetProfile {
+    pub fund_holdings: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bond: Option<BondProfile>,
     /// Provider that supplied this profile (e.g., "YAHOO", "ALPHA_VANTAGE")

@@ -51,6 +51,25 @@ impl ProviderCapabilities {
     /// Get capabilities for a provider by ID.
     pub fn for_provider(provider_id: &str) -> Option<Self> {
         match provider_id {
+            "BHARATSTOCK" => Some(Self {
+                instruments: "Indian mutual funds and ETFs".into(),
+                coverage: "India".into(),
+                features: vec![
+                    "Full monthly fund compositions".into(),
+                    "Official AMC disclosures".into(),
+                    "Requires API key".into(),
+                ],
+            }),
+            "AMFI" => Some(Self {
+                instruments: "Indian mutual funds".into(),
+                coverage: "India".into(),
+                features: vec![
+                    "Daily NAV".into(),
+                    "Historical".into(),
+                    "Search".into(),
+                    "No API key".into(),
+                ],
+            }),
             "YAHOO" => Some(Self {
                 instruments: "Stocks • Crypto • Forex • Metals".to_string(),
                 coverage: "Global".to_string(),

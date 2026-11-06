@@ -263,6 +263,7 @@ impl Scenario {
                 .accounts
                 .iter()
                 .map(|a| RawAccount {
+                    separate_cash_ledger: false,
                     id: a.id.clone(),
                     currency: a.currency.clone(),
                     account_type: a.account_type.clone(),

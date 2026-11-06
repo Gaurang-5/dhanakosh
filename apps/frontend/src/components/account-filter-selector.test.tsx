@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { AccountScopeSelector } from "./account-filter-selector";
+import { AccountScopeEditor as AccountScopeSelector } from "./account-filter-selector";
 
 const viewport = vi.hoisted(() => ({ mobile: false }));
 const inventory = vi.hoisted(() => ({

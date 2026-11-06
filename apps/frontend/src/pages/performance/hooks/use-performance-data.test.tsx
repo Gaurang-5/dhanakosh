@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/adapters", () => ({
+  isWeb: false,
   calculatePerformanceHistory: mocks.calculatePerformanceHistory,
 }));
 

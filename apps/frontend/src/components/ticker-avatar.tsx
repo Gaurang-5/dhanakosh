@@ -19,6 +19,7 @@ interface TickerAvatarProps {
   src?: string;
   exchangeMic?: string | null;
   instrumentType?: string | null;
+  fallbackName?: string | null;
   className?: string;
   imageClassName?: string;
 }
@@ -31,6 +32,7 @@ export const TickerAvatar = ({
   src,
   exchangeMic,
   instrumentType,
+  fallbackName,
   className = "size-8",
   imageClassName = "object-cover p-0",
 }: TickerAvatarProps) => {
@@ -58,13 +60,27 @@ export const TickerAvatar = ({
       ? (override.ref?.sha256 ?? "")
       : "";
   const chainKey = `${customKey}\n${bundledLogoUrls.join("\n")}`;
-  const fallbackAvatarLabel = baseSymbol ? getFallbackAvatarLabel(baseSymbol) : "•";
+  const nameInitials = fallbackName
+    ?.trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((word) => word[0])
+    .join("")
+    .toUpperCase();
+  const fallbackAvatarLabel =
+    nameInitials || (baseSymbol ? getFallbackAvatarLabel(baseSymbol) : "•");
 
   // Index of the candidate currently shown; restarts from 0 whenever the chain changes
   const [failed, setFailed] = useState({ chainKey, index: 0 });
   const candidateIndex = failed.chainKey === chainKey ? failed.index : 0;
   const logoUrl = candidates[candidateIndex] ?? "";
-  const logoSource = !logoUrl ? "initials" : logoUrl === customSrc ? "custom" : "bundled";
+  const logoSource = !logoUrl
+    ? "initials"
+    : logoUrl === customSrc
+      ? "custom"
+      : logoUrl.startsWith("https://")
+        ? "remote"
+        : "bundled";
 
   if (cashAvatarLabel) {
     return (
@@ -82,6 +98,7 @@ export const TickerAvatar = ({
     <Avatar className={className} data-logo-source={logoSource}>
       <AvatarImage
         src={logoUrl}
+        referrerPolicy="no-referrer"
         alt={fullSymbol}
         className={imageClassName}
         onLoadingStatusChange={(status) => {

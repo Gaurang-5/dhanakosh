@@ -9,6 +9,8 @@ use super::shared::{parse_date, parse_date_optional};
 
 #[derive(serde::Deserialize)]
 struct NetWorthQuery {
+    #[serde(rename = "accountIds")]
+    account_ids: Option<String>,
     /// Optional date in ISO format (YYYY-MM-DD). Defaults to today.
     date: Option<String>,
 }
@@ -25,12 +27,25 @@ async fn get_net_worth(
                 .unwrap_or_else(|poisoned| poisoned.into_inner()),
         ))
     });
-    let response = state.net_worth_service.get_net_worth(as_of_date).await?;
+    let response = state
+        .net_worth_service
+        .get_scoped_net_worth(
+            as_of_date,
+            q.account_ids.map(|s| {
+                s.split(',')
+                    .filter(|id| !id.is_empty())
+                    .map(str::to_owned)
+                    .collect()
+            }),
+        )
+        .await?;
     Ok(Json(response))
 }
 
 #[derive(serde::Deserialize)]
 struct NetWorthHistoryQuery {
+    #[serde(rename = "accountIds")]
+    account_ids: Option<String>,
     /// Start date in ISO format (YYYY-MM-DD)
     #[serde(rename = "startDate")]
     start_date: String,
@@ -48,7 +63,16 @@ async fn get_net_worth_history(
 
     let history = state
         .net_worth_service
-        .get_net_worth_history(start, end)
+        .get_scoped_net_worth_history(
+            start,
+            end,
+            q.account_ids.map(|s| {
+                s.split(',')
+                    .filter(|id| !id.is_empty())
+                    .map(str::to_owned)
+                    .collect()
+            }),
+        )
         .await?;
     Ok(Json(history))
 }

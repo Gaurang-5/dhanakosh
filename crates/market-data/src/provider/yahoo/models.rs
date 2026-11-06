@@ -89,6 +89,8 @@ pub struct YahooSummaryDetail {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct YahooTopHoldings {
+    #[serde(default)]
+    pub holdings: Vec<serde_json::Value>,
     /// Sector weightings - each element is a map with sector name as key
     /// e.g., [{"technology": {"raw": 0.30}}, {"healthcare": {"raw": 0.15}}]
     #[serde(default)]

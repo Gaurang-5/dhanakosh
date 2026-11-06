@@ -1,5 +1,6 @@
 {
   "needs_review_alert": {
+    "amountMismatch": "Recorded amount {{recorded}} differs from {{calculated}} calculated from quantity, price and charges. Confirm the final amount.",
     "title_one": "{{count}} 筆交易紀錄需要檢查",
     "title_other": "{{count}} 筆交易紀錄需要檢查",
     "description": "請確認每筆交易的資產、類型與最終金額。",
@@ -210,7 +211,7 @@
   "import_step_4_title": "匯入結果",
   "import_select_account": "選取帳戶",
   "import_select_account_help": "請確保選取你要為其匯入交易紀錄的帳戶",
-  "import_upload_csv": "上傳 CSV 檔案",
+  "import_upload_csv": "上傳 CSV / Excel 檔案",
   "import_upload_csv_help": "上傳包含投資交易紀錄的 CSV 檔案。檔案的第一列應包含表頭。",
   "import_no_account_selected": "未選取帳戶",
   "import_file_contains_errors": "檔案包含錯誤",
@@ -820,6 +821,34 @@
       "goToAccount": "前往帳戶",
       "somethingWentWrong": "發生錯誤了。"
     },
+    "history": {
+    "title": "過往匯入",
+    "description": "可以查看並復原的 CSV 活動匯入。",
+    "empty": "還沒有 CSV 匯入。",
+    "loadError": "無法載入過往匯入。",
+    "show": "過往匯入",
+    "options": "匯入選項",
+    "undo": "復原",
+    "undoing": "正在復原…",
+    "statusApplied": "已匯入",
+    "statusReverted": "已復原",
+    "statusFailed": "失敗",
+    "statusRunning": "進行中",
+    "statusCancelled": "已取消",
+    "statusNeedsReview": "需要檢查",
+    "inserted_one": "{{count}} 筆交易",
+    "inserted_other": "{{count}} 筆交易",
+    "skipped": "略過 {{count}} 筆",
+    "unknownAccount": "未知帳戶",
+    "confirmTitle": "復原這次匯入？",
+    "confirmDescription_one": "這會從 {{label}} 刪除 {{count}} 筆交易，包括匯入後你改過的交易。匯入時建立的資產會保留。",
+    "confirmDescription_other": "這會從 {{label}} 刪除 {{count}} 筆交易，包括匯入後你改過的交易。匯入時建立的資產會保留。",
+    "confirmAction": "復原匯入",
+    "keep": "保留匯入",
+    "undoSuccess_one": "已刪除 {{count}} 筆交易。",
+    "undoSuccess_other": "已刪除 {{count}} 筆交易。",
+    "undoError": "無法復原這次匯入。"
+  },
     "toolbar": {
       "cancel": "取消",
       "configureMapping": "設定對應",
@@ -839,7 +868,14 @@
       "selectAccount": "選取帳戶",
       "selectAccountHelp": "為匯入的交易紀錄選取預設帳戶。如果 CSV 包含有效帳戶 ID 的 Account 欄位，系統會優先套用各資料列中的帳戶。",
       "noAccountSelected": "未選取帳戶",
-      "uploadCsv": "上傳 CSV 檔案",
+      "excelSheet": "Excel worksheet",
+      "excelChooseSheet": "Select a worksheet",
+      "excelHelp": "Import one sheet into the selected account. Review the header row, skip report totals, and map transaction columns before continuing.",
+      "excelTooLarge": "This workbook is too large. Use a smaller export (up to 10 MB and 1 million cells per sheet).",
+      "excelInvalid": "Unable to read this Excel workbook. Use an unencrypted .xls or .xlsx file, or export it as CSV.",
+      "ibkrPdfInvalid": "Unable to read this IBKR trade confirmation. Use the original Trade Confirmation Report PDF.",
+      "excelEmpty": "This workbook has no populated worksheets.",
+      "uploadCsv": "上傳投資檔案",
       "uploadCsvHelp": "上傳後，請仔細檢查下方的解析設定，確認分隔符號、日期格式與略過的資料列數都符合檔案內容。",
       "selectFormat": "選取格式",
       "optional": "選填",
@@ -852,7 +888,7 @@
       "processingFile": "正在處理檔案……",
       "clickToUpload": "點選上傳",
       "orDrop": "或拖放",
-      "csvOnly": "僅限 CSV",
+      "csvOnly": "CSV, Excel (.xls, .xlsx)",
       "removeFile": "移除檔案",
       "failedToParse": "解析 CSV 檔案失敗",
       "failedToReparse": "重新解析 CSV 失敗"
@@ -1344,6 +1380,25 @@
       "importing": "正在匯入……",
       "issuesTitle_other": "{{count}} 筆交易紀錄有問題。",
       "issuesTitle_one": "{{count}} 筆交易紀錄有問題。"
+    },
+    "cas": {
+      "title": "Import CAMS / KFintech PDF",
+      "help": "Use an original detailed statement since inception for one member. Parsing stays on this installation. Reconciled rows open in the CSV wizard for review; conversion does not import transactions.",
+      "file": "CAS PDF (up to 10 MB)",
+      "password": "PDF password (not saved)",
+      "working": "Converting…",
+      "convert": "Convert and review",
+      "failed": "Could not convert the statement."
+    },
+    "broker": {
+      "title": "Broker connection · today’s trades",
+      "help": "Read-only preview of today’s NSE/BSE delivery trades. Use tradebook CSV for history. Review fees and security matches before importing. API credentials are used only for this request and are not saved. Broker access is subject to its own terms.",
+      "key": "Kite API key",
+      "token": "Current access token",
+      "working": "Fetching preview…",
+      "preview": "Preview today’s trades",
+      "failed": "Could not fetch broker trades.",
+      "provider": "Broker"
     }
   }
 }

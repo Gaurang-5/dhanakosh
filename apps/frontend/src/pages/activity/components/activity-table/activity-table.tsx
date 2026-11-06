@@ -78,6 +78,11 @@ import { ActivityTypeBadge } from "../activity-type-badge";
 import { flattenDayGroups } from "@/lib/day-groups";
 import { groupActivitiesByDay } from "./activity-day-groups";
 import { ActivityDayHeaderRow } from "./activity-day-header";
+
+function cashPayeeLabel(comment?: string | null): string {
+  const value = comment?.trim() ?? "";
+  return /^Value Research(?:;|$)/i.test(value) ? "" : value;
+}
 import { useReviewExplanation } from "../activity-data-grid/status-indicator";
 import { getProviderMappingReasons } from "../activity-data-grid/types";
 import {
@@ -247,7 +252,7 @@ export const ActivityTable = ({
 
           // For cash activities, surface the payee/merchant from notes when available
           // (e.g., "AMAZON*MARKETPLACE" instead of just "Cash").
-          const cashPayee = isCash ? (row.original.comment ?? "").trim() : "";
+          const cashPayee = isCash ? cashPayeeLabel(row.original.comment) : "";
           const displaySymbol = isCash
             ? cashPayee || t("activity:table.cash")
             : parsedOption

@@ -110,6 +110,7 @@ export {
   unlinkTransferActivities,
   getActivities,
   importActivities,
+  undoActivityImport,
   listImportTemplates,
   previewImportAssets,
   saveAccountImportMapping,
@@ -551,3 +552,11 @@ export {
   type CloudBackupOperation,
 } from "../shared/cloud-backups";
 export { downloadCloudBackup, previewCloudBackupRestore } from "./cloud-backups";
+
+export { convertCasPdf, previewBrokerTrades } from "../shared/cas";
+
+export { getInvestmentPlans, saveInvestmentPlans } from "../shared/investment-plans";
+
+export * from "../shared/fund-exposure";
+
+export * from "../shared/broker-connections";

@@ -165,5 +165,12 @@
   },
   "more_count_one": "+{{count}} de plus",
   "more_count_other": "+{{count}} de plus",
-  "more_count_many": "+{{count}} de plus"
+  "more_count_many": "+{{count}} de plus",
+  "ppf_title": "Public Provident Fund (PPF)",
+  "ppf_description": "Track your actual PPF statement balance. Contributions add to the balance, credited interest records income, and withdrawals reduce it. Interest is not estimated or posted automatically.",
+  "ppf_deposit": "Add contribution",
+  "ppf_interest": "Record credited interest",
+  "ppf_withdrawal": "Record withdrawal",
+  "ppf_transfer_in": "Transfer from another account",
+  "ppf_opening_balance": "Starting midway? Record your statement opening balance as a deposit on the starting date, then add only later transactions. For money already tracked in another account, use a transfer to avoid counting the contribution twice."
 }

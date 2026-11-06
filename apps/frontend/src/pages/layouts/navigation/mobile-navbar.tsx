@@ -4,14 +4,22 @@ import { useProfile } from "@/features/profiles/profile-context";
 import { MobileProfileMenu } from "@/features/profiles/mobile-profile-menu";
 import { SyncStatusIcon } from "@/features/wealthfolio-connect/components/sync-status-icon";
 import { useAggregatedSyncStatus } from "@/features/wealthfolio-connect/hooks";
+import { HOUSEHOLD_MODE } from "@/features/household/household-config";
 import { useHapticFeedback } from "@/hooks/use-haptic-feedback";
 import { cn } from "@/lib/utils";
 import { Icons, Sheet, SheetContent, SheetTitle } from "@wealthfolio/ui";
 import { motion } from "motion/react";
-import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useCallback, useId, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { type NavLink, type NavigationProps, isPathActive } from "./app-navigation";
+import {
+  MOBILE_NAVBAR_SEARCH_HREF,
+  mobileNavbarCandidates,
+  resolveMobileNavbarHrefs,
+  useIsLandscape,
+  useMobileNavbarSelection,
+} from "./mobile-navbar-selection";
 import { resolveNavigationIcon } from "./navigation-icons";
 
 interface MobileNavBarProps {
@@ -24,17 +32,8 @@ export function MobileNavBar({ navigation }: MobileNavBarProps) {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileView, setProfileView] = useState(false);
-  const [isLandscape, setIsLandscape] = useState(
-    () => typeof window !== "undefined" && window.matchMedia("(orientation: landscape)").matches,
-  );
-
-  useEffect(() => {
-    const query = window.matchMedia("(orientation: landscape)");
-    const onOrientationChange = () => setIsLandscape(query.matches);
-    onOrientationChange();
-    query.addEventListener("change", onOrientationChange);
-    return () => query.removeEventListener("change", onOrientationChange);
-  }, []);
+  const isLandscape = useIsLandscape();
+  const [savedNavbarHrefs] = useMobileNavbarSelection();
 
   const profileContext = useProfile();
   const backButtonRef = useRef<HTMLButtonElement>(null);
@@ -74,35 +73,44 @@ export function MobileNavBar({ navigation }: MobileNavBarProps) {
   const secondaryItems = navigation?.secondary ?? [];
   const pinnedAddonItems = navigation?.pinnedAddons ?? [];
   const addonMenuItems = navigation?.addonMenuItems ?? navigation?.addons ?? [];
-  const directPinnedAddonItems = pinnedAddonItems.slice(0, 1);
-  const overflowPinnedAddonItems = pinnedAddonItems.slice(1);
-
-  const searchItem = {
+  const searchItem: NavLink = {
     title: t("common:search"),
-    href: "#search",
+    href: MOBILE_NAVBAR_SEARCH_HREF,
     icon: <Icons.Search2 className="size-6" />,
   };
-
-  // Landscape has room to keep Holdings directly accessible alongside Dashboard and Insights.
-  const visiblePrimaryCount = isLandscape ? 3 : 2;
-  const visibleItems = [
-    ...primaryItems.slice(0, visiblePrimaryCount),
-    ...directPinnedAddonItems,
-    searchItem,
-  ].filter(Boolean);
-
-  const addonItems = [...overflowPinnedAddonItems, ...addonMenuItems];
-  const standardMenuItems: NavLink[] = [
-    ...primaryItems.slice(visiblePrimaryCount),
-    ...secondaryItems,
-    {
-      title: t("common:connect"),
-      href: "/connect",
-      icon: <SyncStatusIcon status={syncStatus} className="size-6" />,
-    },
-  ];
+  const connectItem: NavLink = {
+    title: HOUSEHOLD_MODE ? t("common:import") : t("common:connect"),
+    href: HOUSEHOLD_MODE ? "/import" : "/connect",
+    icon: HOUSEHOLD_MODE ? (
+      <Icons.FileSpreadsheet className="size-6" />
+    ) : (
+      <SyncStatusIcon status={syncStatus} className="size-6" />
+    ),
+  };
+  const candidates = mobileNavbarCandidates({
+    primary: primaryItems,
+    secondary: secondaryItems,
+    connect: connectItem,
+    pinnedAddons: pinnedAddonItems,
+    addonMenuItems,
+    search: searchItem,
+  });
+  const visibleHrefs = resolveMobileNavbarHrefs({
+    saved: savedNavbarHrefs,
+    candidateHrefs: candidates.map((item) => item.href),
+    primaryHrefs: primaryItems.map((item) => item.href),
+    pinnedAddonHrefs: pinnedAddonItems.map((item) => item.href),
+    isLandscape,
+  });
+  const visibleHrefSet = new Set(visibleHrefs);
+  const visibleItems = candidates.filter((item) => visibleHrefSet.has(item.href));
+  const standardMenuItems = [...primaryItems, ...secondaryItems, connectItem].filter(
+    (item) => !visibleHrefSet.has(item.href),
+  );
+  const addonItems = [...pinnedAddonItems, ...addonMenuItems].filter(
+    (item) => !visibleHrefSet.has(item.href),
+  );
   const moreItems = [...standardMenuItems, ...addonItems];
-  const hasMenu = moreItems.length > 0;
 
   return (
     <div className={containerClassName}>
@@ -173,36 +181,34 @@ export function MobileNavBar({ navigation }: MobileNavBarProps) {
               );
             })}
 
-            {hasMenu && (
-              <button
-                onClick={() => {
-                  triggerHaptic();
-                  setProfileView(false);
-                  setMobileMenuOpen(true);
-                }}
-                aria-label={t("common:layout.more_options")}
-                className={buttonClassName}
+            <button
+              onClick={() => {
+                triggerHaptic();
+                setProfileView(false);
+                setMobileMenuOpen(true);
+              }}
+              aria-label={t("common:layout.more_options")}
+              className={buttonClassName}
+            >
+              {moreItems.some((item) => isPathActive(location.pathname, item.href)) && (
+                <motion.div
+                  layoutId={`mobile-nav-indicator-${uniqueId}`}
+                  className="absolute inset-0 -z-10 rounded-full border border-black/10 bg-black/5 shadow-sm dark:border-white/10 dark:bg-white/10"
+                  initial={false}
+                  transition={{
+                    type: "spring",
+                    stiffness: 400,
+                    damping: 30,
+                  }}
+                />
+              )}
+              <span
+                className="relative flex size-7 shrink-0 items-center justify-center outline-none"
+                aria-hidden="true"
               >
-                {moreItems.some((item) => isPathActive(location.pathname, item.href)) && (
-                  <motion.div
-                    layoutId={`mobile-nav-indicator-${uniqueId}`}
-                    className="absolute inset-0 -z-10 rounded-full border border-black/10 bg-black/5 shadow-sm dark:border-white/10 dark:bg-white/10"
-                    initial={false}
-                    transition={{
-                      type: "spring",
-                      stiffness: 400,
-                      damping: 30,
-                    }}
-                  />
-                )}
-                <span
-                  className="relative flex size-7 shrink-0 items-center justify-center outline-none"
-                  aria-hidden="true"
-                >
-                  <Icons.CirclesFour className="size-6" />
-                </span>
-              </button>
-            )}
+                <Icons.CirclesFour className="size-6" />
+              </span>
+            </button>
           </nav>
         </LiquidGlass>
       </div>

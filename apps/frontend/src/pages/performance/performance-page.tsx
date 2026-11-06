@@ -19,11 +19,14 @@ import { PerformanceChart } from "@/components/performance-chart";
 import { PerformanceChartMobile } from "@/components/performance-chart-mobile";
 
 import { PERFORMANCE_CHART_COLORS } from "@/components/performance-chart-colors";
+import { PortfolioDayChangeText } from "@/components/portfolio-day-change";
 import { useAccounts } from "@/hooks/use-accounts";
+import { useHoldings } from "@/hooks/use-holdings";
 import { usePersistentState } from "@/hooks/use-persistent-state";
 import { useAccountScopeStore } from "@/lib/account-scope-store";
 import { useIsMobileViewport } from "@/hooks/use-platform";
 import { AccountPurpose, PORTFOLIO_SCOPE_ID } from "@/lib/constants";
+import { portfolioDayChange } from "@/lib/portfolio-day-change";
 import {
   performancePeriodPnl,
   performanceSummaryReturn,
@@ -73,8 +76,9 @@ import {
   EmptyDescription,
 } from "@wealthfolio/ui/components/ui/empty";
 import { isSameDay, subDays, subMonths } from "date-fns";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import { AccountSelector } from "../../components/account-selector";
 import { AccountSelectorMobile } from "../../components/account-selector-mobile";
 import { BenchmarkSymbolSelectorMobile } from "../../components/benchmark-symbol-selector-mobile";
@@ -150,19 +154,6 @@ function chartExclusion(
       message: t("performance:exclusion.no_series"),
     };
   }
-  // A return the engine reports as unavailable (an unpriced or unconvertible
-  // period endpoint) has no line worth drawing: the series would only trace
-  // the excluded days as zeros.
-  if (
-    (metric === "twr" || metric === "irr" || metric === "valueReturn") &&
-    metricValue(result, metric) == null
-  ) {
-    return {
-      kind: "missingData",
-      message: t("performance:exclusion.no_data"),
-    };
-  }
-
   if (metric === "twr" && result.mode === "valueReturn") {
     return {
       kind: "differentReturnMethod",
@@ -176,6 +167,15 @@ function chartExclusion(
     };
   }
 
+  // Symbols provide price returns when compared with account TWR.
+  const value =
+    result.mode === "symbolPriceBased" && metric === "twr"
+      ? result.returns.valueReturn
+      : metricValue(result, metric);
+  if (value == null) {
+    return { kind: "missingData", message: t("performance:exclusion.no_data") };
+  }
+
   return {
     kind: "dateOverlap",
     message: t("performance:exclusion.no_overlap"),
@@ -185,6 +185,9 @@ function chartExclusion(
 function comparisonNoticeMessage(kinds: ChartExclusionKind[], t: TFunction): string {
   if (kinds.includes("differentReturnMethod")) {
     return t("performance:comparison_notice.different_methods");
+  }
+  if (kinds.includes("missingData")) {
+    return t("performance:exclusion.no_data");
   }
   return t("performance:comparison_notice.not_enough_overlap");
 }
@@ -621,8 +624,8 @@ const PLOTTED_ITEM_STATE: SelectedItemPlotState = { isPlotted: true };
 const PERFORMANCE_HIDDEN_DATE_RANGES = ["1D"] as const;
 
 function amountTone(value: number): string {
-  if (value < 0) return "text-destructive";
-  if (value > 0) return "text-success";
+  if (value < 0) return "text-loss";
+  if (value > 0) return "text-gain";
   return "text-muted-foreground";
 }
 
@@ -938,12 +941,14 @@ function PerformanceContent({
   hasErrors,
   errorMessages,
   isMobile,
+  emptyDescription,
 }: {
   chartData: ChartDataItem[] | undefined;
   isLoading: boolean;
   hasErrors: boolean;
   errorMessages: string[];
   isMobile: boolean;
+  emptyDescription?: string;
 }) {
   const { t } = useTranslation();
   return (
@@ -963,8 +968,15 @@ function PerformanceContent({
           <EmptyHeader>
             <EmptyMedia variant="icon">{<Icons.BarChart className="size-10" />}</EmptyMedia>
             <EmptyTitle>{t("performance:empty.title")}</EmptyTitle>
-            <EmptyDescription>{t("performance:empty.description")}</EmptyDescription>
+            <EmptyDescription>
+              {emptyDescription ?? t("performance:empty.description")}
+            </EmptyDescription>
           </EmptyHeader>
+          {emptyDescription && (
+            <Button variant="outline" nativeButton={false} render={<Link to="/health" />}>
+              {t("health:page.heading")}
+            </Button>
+          )}
         </Empty>
       )}
 
@@ -1028,6 +1040,7 @@ const SelectedItemBadge = ({
   color?: string;
 }) => {
   const { t } = useTranslation();
+  const statusLabel = !isPlotted ? t("performance:not_plotted") : contextLabel;
   return (
     <Badge
       className={cn(
@@ -1048,6 +1061,7 @@ const SelectedItemBadge = ({
         data-badge-select=""
         onClick={onSelect}
         aria-pressed={isSelected}
+        aria-label={[item.name, statusLabel].filter(Boolean).join(" ")}
         className="flex cursor-pointer items-center space-x-2 outline-none after:absolute after:inset-0 after:content-[''] sm:space-x-3"
       >
         <div
@@ -1094,7 +1108,12 @@ const SelectedItemBadge = ({
   );
 };
 
-export default function PerformancePage() {
+export default function PerformancePage({
+  onToolbarActionsChange,
+}: {
+  /** When set, account scope and the date range render in the insights tab row. */
+  onToolbarActionsChange?: (actions: ReactNode | null) => void;
+} = {}) {
   const numberFormatting = useNumberFormatting();
 
   const { t } = useTranslation();
@@ -1174,6 +1193,9 @@ export default function PerformancePage() {
   }, [isAccountsLoading, isAccountsError, selectedItemId, selectedItems, setSelectedItemId]);
 
   const accountScope = useAccountScopeStore((state) => state.scope);
+  const { holdings, isLoading: isDayChangeLoading } = useHoldings(accountScope);
+  const dayChange = useMemo(() => portfolioDayChange(holdings), [holdings]);
+  const dayChangeCurrency = settings?.baseCurrency ?? "USD";
   const setAccountScope = useAccountScopeStore((state) => state.setScope);
   const releaseBridgedItem = useAccountScopeStore((state) => state.releaseBridgedItem);
 
@@ -1250,8 +1272,7 @@ export default function PerformancePage() {
 
     return new Map(
       selectedItems.map((item) => {
-        const isAnchor = item.id === activeChartAnchorId;
-        const isPlotted = isLoadingPerformance || hasErrors || isAnchor || chartedIds.has(item.id);
+        const isPlotted = isLoadingPerformance || chartedIds.has(item.id);
         const exclusion = isPlotted
           ? undefined
           : chartExclusion(resultById.get(item.id), selectedChartMetric, t);
@@ -1504,29 +1525,51 @@ export default function PerformancePage() {
     }
   };
 
-  return (
-    <>
-      {/* Keep tablet filters below the tabs; wide screens have room in the header. */}
-      <div className="pointer-events-auto mb-4 hidden items-center justify-end gap-2 md:flex xl:fixed xl:end-4 xl:top-4 xl:z-20 xl:mb-0">
-        <AccountScopeSelector value={accountScope} onChange={setAccountScope} />
+  const toolbarActions = useMemo(
+    () => (
+      <>
+        <AccountScopeSelector
+          value={accountScope}
+          onChange={setAccountScope}
+          triggerVariant="input"
+          className="w-auto"
+        />
         <DateRangeSelector
           asOf={today}
           value={dateRange}
           onChange={setDateRange}
           hiddenRanges={PERFORMANCE_HIDDEN_DATE_RANGES}
         />
-      </div>
+      </>
+    ),
+    [accountScope, dateRange, setAccountScope, setDateRange, today],
+  );
 
+  useEffect(() => {
+    if (!onToolbarActionsChange) return;
+    onToolbarActionsChange(toolbarActions);
+    return () => onToolbarActionsChange(null);
+  }, [onToolbarActionsChange, toolbarActions]);
+
+  return (
+    <>
       <div className="flex h-full flex-col space-y-4">
-        <div className="flex items-center justify-end gap-2 md:hidden">
-          <AccountScopeSelector value={accountScope} onChange={setAccountScope} />
-          <DateRangeSelector
-            asOf={today}
-            value={dateRange}
-            onChange={setDateRange}
-            hiddenRanges={PERFORMANCE_HIDDEN_DATE_RANGES}
-          />
-        </div>
+        {!onToolbarActionsChange && (
+          <div className="flex items-center justify-end gap-2">
+            <AccountScopeSelector
+              value={accountScope}
+              onChange={setAccountScope}
+              triggerVariant="input"
+              className="w-auto"
+            />
+            <DateRangeSelector
+              asOf={today}
+              value={dateRange}
+              onChange={setDateRange}
+              hiddenRanges={PERFORMANCE_HIDDEN_DATE_RANGES}
+            />
+          </div>
+        )}
 
         {/* Mobile: Carousel + Plus button in same row */}
         <div className="flex items-center gap-2 md:hidden">
@@ -1702,6 +1745,16 @@ export default function PerformancePage() {
                   >
                     {displayDateRange}
                   </CardDescription>
+                  <div className={cn("mt-2", !isMobile && "col-start-1")}>
+                    <PortfolioDayChangeText
+                      dayChange={dayChange}
+                      currency={dayChangeCurrency}
+                      label={t("performance:metric.today")}
+                      description={t("performance:metric.today_info")}
+                      isLoading={isDayChangeLoading}
+                      showWhenEmpty
+                    />
+                  </div>
                   {selectedItemData?.trackingModeBadge && (
                     <Badge
                       variant={selectedItemData.trackingModeBadge.variant}
@@ -1932,6 +1985,12 @@ export default function PerformancePage() {
                       accountsError ? [accountsError.message, ...errorMessages] : errorMessages
                     }
                     isMobile={isMobile}
+                    emptyDescription={
+                      selectedItems.length
+                        ? chartExclusion(selectedPerformanceData?.result, selectedChartMetric, t)
+                            .message
+                        : undefined
+                    }
                   />
                 </div>
               </div>

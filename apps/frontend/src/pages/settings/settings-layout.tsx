@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useIsCompactTableViewport, usePlatform } from "@/hooks/use-platform";
+import { HOUSEHOLD_MODE } from "@/features/household/household-config";
 import { SidebarNav } from "./sidebar-nav";
 
 export default function SettingsLayout() {
@@ -55,12 +56,16 @@ export default function SettingsLayout() {
             subtitle: t("settings:nav.subtitles.contribution_limits"),
             icon: <Icons.TrendingUp className="size-5" />,
           },
-          {
-            title: t("settings:nav.items.spending"),
-            href: "spending",
-            subtitle: t("settings:nav.subtitles.spending"),
-            icon: <Icons.Wallet className="size-5" />,
-          },
+          ...(!HOUSEHOLD_MODE
+            ? [
+                {
+                  title: t("settings:nav.items.spending"),
+                  href: "spending",
+                  subtitle: t("settings:nav.subtitles.spending"),
+                  icon: <Icons.Wallet className="size-5" />,
+                },
+              ]
+            : []),
         ],
       },
       {
@@ -90,9 +95,13 @@ export default function SettingsLayout() {
         title: t("settings:nav.sections.connections"),
         items: [
           {
-            title: t("settings:nav.items.connect"),
+            title: HOUSEHOLD_MODE
+              ? t("common:profiles.connectionsNavLabel")
+              : t("settings:nav.items.connect"),
             href: "connect",
-            subtitle: t("settings:nav.subtitles.connect"),
+            subtitle: HOUSEHOLD_MODE
+              ? t("common:profiles.connectionsNavSubtitle")
+              : t("settings:nav.subtitles.connect"),
             icon: <Icons.CloudSync2 className="text-info size-6" />,
           },
           {

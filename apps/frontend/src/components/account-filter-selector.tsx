@@ -265,7 +265,7 @@ function AccountScopeCommand({
   );
 }
 
-export function AccountScopeSelector({
+export function AccountScopeEditor({
   value,
   onChange,
   className,
@@ -434,4 +434,10 @@ export function AccountScopeSelector({
       </PopoverContent>
     </Popover>
   );
+}
+
+/** Selection is now shared across all pages by WorkspaceFilter. */
+export function AccountScopeSelector(props: AccountScopeSelectorProps) {
+  // Saved allocation targets need their own editing scope; report pages use the global filter.
+  return props.triggerVariant === "input" ? <AccountScopeEditor {...props} /> : null;
 }

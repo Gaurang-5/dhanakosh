@@ -1,4 +1,8 @@
 "use client";
+import { useHouseholdScope } from "@/features/household/household-scope";
+import { getHouseholdPerformance } from "@/features/household/household-performance";
+import { useHouseholdReport } from "@/features/household/household-report-context";
+import { isPpfAccount } from "@/features/ppf/ppf-account";
 
 import { calculatePerformanceSummaries, performanceSummaryScopeKey } from "@/adapters";
 import { useAccounts } from "@/hooks/use-accounts";
@@ -396,18 +400,22 @@ AccountSummaryComponent.displayName = "AccountSummaryComponent";
 
 export const AccountsSummary = React.memo(
   ({
+    investmentsOnly = false,
     accountIds: selectedAccountIds,
     dateRange,
     isAllTime,
     currentAccountValuations: currentAccountValuationsProp,
     isLoadingCurrentValuations: isLoadingCurrentValuationsProp,
   }: {
+    investmentsOnly?: boolean;
     accountIds?: string[];
     dateRange?: DateRange;
     isAllTime?: boolean;
     currentAccountValuations?: CurrentAccountValuation[];
     isLoadingCurrentValuations?: boolean;
   }) => {
+    const family = useHouseholdReport();
+    const familyScope = useHouseholdScope();
     const { t } = useTranslation();
     const { accountsGrouped, setAccountsGrouped, settings } = useSettingsContext();
     const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
@@ -451,7 +459,7 @@ export const AccountsSummary = React.memo(
     const performanceScopes = useMemo((): PerformanceSummaryScope[] => {
       return getDashboardAccountPerformanceScopes(accounts, accountsGrouped, expandedGroups);
     }, [accounts, accountsGrouped, expandedGroups]);
-    const shouldFetchPerformance = datesReady && performanceScopes.length > 0;
+    const shouldFetchPerformance = !investmentsOnly && datesReady && performanceScopes.length > 0;
 
     const {
       data: performanceSummaries,
@@ -462,14 +470,30 @@ export const AccountsSummary = React.memo(
       queryKey: [
         QueryKeys.PERFORMANCE_SUMMARY,
         "dashboard-accounts-batch",
+        family ? familyScope?.memberIds : undefined,
+        family?.currentValuation.summary.baseCurrency,
         performanceScopes,
         startDate,
         endDate,
       ],
-      queryFn: () =>
-        calculatePerformanceSummaries(performanceScopes, startDate, endDate, "dashboard"),
+      queryFn: async () => {
+        if (!family || !familyScope)
+          return calculatePerformanceSummaries(performanceScopes, startDate, endDate, "dashboard");
+        const entries = [];
+        for (const scope of performanceScopes) {
+          const result = await getHouseholdPerformance(
+            familyScope.memberIds,
+            family.currentValuation.summary.baseCurrency,
+            startDate,
+            endDate,
+            { type: "accounts", accountIds: scope.accountIds },
+          );
+          entries.push([performanceSummaryScopeKey(scope.accountIds), result] as const);
+        }
+        return Object.fromEntries(entries);
+      },
       enabled: shouldFetchPerformance,
-      placeholderData: keepPreviousData,
+      placeholderData: family ? undefined : keepPreviousData,
       staleTime: 30 * 1000,
       retry: 1,
     });
@@ -504,11 +528,20 @@ export const AccountsSummary = React.memo(
         }
 
         const perf = performanceSummaries?.[performanceSummaryScopeKey([acc.id])];
-        const totalValueAccountCurrency = valuation.totalValue;
-        const totalValueBaseCurrency = valuation.totalValueBase;
+        const showLedgerBalanceAsInvestment = investmentsOnly && isPpfAccount(acc);
+        const totalValueAccountCurrency = investmentsOnly
+          ? showLedgerBalanceAsInvestment
+            ? valuation.totalValue
+            : valuation.investmentMarketValue
+          : valuation.totalValue;
+        const totalValueBaseCurrency = investmentsOnly
+          ? showLedgerBalanceAsInvestment
+            ? valuation.totalValueBase
+            : valuation.investmentMarketValueBase
+          : valuation.totalValueBase;
 
-        const gainLossBaseCurrency = performancePeriodPnl(perf);
-        const gainPercent = performanceSummaryReturn(perf);
+        const gainLossBaseCurrency = investmentsOnly ? null : performancePeriodPnl(perf);
+        const gainPercent = investmentsOnly ? null : performanceSummaryReturn(perf);
 
         return {
           accountName: acc.name,
@@ -534,7 +567,13 @@ export const AccountsSummary = React.memo(
           isActive: acc.isActive,
         };
       });
-    }, [accounts, currentAccountValuations, performanceSummaries, settings?.baseCurrency]);
+    }, [
+      accounts,
+      currentAccountValuations,
+      performanceSummaries,
+      settings?.baseCurrency,
+      investmentsOnly,
+    ]);
 
     const toggleGroup = useCallback((groupName: string) => {
       setExpandedGroups((prev) => ({
@@ -639,8 +678,12 @@ export const AccountsSummary = React.memo(
             0,
           );
 
-          const totalGainLossAmountBase = performancePeriodPnl(groupPerformance);
-          const groupTotalReturnPercentBase = performanceSummaryReturn(groupPerformance);
+          const totalGainLossAmountBase = investmentsOnly
+            ? null
+            : performancePeriodPnl(groupPerformance);
+          const groupTotalReturnPercentBase = investmentsOnly
+            ? null
+            : performanceSummaryReturn(groupPerformance);
 
           actualGroups.push({
             accountName: groupName,
@@ -742,6 +785,7 @@ export const AccountsSummary = React.memo(
         ));
       }
     }, [
+      investmentsOnly,
       combinedAccountViews,
       selectedAccountIds,
       accountsGrouped,

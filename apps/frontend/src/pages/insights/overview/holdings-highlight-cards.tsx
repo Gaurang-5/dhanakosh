@@ -1,3 +1,8 @@
+import {
+  getInstrumentAvatarIdentity,
+  getInstrumentPrimaryLabel,
+  getInstrumentSecondaryLabel,
+} from "@/lib/instrument-display";
 import { HoldingPerformancePercent } from "@/components/holding-performance-percent";
 import { TickerAvatar } from "@/components/ticker-avatar";
 import { useBalancePrivacy } from "@/hooks/use-balance-privacy";
@@ -24,25 +29,38 @@ interface HighlightProps {
   holdings: Holding[];
   currency: string;
   isLoading: boolean;
+  exposureMode?: boolean;
 }
 
-function HoldingRow({ holding, children }: { holding: Holding; children: ReactNode }) {
+function HoldingRow({
+  holding,
+  children,
+  exposureMode = false,
+}: {
+  holding: Holding;
+  children: ReactNode;
+  exposureMode?: boolean;
+}) {
   const instrument = holding.instrument;
+  const avatar = getInstrumentAvatarIdentity(instrument);
+  const primary = getInstrumentPrimaryLabel(instrument) || holding.id;
+  const secondary = getInstrumentSecondaryLabel(instrument);
   const className =
     "border-border flex items-center justify-between gap-3 border-b py-3 transition-colors last:border-0";
   const content = (
     <>
       <div className="flex min-w-0 flex-1 items-center gap-3">
         <TickerAvatar
-          symbol={instrument?.symbol ?? holding.id}
-          exchangeMic={instrument?.exchangeMic}
+          symbol={avatar.symbol}
+          exchangeMic={avatar.exchangeMic}
           instrumentType={instrument?.instrumentType}
           assetId={instrument?.id}
+          fallbackName={exposureMode ? instrument?.name : undefined}
           className="size-9 shrink-0"
         />
         <div className="flex min-w-0 flex-col">
-          <span className="truncate text-sm font-semibold">{instrument?.symbol ?? holding.id}</span>
-          <span className="text-muted-foreground truncate text-xs">{instrument?.name}</span>
+          <span className="truncate text-sm font-semibold">{primary}</span>
+          {secondary && <span className="text-muted-foreground truncate text-xs">{secondary}</span>}
         </div>
       </div>
       <div className="flex shrink-0 flex-col items-end gap-1">{children}</div>
@@ -184,7 +202,12 @@ export function TopMoversCard({ holdings, currency, isLoading }: HighlightProps)
   );
 }
 
-export function ConcentrationCard({ holdings, currency, isLoading }: HighlightProps) {
+export function ConcentrationCard({
+  holdings,
+  currency,
+  isLoading,
+  exposureMode = false,
+}: HighlightProps) {
   const { t } = useTranslation();
   const formatting = useNumberFormatting();
   const { isBalanceHidden } = useBalancePrivacy();
@@ -222,7 +245,7 @@ export function ConcentrationCard({ holdings, currency, isLoading }: HighlightPr
               </div>
             </div>
             {concentration.holdings.map((holding) => (
-              <HoldingRow key={holding.id} holding={holding}>
+              <HoldingRow key={holding.id} holding={holding} exposureMode={exposureMode}>
                 <span className="text-sm font-semibold tabular-nums">
                   {percent(holding.marketValue.base / concentration.total)}
                 </span>

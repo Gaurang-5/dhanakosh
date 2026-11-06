@@ -81,7 +81,7 @@ pub mod types;
 pub const SYSTEM_PROMPT: &str = include_str!("system_prompt.txt");
 
 /// Version marker embedded in the one authoritative live system prompt.
-pub const FINANCIAL_SAFETY_POLICY_VERSION: &str = "2026-08-18.p0";
+pub const FINANCIAL_SAFETY_POLICY_VERSION: &str = "2026-11-04.p3";
 
 /// Stable identity persisted in new chat configuration snapshots.
 pub const LIVE_PROMPT_ID: &str = "wealthfolio-system-prompt";

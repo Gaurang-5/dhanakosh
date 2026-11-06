@@ -70,6 +70,7 @@ impl PortfolioRepositoryTrait for PortfolioRepository {
 
                 let mut memberships = Vec::new();
                 for (i, account_id) in new.account_ids.iter().enumerate() {
+                    ensure_unassigned(tx.conn(), account_id)?;
                     let membership = PortfolioAccountDB {
                         id: format!("pfm_{}_{}", portfolio_id, account_id),
                         portfolio_id: portfolio_id.clone(),
@@ -136,6 +137,7 @@ impl PortfolioRepositoryTrait for PortfolioRepository {
 
                 let mut memberships = Vec::new();
                 for (i, account_id) in update.account_ids.iter().enumerate() {
+                    ensure_unassigned(tx.conn(), account_id)?;
                     let membership = PortfolioAccountDB {
                         id: format!("pfm_{}_{}", update.id, account_id),
                         portfolio_id: update.id.clone(),
@@ -160,6 +162,16 @@ impl PortfolioRepositoryTrait for PortfolioRepository {
         let id_owned = id.to_string();
         self.writer
             .exec_tx(move |tx| {
+                let count = portfolio_accounts::table
+                    .filter(portfolio_accounts::portfolio_id.eq(&id_owned))
+                    .count()
+                    .get_result::<i64>(tx.conn())
+                    .map_err(StorageError::from)?;
+                if count > 0 {
+                    return Err(Error::InvalidConfigValue(
+                        "Move or remove this portfolio's accounts before deleting it".into(),
+                    ));
+                }
                 let affected = diesel::delete(portfolios::table.find(&id_owned))
                     .execute(tx.conn())
                     .map_err(StorageError::from)?;
@@ -251,6 +263,20 @@ impl PortfolioRepositoryTrait for PortfolioRepository {
             AccountScope::Accounts { account_ids } => Ok(account_ids.clone()),
         }
     }
+}
+
+fn ensure_unassigned(conn: &mut SqliteConnection, account: &str) -> Result<()> {
+    let count = portfolio_accounts::table
+        .filter(portfolio_accounts::account_id.eq(account))
+        .count()
+        .get_result::<i64>(conn)
+        .map_err(StorageError::from)?;
+    if count > 0 {
+        return Err(Error::InvalidConfigValue(
+            "An account can belong to only one portfolio; move it in account settings".into(),
+        ));
+    }
+    Ok(())
 }
 
 #[cfg(test)]

@@ -150,6 +150,28 @@ const brokerageDays = () => [
 ];
 
 describe("activity lists' cash balances", () => {
+  it("does not show Value Research import provenance as a cash symbol", () => {
+    renderTable([
+      {
+        ...row("ppf-interest", "3066441.56", "ROW"),
+        activityType: ActivityType.INTEREST,
+        accountName: "Deepa's PPF",
+        currency: "INR",
+        comment:
+          "Value Research; PPF; row 14; Interest Accrued; PPF A/C Name: PPF A/C- Deepa Bhatia",
+      },
+    ]);
+
+    expect(screen.getByText("Cash")).toBeInTheDocument();
+    expect(screen.queryByText(/Value Research/)).toBeNull();
+  });
+
+  it("keeps ordinary cash payees visible", () => {
+    renderTable([{ ...row("merchant", "900", "ROW"), comment: "AMAZON MARKETPLACE" }]);
+
+    expect(screen.getByText("AMAZON MARKETPLACE")).toBeInTheDocument();
+  });
+
   it("leaves end-of-day balances out of a table without day headers", () => {
     renderTable([row("dividend", "3501.35", "DAY"), row("buy", "3501.35", "DAY")]);
 

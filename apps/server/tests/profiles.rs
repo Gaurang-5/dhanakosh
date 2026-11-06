@@ -71,6 +71,127 @@ fn test_config(path: &std::path::Path) -> Config {
 }
 
 #[tokio::test]
+async fn household_reads_exclude_locked_members_and_validate_query_bounds() {
+    let dir = tempfile::tempdir().unwrap();
+    let config = test_config(dir.path());
+    let state = build_state(&config).await.unwrap();
+    let currency = state.base_currency.read().unwrap().clone();
+    let root = WebProfiles::new(state, &config).unwrap();
+    let locked = root
+        .registry
+        .create("Locked", "clay-fluff-animated")
+        .unwrap();
+    root.registry
+        .set_password(locked.id, None, Some("test passphrase"))
+        .unwrap();
+    let member_id = root
+        .registry
+        .list()
+        .unwrap()
+        .into_iter()
+        .find(|p| !p.lock_enabled)
+        .unwrap()
+        .id;
+    let router: Router = profiles::router(root);
+    for (ids, currency, status) in [
+        (member_id.to_string(), "INR", StatusCode::OK),
+        (locked.id.to_string(), "INR", StatusCode::BAD_REQUEST),
+        ("invalid".to_string(), "INR", StatusCode::BAD_REQUEST),
+        (member_id.to_string(), "invalid", StatusCode::BAD_REQUEST),
+    ] {
+        let path = format!("/profiles/household-overview?memberIds={ids}&currency={currency}");
+        let response = router
+            .clone()
+            .oneshot(Request::builder().uri(path).body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), status);
+    }
+    for endpoint in ["household-performance", "household-activity-search"] {
+        for id in [member_id, locked.id] {
+            let response = router.clone().oneshot(Request::builder()
+                .method("POST").uri(format!("/profiles/{endpoint}"))
+                .header("content-type", "application/json")
+                .body(Body::from(json!({"memberIds": [id], "currency": currency, "page": 0, "pageSize": 30}).to_string())).unwrap()).await.unwrap();
+            assert_eq!(
+                response.status(),
+                if id == locked.id {
+                    StatusCode::BAD_REQUEST
+                } else {
+                    StatusCode::OK
+                },
+                "{endpoint}"
+            );
+        }
+    }
+    for id in [member_id, locked.id] {
+        let response = router
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri(format!(
+                        "/profiles/household-income?memberIds={id}&currency={currency}"
+                    ))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            response.status(),
+            if id == locked.id {
+                StatusCode::BAD_REQUEST
+            } else {
+                StatusCode::OK
+            }
+        );
+    }
+    for path in [
+        "/profiles/household-summary?date=2026-10-24&includeHoldings=true",
+        "/profiles/household-history?startDate=2026-10-23&endDate=2026-10-24",
+        "/profiles/household-activities?page=0&pageSize=30",
+        "/profiles/household-goals",
+    ] {
+        let response = router
+            .clone()
+            .oneshot(Request::builder().uri(path).body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK, "{path}");
+        let bytes = to_bytes(response.into_body(), 1024 * 1024).await.unwrap();
+        if path.starts_with("/profiles/household-summary") {
+            let value: Value = serde_json::from_slice(&bytes).unwrap();
+            let member = value["members"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|member| member["id"] == locked.id.to_string())
+                .unwrap();
+            assert_eq!(member["status"], "unavailable");
+            assert!(member["netWorth"].is_null());
+            assert_eq!(member["holdings"], json!([]));
+            assert_eq!(member["accounts"], json!([]));
+        } else {
+            assert!(!String::from_utf8_lossy(&bytes).contains(&locked.id.to_string()));
+        }
+    }
+    for path in [
+        "/profiles/household-summary?date=invalid",
+        "/profiles/household-history?startDate=2026-10-24&endDate=2026-10-23",
+        "/profiles/household-activities?page=-1",
+        "/profiles/household-activities?pageSize=101",
+        "/profiles/household-activities?memberIds=invalid",
+    ] {
+        let response = router
+            .clone()
+            .oneshot(Request::builder().uri(path).body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST, "{path}");
+    }
+}
+
+#[tokio::test]
 async fn browsers_databases_credentials_and_stale_scopes_are_isolated() {
     let dir = tempfile::tempdir().unwrap();
     let config = test_config(dir.path());

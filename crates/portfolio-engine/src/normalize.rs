@@ -44,6 +44,7 @@ pub fn normalize(raw: RawFacts) -> Result<Normalized, EngineError> {
             });
         };
         let facts = AccountFacts {
+            separate_cash_ledger: account.separate_cash_ledger,
             id: id.clone(),
             currency,
             kind: account_kind(&account.account_type),
@@ -817,6 +818,7 @@ mod tests {
 
     fn account(id: &str, currency: &str) -> RawAccount {
         RawAccount {
+            separate_cash_ledger: false,
             id: id.into(),
             currency: currency.into(),
             account_type: "SECURITIES".into(),

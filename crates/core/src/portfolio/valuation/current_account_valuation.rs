@@ -248,8 +248,13 @@ where
             },
         };
 
-        summary.cash_balance_base += computation.valuation.cash_balance_base;
-        summary.investment_market_value_base += computation.valuation.investment_market_value_base;
+        if account.is_ppf_investment() {
+            summary.investment_market_value_base += computation.valuation.total_value_base;
+        } else {
+            summary.cash_balance_base += computation.valuation.cash_balance_base;
+            summary.investment_market_value_base +=
+                computation.valuation.investment_market_value_base;
+        }
         summary.total_value_base += computation.valuation.total_value_base;
         summary.holdings_count += computation.holdings_count;
         summary.source_data_as_of = latest_datetime(
@@ -257,8 +262,10 @@ where
             computation.valuation.source_data_as_of,
         );
         merge_totals(&mut currency_base_totals, computation.currency_base_totals);
-        merge_totals(&mut cash_base_totals, computation.cash_base_totals);
-        merge_totals(&mut cash_local_totals, computation.cash_local_totals);
+        if !account.is_ppf_investment() {
+            merge_totals(&mut cash_base_totals, computation.cash_base_totals);
+            merge_totals(&mut cash_local_totals, computation.cash_local_totals);
+        }
         summary.warnings.extend(computation.summary_warnings);
 
         if include_accounts {

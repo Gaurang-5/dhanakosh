@@ -116,10 +116,21 @@ export const COMMANDS: CommandMap = {
   check_activities_import: { method: "POST", path: "/activities/import/check" },
   preview_import_assets: { method: "POST", path: "/activities/import/assets/preview" },
   import_activities: { method: "POST", path: "/activities/import" },
+  undo_activity_import: { method: "POST", path: "/activities/import/undo" },
   get_account_import_mapping: { method: "GET", path: "/activities/import/mapping" },
   save_account_import_mapping: { method: "POST", path: "/activities/import/mapping" },
   link_account_template: { method: "POST", path: "/activities/import/templates/link" },
   list_import_templates: { method: "GET", path: "/activities/import/templates" },
+  preview_fund_composition: { method: "POST", path: "/fund-exposure/preview" },
+  get_fund_exposure: { method: "POST", path: "/fund-exposure/query" },
+  save_fund_composition: { method: "POST", path: "/fund-exposure/composition" },
+  refresh_fund_composition: { method: "POST", path: "/fund-exposure/refresh" },
+  remove_fund_composition: { method: "DELETE", path: "/fund-exposure/composition" },
+  get_investment_plans: { method: "GET", path: "/investment-plans" },
+  save_investment_plans: { method: "PUT", path: "/investment-plans" },
+  broker_connection: { method: "POST", path: "/broker-connections" },
+  preview_broker: { method: "POST", path: "/activities/import/broker" },
+  parse_cas: { method: "POST", path: "/activities/import/cas" },
   get_import_template: { method: "GET", path: "/activities/import/templates/item" },
   save_import_template: { method: "POST", path: "/activities/import/templates" },
   delete_import_template: { method: "DELETE", path: "/activities/import/templates" },
@@ -909,7 +920,8 @@ export const invoke = async <T>(command: string, payload?: Record<string, unknow
     }
     case "check_activities_import":
     case "preview_import_assets":
-    case "import_activities": {
+    case "import_activities":
+    case "undo_activity_import": {
       body = JSON.stringify(payload);
       break;
     }
@@ -924,6 +936,30 @@ export const invoke = async <T>(command: string, payload?: Record<string, unknow
     case "save_account_import_mapping": {
       const { mapping } = payload as { mapping: Record<string, unknown> };
       body = JSON.stringify({ mapping });
+      break;
+    }
+    case "save_fund_composition": {
+      body = JSON.stringify((payload as { snapshot: unknown }).snapshot);
+      break;
+    }
+    case "get_fund_exposure":
+    case "preview_fund_composition":
+    case "refresh_fund_composition":
+    case "remove_fund_composition": {
+      body = JSON.stringify(payload);
+      break;
+    }
+    case "save_investment_plans": {
+      body = JSON.stringify((payload as { plans: unknown }).plans);
+      break;
+    }
+    case "broker_connection": {
+      body = JSON.stringify((payload as { request: unknown }).request);
+      break;
+    }
+    case "preview_broker":
+    case "parse_cas": {
+      body = JSON.stringify(payload);
       break;
     }
     case "get_import_template":
@@ -1847,20 +1883,22 @@ export const invoke = async <T>(command: string, payload?: Record<string, unknow
     }
     // Net Worth commands
     case "get_net_worth": {
-      const { date } = (payload ?? {}) as { date?: string };
-      if (date) {
-        const params = new URLSearchParams();
-        params.set("date", date);
-        url += `?${params.toString()}`;
-      }
+      const { date, accountIds } = payload as { date?: string; accountIds?: string[] };
+      const params = new URLSearchParams();
+      if (date) params.set("date", date);
+      if (accountIds) params.set("accountIds", accountIds.join(","));
+      if (params.size) url += `?${params}`;
       break;
     }
     case "get_net_worth_history": {
-      const { startDate, endDate } = payload as { startDate: string; endDate: string };
-      const params = new URLSearchParams();
-      params.set("startDate", startDate);
-      params.set("endDate", endDate);
-      url += `?${params.toString()}`;
+      const { startDate, endDate, accountIds } = payload as {
+        startDate: string;
+        endDate: string;
+        accountIds?: string[];
+      };
+      const params = new URLSearchParams({ startDate, endDate });
+      if (accountIds) params.set("accountIds", accountIds.join(","));
+      url += `?${params}`;
       break;
     }
     // Alternative Assets commands

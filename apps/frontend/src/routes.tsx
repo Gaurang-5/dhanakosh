@@ -1,5 +1,8 @@
+import { HouseholdInvestmentPlansPage } from "@/features/investment-plans/household-investment-plans-page";
+import { InvestmentPlansPage } from "@/features/investment-plans/investment-plans-page";
+import { MemberPortfolioRequired } from "@/features/household/member-portfolio-required";
 import { RestoredPortfolioNotice } from "@/features/database-recovery/restored-portfolio-notice";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import { AppLayout } from "@/pages/layouts/app-layout";
@@ -53,10 +56,16 @@ import GoalsDashboardPage from "@/features/goals/pages/goals-dashboard-page";
 import GoalNewPage from "@/features/goals/pages/goal-new-page";
 import GoalDetailPage from "@/features/goals/pages/goal-detail-page";
 import GoalRetirementGuidePage from "@/features/goals/pages/goal-retirement-guide-page";
+import { HouseholdReportProvider } from "@/features/household/household-report-context";
+import { HOUSEHOLD_MODE } from "@/features/household/household-config";
 
 function NavigationEventBridge() {
   useNavigationEventListener();
   return null;
+}
+
+function HouseholdScopedPage({ member }: { family: ReactNode; member: ReactNode }) {
+  return member;
 }
 
 export function AppRoutes() {
@@ -99,28 +108,160 @@ export function AppRoutes() {
         <Route path="/" element={<AppLayout />}>
           <Route index element={<PortfolioPage />} />
           <Route path="dashboard" element={<PortfolioPage />} />
-          <Route path="activities" element={<ActivityPage />} />
-          <Route path="activities/manage" element={<ActivityManagerPage />} />
-          <Route path="holdings" element={<HoldingsPage />} />
-          <Route path="holdings/:assetId" element={<AssetProfilePage />} />
-          <Route path="import" element={<ActivityImportPage />} />
-          <Route path="accounts/:id" element={<AccountPage />} />
+          <Route path="household" element={<Navigate to="/dashboard" replace />} />
+          <Route
+            path="activities"
+            element={
+              <HouseholdScopedPage
+                family={
+                  <HouseholdReportProvider>
+                    <ActivityPage />
+                  </HouseholdReportProvider>
+                }
+                member={<ActivityPage />}
+              />
+            }
+          />
+          <Route
+            path="activities/manage"
+            element={
+              <MemberPortfolioRequired>
+                <ActivityManagerPage />
+              </MemberPortfolioRequired>
+            }
+          />
+          <Route
+            path="holdings"
+            element={
+              <HouseholdScopedPage
+                family={
+                  <HouseholdReportProvider>
+                    <HoldingsPage />
+                  </HouseholdReportProvider>
+                }
+                member={<HoldingsPage />}
+              />
+            }
+          />
+          <Route
+            path="holdings/:assetId"
+            element={
+              <MemberPortfolioRequired>
+                <AssetProfilePage />
+              </MemberPortfolioRequired>
+            }
+          />
+          <Route
+            path="import"
+            element={
+              <MemberPortfolioRequired>
+                <ActivityImportPage />
+              </MemberPortfolioRequired>
+            }
+          />
+          <Route
+            path="accounts/:id"
+            element={
+              <MemberPortfolioRequired>
+                <AccountPage />
+              </MemberPortfolioRequired>
+            }
+          />
           <Route path="income" element={<Navigate to="/insights?tab=income" replace />} />
           <Route path="performance" element={<Navigate to="/insights?tab=performance" replace />} />
-          <Route path="insights" element={<PortfolioInsightsPage />} />
-          <Route path="health" element={<HealthPage />} />
-          <Route path="assistant" element={<AiAssistantPage />} />
-          <Route path="connect" element={<ConnectPage />} />
+          <Route
+            path="insights"
+            element={
+              <HouseholdScopedPage
+                family={
+                  <HouseholdReportProvider>
+                    <PortfolioInsightsPage />
+                  </HouseholdReportProvider>
+                }
+                member={<PortfolioInsightsPage />}
+              />
+            }
+          />
+          <Route
+            path="health"
+            element={
+              <MemberPortfolioRequired>
+                <HealthPage />
+              </MemberPortfolioRequired>
+            }
+          />
+          <Route
+            path="assistant"
+            element={
+              <MemberPortfolioRequired>
+                <AiAssistantPage />
+              </MemberPortfolioRequired>
+            }
+          />
+          <Route
+            path="connect"
+            element={HOUSEHOLD_MODE ? <Navigate to="/import" replace /> : <ConnectPage />}
+          />
           <Route
             path="allocation-targets"
             element={<Navigate to="/insights?tab=overview" replace />}
           />
-          <Route path="goals" element={<GoalsDashboardPage />} />
-          <Route path="goals/new" element={<GoalNewPage />} />
-          <Route path="goals/:goalId/guide" element={<GoalRetirementGuidePage />} />
-          <Route path="goals/:goalId" element={<GoalDetailPage />} />
-          <Route path="spending/insights" element={<SpendingInsightsPage />} />
-          <Route path="spending/budget" element={<SpendingBudgetPage />} />
+          <Route
+            path="goals"
+            element={
+              <HouseholdScopedPage
+                family={
+                  <HouseholdReportProvider>
+                    <GoalsDashboardPage />
+                  </HouseholdReportProvider>
+                }
+                member={<GoalsDashboardPage />}
+              />
+            }
+          />
+          <Route
+            path="investment-plans"
+            element={
+              <HouseholdScopedPage
+                family={<HouseholdInvestmentPlansPage />}
+                member={<InvestmentPlansPage />}
+              />
+            }
+          />
+          <Route
+            path="goals/new"
+            element={
+              <MemberPortfolioRequired>
+                <GoalNewPage />
+              </MemberPortfolioRequired>
+            }
+          />
+          <Route
+            path="goals/:goalId/guide"
+            element={
+              <MemberPortfolioRequired>
+                <GoalRetirementGuidePage />
+              </MemberPortfolioRequired>
+            }
+          />
+          <Route
+            path="goals/:goalId"
+            element={
+              <MemberPortfolioRequired>
+                <GoalDetailPage />
+              </MemberPortfolioRequired>
+            }
+          />
+          <Route
+            path="spending/insights"
+            element={
+              HOUSEHOLD_MODE ? <Navigate to="/dashboard" replace /> : <SpendingInsightsPage />
+            }
+          />
+          <Route
+            path="spending/budget"
+            element={HOUSEHOLD_MODE ? <Navigate to="/dashboard" replace /> : <SpendingBudgetPage />}
+          />
           {/* Dynamic addon routes */}
           {dynamicRoutes.map(({ path, addonId, routeId }) => (
             <Route
@@ -133,21 +274,58 @@ export function AppRoutes() {
             <Route index element={<GeneralSettingsPage />} />
             <Route path="general" element={<GeneralSettingsPage />} />
             <Route path="accounts" element={<SettingsAccountsPage />} />
+            {HOUSEHOLD_MODE ? (
+              <Route path="accounts/manage" element={<SettingsAccountsPage />} />
+            ) : null}
             <Route path="portfolios" element={<PortfoliosPage />} />
             <Route path="appearance" element={<SettingsAppearancePage />} />
             <Route path="about" element={<AboutSettingsPage />} />
             <Route path="exports" element={<ExportSettingsPage />} />
             <Route path="contribution-limits" element={<ContributionLimitPage />} />
-            <Route path="spending" element={<SpendingSettingsPage />} />
-            <Route path="spending/categories" element={<SpendingSettingsCategoriesPage />} />
-            <Route path="spending/events" element={<SpendingSettingsEventsPage />} />
-            <Route path="spending/rules" element={<SpendingSettingsRulesPage />} />
-            <Route path="spending/setup" element={<SpendingSetupPage />} />
+            <Route
+              path="spending"
+              element={
+                HOUSEHOLD_MODE ? <Navigate to="/settings" replace /> : <SpendingSettingsPage />
+              }
+            />
+            <Route
+              path="spending/categories"
+              element={
+                HOUSEHOLD_MODE ? (
+                  <Navigate to="/settings" replace />
+                ) : (
+                  <SpendingSettingsCategoriesPage />
+                )
+              }
+            />
+            <Route
+              path="spending/events"
+              element={
+                HOUSEHOLD_MODE ? (
+                  <Navigate to="/settings" replace />
+                ) : (
+                  <SpendingSettingsEventsPage />
+                )
+              }
+            />
+            <Route
+              path="spending/rules"
+              element={
+                HOUSEHOLD_MODE ? <Navigate to="/settings" replace /> : <SpendingSettingsRulesPage />
+              }
+            />
+            <Route
+              path="spending/setup"
+              element={HOUSEHOLD_MODE ? <Navigate to="/settings" replace /> : <SpendingSetupPage />}
+            />
             <Route path="market-data" element={<MarketDataSettingsPage />} />
             <Route path="market-data/import" element={<MarketDataImportPage />} />
             <Route path="securities" element={<AssetsPage />} />
             <Route path="taxonomies" element={<TaxonomiesPage />} />
-            <Route path="connect" element={<ConnectSettingsPage />} />
+            <Route
+              path="connect"
+              element={HOUSEHOLD_MODE ? <Navigate to="/import" replace /> : <ConnectSettingsPage />}
+            />
             <Route path="ai-providers" element={<AiProvidersPage />} />
             <Route path="agent-access" element={<AgentAccessPage />} />
             <Route path="addons" element={<AddonSettingsPage />} />

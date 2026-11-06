@@ -93,7 +93,9 @@
     "annualized_return": "Annualized Return",
     "annualized_short": "Annualized",
     "gain_loss": "Gain / loss",
-    "gain_loss_info": "Total profit or loss over the selected period. Open the metric for attribution details."
+    "gain_loss_info": "Total profit or loss over the selected period. Open the metric for attribution details.",
+    "today": "Today",
+    "today_info": "Market move since the previous close for holdings with a daily price. Cash is not included."
   },
   "section": {
     "returns": "Returns",

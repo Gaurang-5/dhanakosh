@@ -530,6 +530,7 @@ impl FinnhubProvider {
         }
 
         Ok(AssetProfile {
+            fund_holdings: None,
             bond: None,
             source: Some(PROVIDER_ID.to_string()),
             name: response.name,

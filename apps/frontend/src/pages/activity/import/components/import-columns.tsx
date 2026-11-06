@@ -1,3 +1,5 @@
+import { accountLabel } from "@/lib/account-label";
+import { usePortfolios } from "@/hooks/use-portfolios";
 import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -89,13 +91,14 @@ export function useImportColumns<T extends ImportRowData>({
   dateField = "activityDate",
 }: UseImportColumnsOptions<T>): ColumnDef<T>[] {
   const { t } = useTranslation();
+  const { data: portfolios = [] } = usePortfolios();
   const accountOptions = useMemo(
     () =>
       accounts.map((account) => ({
         value: account.id,
-        label: account.name,
+        label: accountLabel(account, portfolios),
       })),
-    [accounts],
+    [accounts, portfolios],
   );
 
   const activityTypeOptions = useMemo(

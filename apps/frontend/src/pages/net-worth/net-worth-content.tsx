@@ -1,3 +1,4 @@
+import { useAccountScopeStore } from "@/lib/account-scope-store";
 import { useNetWorth, useNetWorthHistory } from "@/hooks/use-alternative-assets";
 import { usePortfolioAllocations } from "@/hooks/use-portfolio-allocations";
 import { useIsMobileViewport } from "@/hooks/use-platform";
@@ -55,6 +56,7 @@ const MS_PER_DAY = 86_400_000;
 
 export function NetWorthContent() {
   const { t } = useTranslation();
+  const accountScope = useAccountScopeStore((s) => s.scope);
   const formatting = useNumberFormatting();
   const { settings } = useSettingsContext();
   const currentDateISO = formatZonedDateKey(new Date(), settings?.timezone);
@@ -193,7 +195,7 @@ export function NetWorthContent() {
   // Breakdown row → detail drawer. Investments open the existing asset-class
   // allocation sheet; every other row opens the category detail sheet.
   const [selected, setSelected] = useState<SelectedCategory | null>(null);
-  const { allocations } = usePortfolioAllocations({ type: "all" });
+  const { allocations } = usePortfolioAllocations(accountScope);
   const investmentsAlloc = useMemo(
     () => investmentAllocation(allocations?.assetClasses),
     [allocations],

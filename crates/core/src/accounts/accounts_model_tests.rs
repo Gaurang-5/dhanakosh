@@ -113,6 +113,29 @@ mod tests {
         );
     }
 
+    #[test]
+    fn ppf_investment_requires_the_ppf_account_contract() {
+        let account = Account {
+            account_type: "SECURITIES".to_string(),
+            currency: "INR".to_string(),
+            tracking_mode: TrackingMode::Transactions,
+            meta: Some(r#"{"investmentProduct":"PPF"}"#.to_string()),
+            ..Account::default()
+        };
+
+        assert!(account.is_ppf_investment());
+        assert!(!Account {
+            currency: "USD".to_string(),
+            ..account.clone()
+        }
+        .is_ppf_investment());
+        assert!(!Account {
+            meta: Some(r#"{"investmentProduct":"OTHER"}"#.to_string()),
+            ..account
+        }
+        .is_ppf_investment());
+    }
+
     // ==================== Accounting Settings Tests ====================
 
     fn accounting_settings_of(meta: Option<&str>) -> crate::Result<AccountAccountingSettings> {

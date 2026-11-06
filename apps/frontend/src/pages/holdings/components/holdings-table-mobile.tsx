@@ -1,6 +1,11 @@
 import { TickerAvatar } from "@/components/ticker-avatar";
 import { useBalancePrivacy } from "@/hooks/use-balance-privacy";
 import { HoldingType } from "@/lib/constants";
+import {
+  getInstrumentAvatarIdentity,
+  getInstrumentPrimaryLabel,
+  getInstrumentSecondaryLabel,
+} from "@/lib/instrument-display";
 import { formatOptionSubtitle, parseOccSymbol } from "@/lib/occ-symbol";
 import { Account, AccountScope, Holding } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -199,16 +204,17 @@ export const HoldingsTableMobile = ({
             const isCash = holding.holdingType === HoldingType.CASH || symbol.startsWith("$CASH");
             const isClosed = isClosedPosition(holding);
             const parsedOption = isCash ? null : parseOccSymbol(symbol);
+            const avatarIdentity = getInstrumentAvatarIdentity(holding.instrument);
             const avatarSymbol = isCash
               ? `CASH:${holding.localCurrency}`
               : parsedOption
                 ? parsedOption.underlying
-                : symbol;
+                : avatarIdentity.symbol;
             const displaySymbol = isCash
               ? symbol.split("-")[0]
               : parsedOption
                 ? parsedOption.underlying
-                : symbol;
+                : getInstrumentPrimaryLabel(holding.instrument) || symbol;
             const subtitle = isCash
               ? t("holdings:cash_balance")
               : parsedOption
@@ -217,7 +223,7 @@ export const HoldingsTableMobile = ({
                     holding.instrument?.currency ?? holding.localCurrency,
                     formatting,
                   )
-                : (holding.instrument?.name ?? null);
+                : getInstrumentSecondaryLabel(holding.instrument);
             const isNavigable = !isCash && holding.instrument?.symbol;
 
             return (
@@ -233,7 +239,11 @@ export const HoldingsTableMobile = ({
                   <div className="flex flex-1 items-center gap-3 overflow-hidden">
                     <TickerAvatar
                       symbol={avatarSymbol}
-                      exchangeMic={holding.instrument?.exchangeMic}
+                      exchangeMic={
+                        isCash || parsedOption
+                          ? holding.instrument?.exchangeMic
+                          : avatarIdentity.exchangeMic
+                      }
                       instrumentType={holding.instrument?.instrumentType}
                       assetId={holding.instrument?.id}
                       className="h-10 w-10"

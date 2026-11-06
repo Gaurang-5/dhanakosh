@@ -33,7 +33,6 @@ import { Label } from "@wealthfolio/ui/components/ui/label";
 import { Textarea } from "@wealthfolio/ui/components/ui/textarea";
 import {
   Button,
-  Checkbox,
   Icons,
   Separator,
   Skeleton,
@@ -45,7 +44,6 @@ import {
   EmptyContent,
 } from "@wealthfolio/ui";
 import { SettingsHeader } from "../settings-header";
-import { Alert, AlertDescription, AlertTitle } from "@wealthfolio/ui/components/ui/alert";
 
 export default function PortfoliosPage() {
   const { t } = useTranslation();
@@ -277,20 +275,13 @@ function PortfolioDialog({
     () => new Set(accountOptions.map((account) => account.id)),
     [accountOptions],
   );
-  const missingAccountIds = useMemo(
-    () => portfolio?.accountIds.filter((id) => !existingAccountIds.has(id)) ?? [],
-    [existingAccountIds, portfolio],
-  );
   const [name, setName] = useState(portfolio?.name ?? "");
   const [description, setDescription] = useState(portfolio?.description ?? "");
-  const [selectedIds, setSelectedIds] = useState<string[]>(
+  const [selectedIds] = useState<string[]>(
     portfolio?.accountIds.filter((id) => existingAccountIds.has(id)) ?? [],
   );
 
-  const toggle = (id: string) =>
-    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-
-  const canSave = name.trim().length > 0 && selectedIds.length > 0;
+  const canSave = name.trim().length > 0;
 
   const handleSave = () => {
     if (!canSave) return;
@@ -336,49 +327,9 @@ function PortfolioDialog({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label>{t("settings:portfolios.accounts_label")}</Label>
-            <div className="divide-border max-h-56 overflow-y-auto rounded-md border">
-              {accountOptions.length === 0 ? (
-                <p className="text-muted-foreground p-3 text-sm">
-                  {t("settings:portfolios.no_accounts")}
-                </p>
-              ) : (
-                accountOptions.map((a) => (
-                  <label
-                    key={a.id}
-                    className="hover:bg-muted/40 flex cursor-pointer items-center gap-3 px-3 py-2"
-                  >
-                    <Checkbox
-                      checked={selectedIds.includes(a.id)}
-                      onCheckedChange={() => toggle(a.id)}
-                    />
-                    <span className="text-sm">
-                      {a.name} <span className="text-muted-foreground text-xs">({a.currency})</span>
-                    </span>
-                  </label>
-                ))
-              )}
-            </div>
-            {selectedIds.length === 0 && (
-              <p className="text-destructive text-xs">
-                {t("settings:portfolios.select_one_account")}
-              </p>
-            )}
-            {missingAccountIds.length > 0 && (
-              <Alert variant="warning" className="p-3 text-xs">
-                <Icons.AlertTriangle className="size-3.5" />
-                <AlertTitle>{t("settings:portfolios.remove_deleted_links")}</AlertTitle>
-                <AlertDescription className="mt-1 space-y-1">
-                  {missingAccountIds.map((id) => (
-                    <div key={id} className="break-all">
-                      {t("settings:portfolios.deleted_account", { id })}
-                    </div>
-                  ))}
-                </AlertDescription>
-              </Alert>
-            )}
-          </div>
+          <p className="text-muted-foreground text-sm">
+            {t("settings:workspace.manageAccountsHelp")}
+          </p>
         </div>
 
         <DialogFooter>

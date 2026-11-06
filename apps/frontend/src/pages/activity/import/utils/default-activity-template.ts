@@ -7,6 +7,8 @@ import {
   type ActivityImportProfile,
 } from "./activity-import-profile";
 
+import { ActivityType, ImportFormat } from "@/lib/constants";
+
 export const DEFAULT_ACTIVITY_TEMPLATE_ID = "system_default_activity";
 
 export function createDefaultParseConfig(defaultCurrency = "USD"): ParseConfig {
@@ -38,6 +40,63 @@ export function createDefaultActivityTemplate(
     accountMappings: {},
     symbolMappingMeta: {},
   };
+}
+
+/** Code-defined presets stay local; only user-saved templates have database IDs. */
+export function createInvestmentImportPresets(): ImportTemplateData[] {
+  const baseline = createDefaultActivityTemplate();
+  return [
+    {
+      ...baseline,
+      id: "system_zerodha_tradebook",
+      name: "Zerodha equity tradebook (INR)",
+      fieldMappings: {
+        [ImportFormat.DATE]: "trade_date",
+        [ImportFormat.ACTIVITY_TYPE]: "trade_type",
+        [ImportFormat.SYMBOL]: "symbol",
+        [ImportFormat.ISIN]: "isin",
+        [ImportFormat.QUANTITY]: "quantity",
+        [ImportFormat.UNIT_PRICE]: "price",
+      },
+      activityMappings: {
+        ...baseline.activityMappings,
+        [ActivityType.BUY]: ["BUY", "buy"],
+        [ActivityType.SELL]: ["SELL", "sell"],
+      },
+      parseConfig: { ...createDefaultParseConfig("INR"), dateFormat: "YYYY-MM-DD" },
+    },
+    {
+      ...baseline,
+      id: "system_zerodha_mutual_fund_tradebook",
+      name: "Zerodha Coin mutual fund tradebook (INR)",
+      fieldMappings: {
+        [ImportFormat.DATE]: "trade_date",
+        [ImportFormat.ACTIVITY_TYPE]: "trade_type",
+        [ImportFormat.SYMBOL]: "symbol",
+        [ImportFormat.ISIN]: "isin",
+        [ImportFormat.QUANTITY]: "quantity",
+        [ImportFormat.UNIT_PRICE]: "price",
+      },
+      activityMappings: {
+        ...baseline.activityMappings,
+        [ActivityType.BUY]: ["BUY", "buy"],
+        [ActivityType.SELL]: ["SELL", "sell"],
+      },
+      parseConfig: { ...createDefaultParseConfig("INR"), dateFormat: "YYYY-MM-DD" },
+    },
+    {
+      ...baseline,
+      id: "system_india_activity",
+      name: "India investments CSV (INR)",
+      parseConfig: createDefaultParseConfig("INR"),
+    },
+    {
+      ...baseline,
+      id: "system_global_activity",
+      name: "Global investments CSV (USD default)",
+      parseConfig: createDefaultParseConfig("USD"),
+    },
+  ];
 }
 
 export function createDefaultActivityMapping(
@@ -73,12 +132,21 @@ export function prependDefaultActivityTemplate(
   templates: ImportTemplateData[],
   profile: ActivityImportProfile = DEFAULT_ACTIVITY_IMPORT_PROFILE,
 ): ImportTemplateData[] {
-  return [
+  const builtins = [
     createDefaultActivityTemplate(profile),
-    ...templates.filter((template) => template.id !== DEFAULT_ACTIVITY_TEMPLATE_ID),
+    ...(profile.kind === "investment" ? createInvestmentImportPresets() : []),
   ];
+  const ids = new Set(builtins.map((template) => template.id));
+  return [...builtins, ...templates.filter((template) => !ids.has(template.id))];
 }
 
 export function isDefaultActivityTemplateId(templateId: string | null): boolean {
   return templateId === DEFAULT_ACTIVITY_TEMPLATE_ID;
+}
+
+export function isBuiltinActivityTemplateId(id: string | null): boolean {
+  return (
+    id === DEFAULT_ACTIVITY_TEMPLATE_ID ||
+    createInvestmentImportPresets().some((item) => item.id === id)
+  );
 }

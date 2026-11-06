@@ -12,9 +12,14 @@ pub const DATA_SOURCE_OPENFIGI: &str = "OPENFIGI";
 pub const DATA_SOURCE_US_TREASURY_CALC: &str = "US_TREASURY_CALC";
 pub const DATA_SOURCE_BOERSE_FRANKFURT: &str = "BOERSE_FRANKFURT";
 pub const DATA_SOURCE_BROKER: &str = "BROKER";
+/// Full monthly Indian mutual-fund portfolio compositions.
+pub const DATA_SOURCE_BHARATSTOCK: &str = "BHARATSTOCK";
+pub use wealthfolio_market_data::provider::amfi::DATA_SOURCE_AMFI;
 pub use wealthfolio_market_data::provider::DATA_SOURCE_CUSTOM_SCRAPER;
-pub const MARKET_DATA_PROVIDER_IDS: [&str; 9] = [
+pub const MARKET_DATA_PROVIDER_IDS: [&str; 11] = [
     DATA_SOURCE_YAHOO,
+    DATA_SOURCE_AMFI,
+    DATA_SOURCE_BHARATSTOCK,
     DATA_SOURCE_ALPHA_VANTAGE,
     DATA_SOURCE_MARKET_DATA_APP,
     DATA_SOURCE_METAL_PRICE_API,

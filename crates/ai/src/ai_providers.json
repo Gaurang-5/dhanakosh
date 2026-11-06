@@ -1,5 +1,44 @@
 {
   "providers": {
+    "codex_cli": {
+      "name": "Codex (local account)",
+      "type": "local",
+      "icon": "LogoOpenAI",
+      "description": "Uses the signed-in Codex CLI on this computer. No API key is stored in Wealthfolio.",
+      "envKey": "",
+      "defaultConfig": { "enabled": true, "priority": 1 },
+      "connectionFields": [],
+      "models": { "default": { "capabilities": { "tools": true, "thinking": false, "vision": true, "streaming": false } } },
+      "defaultModel": "default",
+      "titleModelId": "default",
+      "documentationUrl": "https://developers.openai.com/codex/noninteractive"
+    },
+    "claude_cli": {
+      "name": "Claude Code (local account)",
+      "type": "local",
+      "icon": "LogoAnthropic",
+      "description": "Uses the signed-in Claude Code CLI on this computer. No API key is stored in Wealthfolio.",
+      "envKey": "",
+      "defaultConfig": { "enabled": true, "priority": 2 },
+      "connectionFields": [],
+      "models": { "default": { "capabilities": { "tools": true, "thinking": false, "vision": false, "streaming": false } } },
+      "defaultModel": "default",
+      "titleModelId": "default",
+      "documentationUrl": "https://code.claude.com/docs/en/headless"
+    },
+    "antigravity_cli": {
+      "name": "Antigravity (local account)",
+      "type": "local",
+      "icon": "LogoGoogle",
+      "description": "Uses the signed-in Antigravity CLI on this computer. Install agy to share the app account.",
+      "envKey": "",
+      "defaultConfig": { "enabled": true, "priority": 3 },
+      "connectionFields": [],
+      "models": { "default": { "capabilities": { "tools": true, "thinking": false, "vision": false, "streaming": false } } },
+      "defaultModel": "default",
+      "titleModelId": "default",
+      "documentationUrl": "https://antigravity.google/docs/cli/headless/"
+    },
     "ollama": {
       "name": "Ollama",
       "type": "local",

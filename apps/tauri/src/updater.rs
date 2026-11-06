@@ -30,10 +30,10 @@ impl ExternalUpdateSource {
         match self {
             Self::Packager { explanation } => explanation,
             Self::Flatpak => {
-                "This copy of Wealthfolio was installed with Flatpak. Update it with Flatpak or your software center."
+                "This copy of Dhanakosh was installed with Flatpak. Update it with Flatpak or your software center."
             }
             Self::PackageManager => {
-                "This installation can't be updated from within Wealthfolio. Update it the same way you installed it."
+                "This installation can't be updated from within Dhanakosh. Update it the same way you installed it."
             }
         }
     }

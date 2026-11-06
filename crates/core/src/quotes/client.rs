@@ -237,7 +237,9 @@ impl MarketDataClient {
                 UsTreasuryCalcProvider::with_fixtures(fixture_dir)
                     .map_err(MarketDataClientError::from)?,
             ))),
-            DATA_SOURCE_MARKET_DATA_APP
+            DATA_SOURCE_AMFI
+            | DATA_SOURCE_BHARATSTOCK
+            | DATA_SOURCE_MARKET_DATA_APP
             | DATA_SOURCE_ALPHA_VANTAGE
             | DATA_SOURCE_METAL_PRICE_API
             | DATA_SOURCE_FINNHUB
@@ -267,6 +269,12 @@ impl MarketDataClient {
         }
 
         match provider_id {
+            // Fund compositions use the dedicated look-through path. This provider
+            // must not enter quote resolution because it does not supply prices.
+            DATA_SOURCE_BHARATSTOCK => Ok(None),
+            DATA_SOURCE_AMFI => Ok(Some(Arc::new(
+                wealthfolio_market_data::provider::amfi::AmfiProvider::new(),
+            ))),
             DATA_SOURCE_YAHOO => {
                 // Yahoo doesn't need an API key
                 let provider = YahooProvider::new()
@@ -877,6 +885,7 @@ impl MarketDataClient {
         });
 
         ProviderProfile {
+            fund_holdings: profile.fund_holdings,
             bond: profile.bond.map(|bond| crate::assets::BondSpec {
                 isin: bond.isin,
                 treasury_type: bond.treasury_type,

@@ -80,6 +80,7 @@ pub enum TrackingMode {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AccountFacts {
+    pub separate_cash_ledger: bool,
     pub id: AccountId,
     pub currency: Currency,
     pub kind: AccountKind,

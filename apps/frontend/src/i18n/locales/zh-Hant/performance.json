@@ -93,7 +93,9 @@
     "annualized_return": "年化報酬率",
     "annualized_short": "年化",
     "gain_loss": "損益",
-    "gain_loss_info": "所選期間內的總獲利或虧損。展開指標即可查看歸因明細。"
+    "gain_loss_info": "所選期間內的總獲利或虧損。展開指標即可查看歸因明細。",
+    "today": "今日",
+    "today_info": "有當日價格的持倉相對前收盤的變動。不含現金。"
   },
   "section": {
     "returns": "報酬率",

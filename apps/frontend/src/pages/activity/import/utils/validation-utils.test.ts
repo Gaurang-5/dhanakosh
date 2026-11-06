@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateTickerSymbol } from "./validation-utils";
+import { canResolveImportAssetIdentifier, validateTickerSymbol } from "./validation-utils";
 
 describe("validateTickerSymbol", () => {
   it("accepts supported ticker formats", () => {
@@ -24,5 +24,19 @@ describe("validateTickerSymbol", () => {
   it("rejects free text and whitespace", () => {
     expect(validateTickerSymbol("bad symbol")).toBe(false);
     expect(validateTickerSymbol("Some Company Inc.")).toBe(false);
+  });
+});
+
+describe("canResolveImportAssetIdentifier", () => {
+  it("accepts a mutual-fund name when its row contains a valid ISIN", () => {
+    expect(canResolveImportAssetIdentifier("HDFC Mid Cap Dir-G", "INF179K01XQ0")).toBe(true);
+  });
+
+  it("still requires mapping for free text without an ISIN", () => {
+    expect(canResolveImportAssetIdentifier("HDFC Mid Cap Dir-G")).toBe(false);
+  });
+
+  it("accepts an explicit symbol mapping", () => {
+    expect(canResolveImportAssetIdentifier("HDFC Mid Cap Dir-G", "", "AMFI:118989")).toBe(true);
   });
 });

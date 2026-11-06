@@ -13,6 +13,11 @@ import { useBalancePrivacy } from "@/hooks/use-balance-privacy";
 import { Holding, HOLDING_GROUP_ORDER } from "@/lib/types";
 import { AccountType, AssetKind, HoldingType } from "@/lib/constants";
 import { getBaseHoldingPerformancePercent } from "@/lib/holding-performance";
+import {
+  getInstrumentAvatarIdentity,
+  getInstrumentPrimaryLabel,
+  getInstrumentSecondaryLabel,
+} from "@/lib/instrument-display";
 import { cn, safeDivide } from "@/lib/utils";
 import { useSettingsContext } from "@/lib/settings-provider";
 import { useState, useMemo } from "react";
@@ -212,8 +217,13 @@ function HoldingRow({
 }: HoldingRowProps) {
   const { t } = useTranslation();
   const symbol = holding.instrument?.symbol ?? holding.id;
+  const avatarIdentity = getInstrumentAvatarIdentity(holding.instrument);
+  const primaryLabel = getInstrumentPrimaryLabel(holding.instrument) || symbol;
+  const secondaryLabel = getInstrumentSecondaryLabel(holding.instrument);
   const avatarSymbol =
-    holding.holdingType === HoldingType.CASH ? `CASH:${holding.localCurrency}` : symbol;
+    holding.holdingType === HoldingType.CASH
+      ? `CASH:${holding.localCurrency}`
+      : avatarIdentity.symbol;
 
   const handleNavigate = () => {
     // Use instrument.id (asset ID) for navigation, not symbol (which may be stripped)
@@ -272,23 +282,27 @@ function HoldingRow({
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <TickerAvatar
             symbol={avatarSymbol}
-            exchangeMic={holding.instrument?.exchangeMic}
+            exchangeMic={
+              holding.holdingType === HoldingType.CASH
+                ? holding.instrument?.exchangeMic
+                : avatarIdentity.exchangeMic
+            }
             instrumentType={holding.instrument?.instrumentType}
             assetId={holding.instrument?.id}
             className="h-8 w-8 flex-shrink-0"
           />
           <div className="flex min-w-0 flex-1 flex-col">
             <div className="flex items-center gap-2">
-              <span className="truncate font-medium">{symbol}</span>
+              <span className="truncate font-medium">{primaryLabel}</span>
               {holding.isLiability && (
                 <Badge variant="destructive" className="text-xs">
                   {t("holdings:debt")}
                 </Badge>
               )}
             </div>
-            <span className="text-muted-foreground truncate text-sm">
-              {holding.instrument?.name ?? holding.id}
-            </span>
+            {secondaryLabel ? (
+              <span className="text-muted-foreground truncate text-sm">{secondaryLabel}</span>
+            ) : null}
           </div>
         </div>
 

@@ -108,7 +108,12 @@ const CustomTooltip = ({ active, payload, isBalanceHidden, t }: CustomTooltipPro
 /**
  * Transform NetWorthHistoryPoint data to chart-compatible format
  */
-function transformData(data: NetWorthHistoryPoint[]): ChartDataPoint[] {
+function transformData(
+  data: Pick<
+    NetWorthHistoryPoint,
+    "date" | "netWorth" | "totalAssets" | "totalLiabilities" | "currency"
+  >[],
+): ChartDataPoint[] {
   return data.map((point) => ({
     date: point.date,
     netWorth: parseFloat(point.netWorth) || 0,
@@ -119,7 +124,10 @@ function transformData(data: NetWorthHistoryPoint[]): ChartDataPoint[] {
 }
 
 interface NetWorthChartProps {
-  data: NetWorthHistoryPoint[];
+  data: Pick<
+    NetWorthHistoryPoint,
+    "date" | "netWorth" | "totalAssets" | "totalLiabilities" | "currency"
+  >[];
   isLoading?: boolean;
 }
 

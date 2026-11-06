@@ -1,3 +1,7 @@
+import { getInstrumentPrimaryLabel } from "@/lib/instrument-display";
+import { useHouseholdReport } from "@/features/household/household-report-context";
+import { useHouseholdScope } from "@/features/household/household-scope";
+import { getHouseholdIncome } from "@/features/household/household-income";
 import { getIncomeSummary } from "@/adapters";
 import { Badge } from "@wealthfolio/ui/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@wealthfolio/ui/components/ui/card";
@@ -81,6 +85,10 @@ const IncomePeriodSelector: React.FC<{
 
 export default function IncomePage() {
   const { t } = useTranslation();
+  const family = useHouseholdReport();
+  const scope = useHouseholdScope();
+  const memberIds = family ? scope?.memberIds : undefined;
+  const familyCurrency = family?.currentValuation.summary.baseCurrency;
   const [selectedPeriod, setSelectedPeriod] = useState<IncomePeriod>("ALL");
   const { isBalanceHidden } = useBalancePrivacy();
   const amountFormatting = useAmountFormatting();
@@ -93,8 +101,11 @@ export default function IncomePage() {
     isLoading,
     error,
   } = useQuery<IncomeSummary[], Error>({
-    queryKey: [QueryKeys.INCOME_SUMMARY, accountFilter],
-    queryFn: () => getIncomeSummary(accountFilter),
+    queryKey: [QueryKeys.INCOME_SUMMARY, accountFilter, memberIds, familyCurrency],
+    queryFn: () =>
+      memberIds && familyCurrency
+        ? getHouseholdIncome(memberIds, familyCurrency)
+        : getIncomeSummary(accountFilter),
   });
 
   // Keep the selector mounted as queries change so multi-selection can continue
@@ -102,12 +113,12 @@ export default function IncomePage() {
   const filters = (
     <>
       <div className="pointer-events-auto fixed end-2 top-4 z-20 hidden items-center gap-2 md:flex lg:end-4">
-        <AccountScopeSelector value={accountFilter} onChange={setAccountScope} />
+        {!family && <AccountScopeSelector value={accountFilter} onChange={setAccountScope} />}
         <IncomePeriodSelector selectedPeriod={selectedPeriod} onPeriodSelect={setSelectedPeriod} />
       </div>
       <div className="mb-6 flex items-center justify-end gap-2 md:hidden">
         <IncomePeriodSelector selectedPeriod={selectedPeriod} onPeriodSelect={setSelectedPeriod} />
-        <AccountScopeSelector value={accountFilter} onChange={setAccountScope} />
+        {!family && <AccountScopeSelector value={accountFilter} onChange={setAccountScope} />}
       </div>
     </>
   );
@@ -547,7 +558,7 @@ export default function IncomePage() {
                     <div key={asset.assetId} className="flex items-center justify-between">
                       <div className="flex items-center">
                         <Badge className="bg-primary me-2 flex min-w-[3.4375rem] items-center justify-center rounded-sm text-xs">
-                          {asset.symbol}
+                          {getInstrumentPrimaryLabel(asset)}
                         </Badge>
                         <span className="text-muted-foreground me-16 text-xs">
                           <bdi>{asset.name}</bdi>

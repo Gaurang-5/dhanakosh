@@ -24,6 +24,8 @@ const PROVIDER_SUFFIX_TO_PACK_MIC: Record<string, string> = {
   DE: "XETR",
   L: "XLON",
   NZ: "XNZE",
+  NS: "XNSE",
+  BO: "XBOM",
   PA: "XPAR",
   T: "XTKS",
   TO: "XTSE",
@@ -38,7 +40,7 @@ export function normalizeTickerLogoSymbol(symbol: unknown): string | undefined {
     normalized.includes("..") ||
     normalized.includes("/") ||
     normalized.includes("\\") ||
-    !/^[A-Z0-9$^._:-]+$/.test(normalized)
+    !/^[A-Z0-9$^._:&-]+$/.test(normalized)
   ) {
     return undefined;
   }
@@ -64,6 +66,32 @@ function getProviderSuffixCompatibilityFilenames(symbol: string): string[] {
   const providerSuffix = symbol.slice(separatorIndex + 1);
   const marketMic = PROVIDER_SUFFIX_TO_PACK_MIC[providerSuffix];
   return baseSymbol && marketMic ? [`${baseSymbol}-${marketMic}`, baseSymbol] : [];
+}
+
+// BSE scrip codes identify the same issuer, but are not NSE trading symbols.
+const BSE_TO_NSE_LOGO: Record<string, string> = {
+  "500325": "RELIANCE",
+  "532540": "TCS",
+  "500180": "HDFCBANK",
+  "500209": "INFY",
+  "532174": "ICICIBANK",
+  "507685": "WIPRO",
+};
+function getIndianCompatibilityFilenames(symbol: string, exchangeMic: unknown): string[] {
+  const prefix = /^(NSE|BSE):(.+)$/.exec(symbol);
+  const suffix = /^(.+)\.(NS|BO)$/.exec(symbol);
+  const canonical = /^(.+)-(XNSE|XBOM)$/.exec(symbol);
+  const market = prefix
+    ? prefix[1] === "NSE"
+      ? "XNSE"
+      : "XBOM"
+    : (canonical?.[2] ??
+      normalizeExchangeMic(exchangeMic) ??
+      (suffix ? PROVIDER_SUFFIX_TO_PACK_MIC[suffix[2]] : undefined));
+  if (market !== "XNSE" && market !== "XBOM") return [];
+  const base = prefix?.[2] ?? suffix?.[1] ?? canonical?.[1] ?? symbol;
+  const mapped = market === "XBOM" ? (BSE_TO_NSE_LOGO[base] ?? base) : base;
+  return [`${mapped}-XNSE`];
 }
 
 function getCryptoProviderCompatibilityFilenames(symbol: string): string[] {
@@ -127,9 +155,12 @@ export function resolveTickerLogoFilenames(
     ? canonicalMatch[1]
     : normalizeFilenameSymbol(normalizedSymbol);
 
-  return [exactFilename, ...providerCompatibilityFilenames, bareFilename].filter(
-    (filename, index, filenames) => !!filename && filenames.indexOf(filename) === index,
-  );
+  return [
+    exactFilename,
+    ...getIndianCompatibilityFilenames(normalizedSymbol, exchangeMic),
+    ...providerCompatibilityFilenames,
+    bareFilename,
+  ].filter((filename, index, filenames) => !!filename && filenames.indexOf(filename) === index);
 }
 
 export function getTickerLogoPath(
@@ -146,7 +177,40 @@ export function getTickerLogoPaths(
   exchangeMic?: unknown,
   instrumentType?: unknown,
 ): string[] {
-  return resolveTickerLogoFilenames(symbol, exchangeMic, instrumentType).map(
-    (filename) => `/ticker-logos/${encodeLogoFilename(filename)}.png`,
-  );
+  const filenames = resolveTickerLogoFilenames(symbol, exchangeMic, instrumentType);
+  const normalized = normalizeTickerLogoSymbol(symbol);
+  if (normalized && /^INE[A-Z0-9]{9}$/.test(normalized) && !isCryptoInstrument(instrumentType)) {
+    return [`https://api.dharun.dev/v1/logos/${normalized}?format=png&size=128`];
+  }
+  // Only an explicit Indian exchange identifies this provider's universe.
+  // Never send an ambiguous bare ticker (e.g. NXST) to an Indian provider.
+  const indian =
+    normalized && !isCryptoInstrument(instrumentType)
+      ? getIndianCompatibilityFilenames(normalized, exchangeMic)[0]
+      : undefined;
+  if (indian && normalized) {
+    const prefix = /^(NSE|BSE):(.+)$/.exec(normalized);
+    const suffix = /^(.+)\.(NS|BO)$/.exec(normalized);
+    const canonical = /^(.+)-(XNSE|XBOM)$/.exec(normalized);
+    const base = prefix?.[2] ?? suffix?.[1] ?? canonical?.[1] ?? normalized;
+    const mic = prefix
+      ? prefix[1] === "NSE"
+        ? "XNSE"
+        : "XBOM"
+      : (canonical?.[2] ??
+        normalizeExchangeMic(exchangeMic) ??
+        (suffix?.[2] === "BO" ? "XBOM" : "XNSE"));
+    const exchange = mic === "XBOM" ? "BSE" : "NSE";
+    if (base === "NXST" && mic === "XNSE") {
+      return ["/ticker-logos/NXST-XNSE.ico"];
+    }
+    return [
+      `https://api.dharun.dev/v1/logos/${encodeURIComponent(`${exchange}:${base}`)}?format=png&size=128`,
+      // Unsuffixed US logos can belong to a completely different company.
+      ...filenames
+        .filter((filename) => /-(XNSE|XBOM)$/.test(filename))
+        .map((filename) => `/ticker-logos/${encodeLogoFilename(filename)}.png`),
+    ];
+  }
+  return filenames.map((filename) => `/ticker-logos/${encodeLogoFilename(filename)}.png`);
 }

@@ -1,3 +1,4 @@
+import { isPpfAccount } from "@/features/ppf/ppf-account";
 import { parseLocalDate } from "@/lib/utils";
 import { formatZonedDateKey } from "@/features/spending/lib/timezone";
 import { getContributionLimit, getSnapshots, searchActivities } from "@/adapters";
@@ -1028,6 +1029,28 @@ const AccountPage = () => {
         </div>
       </PageHeader>
       <PageContent>
+        {isPpfAccount(account) && (
+          <Card className="mb-4">
+            <CardHeader>
+              <CardTitle>{t("account:ppf_title")}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-muted-foreground text-sm">{t("account:ppf_description")}</p>
+              <div className="flex flex-wrap gap-2">
+                {(["DEPOSIT", "INTEREST", "WITHDRAWAL", "TRANSFER_IN"] as const).map((type) => (
+                  <Button
+                    key={type}
+                    variant="outline"
+                    onClick={() => navigate(`/activities/manage?account=${id}&type=${type}`)}
+                  >
+                    {t(`account:ppf_${type.toLowerCase()}`)}
+                  </Button>
+                ))}
+              </div>
+              <p className="text-muted-foreground text-xs">{t("account:ppf_opening_balance")}</p>
+            </CardContent>
+          </Card>
+        )}
         {hasHoldings && !isHoldingsLoading ? (
           <>
             <div className="grid grid-cols-1 gap-4 pt-0 lg:grid-cols-3">

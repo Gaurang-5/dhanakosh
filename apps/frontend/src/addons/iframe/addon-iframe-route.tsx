@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useLocation, useParams } from "react-router-dom";
+import { WorkspaceFilterHost } from "@/features/workspace/workspace-filter";
 import { cn } from "@/lib/utils";
 import { activationCoordinator } from "@/addons/activation-coordinator";
 import { addonIframeManager, type AddonRouteRenderStatus } from "./addon-iframe-manager";
@@ -121,6 +122,12 @@ export function AddonIframeRoute({ addonId, routeId }: AddonIframeRouteProps) {
     addonIframeManager.retryRoute(addonId);
   };
 
+  // Fees Tracker draws Year to Date | Last Year | All Time at the end of the
+  // title line (~17.5rem, plus the header's 1rem end padding). Keep the menu
+  // on that line, one gap to the inline-start of the toggle.
+  const clearsPeriodToggle =
+    addonId === "investment-fees-tracker-addon" || routeId === "investment-fees-tracker";
+
   return (
     <div
       className="relative h-full min-h-0 w-full overflow-hidden"
@@ -135,6 +142,22 @@ export function AddonIframeRoute({ addonId, routeId }: AddonIframeRouteProps) {
         data-addon-id={addonId}
         data-addon-route-id={routeId}
       />
+      {/* On the addon's title line. The frame starts at the top of this
+          viewport; an in-flow row would leave a blank strip above the title.
+          Padding matches PageHeader so the menu shares that line. Clicks pass
+          through except on the menu. */}
+      <div
+        data-addon-route-header="true"
+        className="pt-safe pointer-events-none absolute end-0 start-0 top-0 z-20 md:pt-2"
+      >
+        <div
+          className={cn("flex items-center justify-end p-4", clearsPeriodToggle && "pe-[19.25rem]")}
+        >
+          <div className="pointer-events-auto">
+            <WorkspaceFilterHost />
+          </div>
+        </div>
+      </div>
       {isColdLoading ? <AddonRouteSkeleton /> : null}
       {isError ? (
         <AddonRouteError addonId={addonId} error={errorMessage} onRetry={handleRetry} />

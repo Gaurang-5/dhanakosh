@@ -219,3 +219,26 @@ describe("AccountForm archive", () => {
     expect(screen.queryByText("settings:accounts.archive_title")).not.toBeInTheDocument();
   });
 });
+
+it("creates an INR PPF ledger while preserving existing metadata", async () => {
+  mutations.create.mockClear();
+  renderForm({ id: undefined, name: "My PPF", meta: '{"bank":"SBI"}' });
+  fireEvent.click(screen.getByRole("button", { name: "settings:accounts.ppf_preset" }));
+  expect(screen.queryByTestId("tracking-mode-holdings")).not.toBeInTheDocument();
+  expect(screen.queryByTestId("account-currency-select")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByTestId("account-submit-button"));
+  await waitFor(() => expect(mutations.create).toHaveBeenCalledTimes(1));
+  const submitted = mutations.create.mock.calls[0][0] as { meta: string };
+  expect(submitted).toMatchObject({
+    name: "My PPF",
+    currency: "INR",
+    accountType: "SECURITIES",
+    trackingMode: "TRANSACTIONS",
+    group: "PPF",
+  });
+  expect(JSON.parse(submitted.meta)).toMatchObject({
+    bank: "SBI",
+    investmentProduct: "PPF",
+    allocation: { cashCategoryId: "FIXED_INCOME" },
+  });
+});

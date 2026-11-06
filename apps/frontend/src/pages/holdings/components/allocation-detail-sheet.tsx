@@ -1,3 +1,6 @@
+import { useHouseholdReport } from "@/features/household/household-report-context";
+import { useHouseholdScope } from "@/features/household/household-scope";
+import { getHouseholdAllocation } from "@/features/household/household-allocation";
 import { Button } from "@wealthfolio/ui/components/ui/button";
 import {
   Sheet,
@@ -17,6 +20,11 @@ import { useQuery } from "@tanstack/react-query";
 import { getHoldingsByAllocation } from "@/adapters";
 import { namedChild, namedChildren } from "@/lib/allocation-children";
 import { TickerAvatar } from "@/components/ticker-avatar";
+import {
+  getInstrumentAvatarIdentity,
+  getInstrumentPrimaryLabel,
+  getInstrumentSecondaryLabel,
+} from "@/lib/instrument-display";
 import { useBalancePrivacy } from "@/hooks/use-balance-privacy";
 import { HoldingType } from "@/lib/constants";
 import type {
@@ -35,10 +43,11 @@ interface AllocationDetailSheetProps {
   allocation?: TaxonomyAllocation;
   accountFilter: AccountScope;
   baseCurrency: string;
+  valueScale?: number;
   initialCategoryId?: string | null;
 }
 
-type HoldingsByAllocationQueryKey = readonly [string, AccountScope, string, string];
+type HoldingsByAllocationQueryKey = readonly [string, AccountScope, string, string, string];
 
 export function AllocationDetailSheet({
   isOpen,
@@ -46,8 +55,11 @@ export function AllocationDetailSheet({
   allocation,
   accountFilter,
   baseCurrency,
+  valueScale = 1,
   initialCategoryId,
 }: AllocationDetailSheetProps) {
+  const family = useHouseholdReport();
+  const familyScope = useHouseholdScope();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -109,6 +121,7 @@ export function AllocationDetailSheet({
     accountFilter,
     taxonomyId,
     categoryId,
+    family ? (familyScope?.memberIds.join(",") ?? "") : "member",
   ];
 
   // Fetch holdings for the selected category
@@ -122,7 +135,14 @@ export function AllocationDetailSheet({
     queryKey: holdingsQueryKey,
     queryFn: ({ queryKey }) => {
       const [, filter, selectedTaxonomyId, selectedCategoryId] = queryKey;
-      return getHoldingsByAllocation(filter, selectedTaxonomyId, selectedCategoryId);
+      return family
+        ? getHouseholdAllocation(
+            familyScope?.memberIds ?? [],
+            baseCurrency,
+            selectedTaxonomyId,
+            selectedCategoryId,
+          )
+        : getHoldingsByAllocation(filter, selectedTaxonomyId, selectedCategoryId);
     },
     enabled: !!categoryId && !!taxonomyId,
     staleTime: 30000,
@@ -396,14 +416,17 @@ export function AllocationDetailSheet({
                   {holdings.map((holding, index) => {
                     const canNavigate = holding.holdingType !== HoldingType.CASH;
                     const isCash = holding.holdingType === HoldingType.CASH;
-                    const avatarSymbol = isCash ? `CASH:${holding.currency}` : holding.symbol;
+                    const avatarIdentity = getInstrumentAvatarIdentity(holding);
+                    const avatarSymbol = isCash
+                      ? `CASH:${holding.currency}`
+                      : avatarIdentity.symbol;
                     const primaryLabel = isCash
                       ? (holding.accountName ?? holding.symbol)
-                      : holding.symbol;
+                      : getInstrumentPrimaryLabel(holding) || holding.symbol;
                     const secondaryLabel = isCash
                       ? (holding.name ??
                         t("holdings:cash_with_currency", { currency: holding.currency }))
-                      : (holding.name ?? holding.symbol);
+                      : getInstrumentSecondaryLabel(holding);
                     const rowKey = isCash
                       ? [
                           categoryId,
@@ -426,17 +449,21 @@ export function AllocationDetailSheet({
                         <TickerAvatar
                           symbol={avatarSymbol}
                           assetId={holding.id}
-                          exchangeMic={holding.exchangeMic}
+                          exchangeMic={isCash ? holding.exchangeMic : avatarIdentity.exchangeMic}
                           instrumentType={holding.instrumentType}
                           className="h-9 w-9"
                         />
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-semibold">{primaryLabel}</p>
-                          <p className="text-muted-foreground truncate text-xs">{secondaryLabel}</p>
+                          {secondaryLabel ? (
+                            <p className="text-muted-foreground truncate text-xs">
+                              {secondaryLabel}
+                            </p>
+                          ) : null}
                         </div>
                         <div className="text-end">
                           <AmountDisplay
-                            value={holding.marketValue}
+                            value={holding.marketValue * valueScale}
                             currency={baseCurrency}
                             isHidden={isBalanceHidden}
                             className="text-sm font-medium"

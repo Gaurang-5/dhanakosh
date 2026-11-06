@@ -1,7 +1,6 @@
 import { isWeb } from "@/adapters";
 import { isAppleDevice } from "@/lib/device-utils";
 import { useAuth } from "@/context/auth-context";
-import { ProfileMenu } from "@/features/profiles/profile-menu";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -50,40 +49,6 @@ export function AppSidebar({ navigation }: AppSidebarProps) {
                 aria-label={t("common:layout.sidebar")}
                 className="flex shrink-0 flex-col p-2"
               >
-                <div
-                  data-tauri-drag-region="true"
-                  className="draggable flex items-center justify-center pb-6"
-                >
-                  <Link
-                    to="/"
-                    aria-label={t("common:app_name")}
-                    className="group/logo block shrink-0 [perspective:400px]"
-                  >
-                    <img
-                      className={cn(
-                        "h-10 w-10 rounded-full bg-transparent shadow-lg transition-transform duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
-                        collapsed
-                          ? "motion-safe:[transform:rotateY(180deg)] motion-safe:group-hover/logo:[transform:rotateY(360deg)]"
-                          : "motion-safe:[transform:rotateY(0deg)] motion-safe:group-hover/logo:[transform:rotateY(180deg)]",
-                      )}
-                      aria-hidden="true"
-                      src="/logo.png"
-                    />
-                  </Link>
-
-                  <span
-                    className={cn(
-                      "text-md text-foreground/90 ms-2 font-serif text-xl font-bold transition-opacity delay-100 duration-300 ease-in-out",
-                      {
-                        "sr-only opacity-0": collapsed,
-                        "block opacity-100": !collapsed,
-                      },
-                    )}
-                  >
-                    Wealthfolio
-                  </span>
-                </div>
-
                 <Button
                   type="button"
                   variant="ghost"
@@ -204,9 +169,6 @@ export function AppSidebar({ navigation }: AppSidebarProps) {
                     }
                   />
                 </Button>
-              </div>
-              <div className="flex justify-center pt-1">
-                <ProfileMenu collapsed={collapsed} />
               </div>
             </div>
           </div>

@@ -833,8 +833,13 @@ export function createDraftActivities(
         accountId = mappedAccount;
       } else if (!validAccountIds || validAccountIds.has(rawAccountId)) {
         accountId = rawAccountId;
+      } else {
+        // A populated but unresolved CSV account must never use the default owner.
+        accountId = "";
       }
     }
+
+    if (validAccountIds && !validAccountIds.has(accountId)) accountId = "";
 
     // For cash-like activities, some brokers (e.g. Schwab) put the dollar value
     // in the Quantity column instead of Amount.

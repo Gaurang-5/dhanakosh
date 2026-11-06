@@ -40,6 +40,7 @@ export const TickerAvatar = ({ symbol, exchangeMic, instrumentType, className = 
     <Avatar className={className}>
       <AvatarImage
         src={logoUrl}
+        referrerPolicy="no-referrer"
         alt={fullSymbol}
         className="object-cover p-0"
         onLoadingStatusChange={(status) => {

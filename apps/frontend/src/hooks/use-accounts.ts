@@ -1,3 +1,4 @@
+import { useHouseholdReport } from "@/features/household/household-report-context";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { Account } from "@/lib/types";
@@ -10,10 +11,11 @@ export function useAccounts(options?: {
   includeArchived?: boolean;
   accountPurpose?: AccountPurpose;
 }) {
+  const family = useHouseholdReport();
   const { filterActive = true, includeArchived = false, accountPurpose } = options ?? {};
 
   const {
-    data: fetchedAccounts = [],
+    data: memberAccounts = [],
     isLoading,
     isError,
     error,
@@ -21,8 +23,10 @@ export function useAccounts(options?: {
   } = useQuery<Account[], Error>({
     queryKey: [QueryKeys.ACCOUNTS, includeArchived],
     queryFn: () => getAccounts(includeArchived),
+    enabled: !family,
   });
 
+  const fetchedAccounts = family?.accounts ?? memberAccounts;
   const filteredAccounts = useMemo(() => {
     let accounts = fetchedAccounts;
 
@@ -38,5 +42,11 @@ export function useAccounts(options?: {
     return accounts;
   }, [accountPurpose, fetchedAccounts, filterActive]);
 
-  return { accounts: filteredAccounts, isLoading, isError, error, refetch };
+  return {
+    accounts: filteredAccounts,
+    isLoading: family ? false : isLoading,
+    isError: family ? false : isError,
+    error: family ? null : error,
+    refetch,
+  };
 }

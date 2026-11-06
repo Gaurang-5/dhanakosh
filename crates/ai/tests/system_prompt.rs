@@ -14,20 +14,40 @@ fn live_stream_uses_the_versioned_authoritative_prompt() {
 }
 
 #[test]
-fn enforces_financial_decision_boundary() {
+fn allows_investment_advice_while_preserving_draft_boundaries() {
     let lower = SYSTEM_PROMPT.to_lowercase();
     for required in [
-        "do not select, rank, optimize, or recommend",
-        "do not turn them into a buy, sell, or hold instruction",
+        "you may select, rank, optimize, and recommend specific securities",
+        "buy, sell, or hold actions",
+        "you may recommend stocks outside the user's existing holdings",
+        "choose among company names or tickers the user provides",
+        "when the user restricts recommendations to a supplied list, choose only from that list",
+        "do not imply that you checked live prices, news, or fundamentals",
+        "you may propose scenario inputs and allocation targets",
+        "label your assumptions",
+        "you may choose stocks and investment amounts based on the user's portfolio",
+        "the user does not need to specify the stocks or allocation first",
+        "earlier assistant refusals in the conversation do not define the current policy",
+        "do not guarantee returns",
         "activity tools create editable drafts, not executed trades",
-        "never invent those material trade details from your own analysis",
-        "do not claim that an investment",
+        "advice and scenario questions alone do not authorize activity drafts",
+        "never invent transaction details",
         "buy 10 aapl",
         "prepare an editable draft for review",
     ] {
         assert!(
             lower.contains(required),
-            "system prompt is missing financial-safety rule: {required}",
+            "system prompt is missing advice or draft rule: {required}",
+        );
+    }
+    for obsolete in [
+        "do not select, rank, optimize, or recommend",
+        "do not turn them into a buy, sell, or hold instruction",
+        "i cannot decide which investment is suitable for you",
+    ] {
+        assert!(
+            !lower.contains(obsolete),
+            "system prompt still forbids investment advice: {obsolete}",
         );
     }
 }

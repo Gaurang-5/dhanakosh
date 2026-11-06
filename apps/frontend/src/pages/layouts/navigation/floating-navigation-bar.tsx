@@ -2,6 +2,7 @@ import { LiquidGlass } from "@/components/liquid-glass";
 import { ProfileMenu } from "@/features/profiles/profile-menu";
 import { SyncStatusIcon } from "@/features/wealthfolio-connect/components/sync-status-icon";
 import { useAggregatedSyncStatus } from "@/features/wealthfolio-connect/hooks";
+import { HOUSEHOLD_MODE } from "@/features/household/household-config";
 import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, Icons } from "@wealthfolio/ui";
 import { motion } from "motion/react";
@@ -122,15 +123,22 @@ export function FloatingNavigationBar({ navigation }: FloatingNavigationBarProps
             </button>
             {/* Connect with status icon */}
             <Link
-              to="/connect"
+              to={HOUSEHOLD_MODE ? "/import" : "/connect"}
               onClick={() =>
-                handleNavigation("/connect", isPathActive(location.pathname, "/connect"))
+                handleNavigation(
+                  HOUSEHOLD_MODE ? "/import" : "/connect",
+                  isPathActive(location.pathname, HOUSEHOLD_MODE ? "/import" : "/connect"),
+                )
               }
-              aria-label={t("common:connect")}
+              aria-label={HOUSEHOLD_MODE ? t("common:import") : t("common:connect")}
               className={baseButtonClass}
-              aria-current={isPathActive(location.pathname, "/connect") ? "page" : undefined}
+              aria-current={
+                isPathActive(location.pathname, HOUSEHOLD_MODE ? "/import" : "/connect")
+                  ? "page"
+                  : undefined
+              }
             >
-              {isPathActive(location.pathname, "/connect") && (
+              {isPathActive(location.pathname, HOUSEHOLD_MODE ? "/import" : "/connect") && (
                 <motion.div
                   layoutId={`floating-nav-indicator-${uniqueId}`}
                   className="absolute inset-0 -z-10 rounded-full border border-black/10 bg-black/5 shadow-sm dark:border-white/10 dark:bg-white/10"
@@ -146,7 +154,11 @@ export function FloatingNavigationBar({ navigation }: FloatingNavigationBarProps
                 className="relative flex size-7 shrink-0 items-center justify-center outline-none"
                 aria-hidden="true"
               >
-                <SyncStatusIcon status={syncStatus} className="size-6" />
+                {HOUSEHOLD_MODE ? (
+                  <Icons.FileSpreadsheet className="size-6" />
+                ) : (
+                  <SyncStatusIcon status={syncStatus} className="size-6" />
+                )}
               </span>
             </Link>
             {hasMoreItems && (

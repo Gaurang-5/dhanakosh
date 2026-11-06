@@ -1,0 +1,5 @@
+apps/frontend/public/ticker-logos/
+tmp/
+**/*.png
+**/*.ico
+**/*.jpg

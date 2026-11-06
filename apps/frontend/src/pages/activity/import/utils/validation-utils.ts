@@ -22,4 +22,14 @@ export function validateTickerSymbol(symbol: string): boolean {
   );
 }
 
+export function canResolveImportAssetIdentifier(
+  symbol: string,
+  isin?: string,
+  mappedSymbol?: string,
+): boolean {
+  return Boolean(
+    mappedSymbol?.trim() || validateTickerSymbol(symbol) || (isin && looksLikeIsin(isin)),
+  );
+}
+
 export { findMappedActivityType };

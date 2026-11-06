@@ -1,7 +1,8 @@
 import { SyncStatusIcon } from "@/features/wealthfolio-connect/components/sync-status-icon";
 import { useAggregatedSyncStatus } from "@/features/wealthfolio-connect/hooks";
+import { HOUSEHOLD_MODE } from "@/features/household/household-config";
 import { formatDistanceToNow } from "@/lib/utils";
-import { useLocalizationSettings, buttonVariants } from "@wealthfolio/ui";
+import { Icons, useLocalizationSettings, buttonVariants } from "@wealthfolio/ui";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@wealthfolio/ui/components/ui/tooltip";
 import { cn } from "@wealthfolio/ui/lib/utils";
 import { useTranslation } from "react-i18next";
@@ -18,10 +19,13 @@ export function ConnectNavItem({ collapsed }: ConnectNavItemProps) {
   const { t } = useTranslation();
   const location = useLocation();
   const { status, lastSyncTime } = useAggregatedSyncStatus();
-  const isActive = isPathActive(location.pathname, "/connect");
+  const destination = HOUSEHOLD_MODE ? "/import" : "/connect";
+  const isActive = isPathActive(location.pathname, destination);
+  const navLabel = HOUSEHOLD_MODE ? t("common:import") : t("common:connect");
 
-  const tooltipContent =
-    status === "restoring"
+  const tooltipContent = HOUSEHOLD_MODE
+    ? t("common:import")
+    : status === "restoring"
       ? t("connect:session.restoring", { defaultValue: "Restoring Connect…" })
       : status === "unavailable"
         ? t("connect:session.unavailable", { defaultValue: "Connect is temporarily unavailable" })
@@ -40,13 +44,14 @@ export function ConnectNavItem({ collapsed }: ConnectNavItemProps) {
       <TooltipTrigger
         render={
           <Link
-            to="/connect"
+            to={destination}
             title={tooltipContent}
             aria-label={
-              status === "subscription_required" ||
-              status === "restoring" ||
-              status === "unavailable"
-                ? `${t("common:connect")}: ${tooltipContent}`
+              !HOUSEHOLD_MODE &&
+              (status === "subscription_required" ||
+                status === "restoring" ||
+                status === "unavailable")
+                ? `${navLabel}: ${tooltipContent}`
                 : undefined
             }
             aria-current={isActive ? "page" : undefined}
@@ -61,7 +66,11 @@ export function ConnectNavItem({ collapsed }: ConnectNavItemProps) {
         }
       >
         <span aria-hidden="true">
-          <SyncStatusIcon status={status} className="size-5" />
+          {HOUSEHOLD_MODE ? (
+            <Icons.FileSpreadsheet className="size-5" />
+          ) : (
+            <SyncStatusIcon status={status} className="size-5" />
+          )}
         </span>
 
         <span
@@ -71,7 +80,7 @@ export function ConnectNavItem({ collapsed }: ConnectNavItemProps) {
             "block opacity-100": !collapsed,
           })}
         >
-          {t("common:connect")}
+          {navLabel}
         </span>
       </TooltipTrigger>
       <TooltipContent side="inline-end">{tooltipContent}</TooltipContent>

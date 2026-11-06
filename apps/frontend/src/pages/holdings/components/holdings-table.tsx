@@ -27,6 +27,11 @@ import { HoldingPerformancePercent } from "@/components/holding-performance-perc
 import { useBalancePrivacy } from "@/hooks/use-balance-privacy";
 import { HoldingType } from "@/lib/constants";
 import { getBaseHoldingPerformancePercent } from "@/lib/holding-performance";
+import {
+  getInstrumentAvatarIdentity,
+  getInstrumentPrimaryLabel,
+  getInstrumentSecondaryLabel,
+} from "@/lib/instrument-display";
 import { useSettingsContext } from "@/lib/settings-provider";
 import { Holding, MonetaryValue } from "@/lib/types";
 import { AmountDisplay, PriceDisplay, QuantityDisplay } from "@wealthfolio/ui";
@@ -133,6 +138,8 @@ export const HoldingsTable = ({
   visibilityFilters,
   setVisibilityFilters,
   showClosedPositions = true,
+  showConvertedValues: controlledShowConvertedValues,
+  onShowConvertedValuesChange,
 }: {
   holdings: Holding[];
   isLoading: boolean;
@@ -140,6 +147,8 @@ export const HoldingsTable = ({
   visibilityFilters?: HoldingsVisibilityFilter[];
   setVisibilityFilters?: (value: HoldingsVisibilityFilter[]) => void;
   showClosedPositions?: boolean;
+  showConvertedValues?: boolean;
+  onShowConvertedValuesChange?: (value: boolean) => void;
 }) => {
   const { t, i18n } = useTranslation();
   const formatting = useNumberFormatting();
@@ -148,7 +157,9 @@ export const HoldingsTable = ({
   const navigate = useNavigate();
   const { isBalanceHidden } = useBalancePrivacy();
   const { settings } = useSettingsContext();
-  const [showConvertedValues, setShowConvertedValues] = useState(false);
+  const [internalShowConvertedValues, setInternalShowConvertedValues] = useState(false);
+  const showConvertedValues = controlledShowConvertedValues ?? internalShowConvertedValues;
+  const setShowConvertedValues = onShowConvertedValuesChange ?? setInternalShowConvertedValues;
   const isClosedView = visibilityFilters?.length === 1 && visibilityFilters[0] === "closed";
 
   const baseCurrency = settings?.baseCurrency ?? holdings[0]?.baseCurrency;
@@ -342,12 +353,15 @@ const getColumns = (
 
       // Parse OCC symbol for options
       const parsedOption = isCash ? null : parseOccSymbol(symbol);
-      const displaySymbol = parsedOption ? parsedOption.underlying : symbol;
+      const displaySymbol = parsedOption
+        ? parsedOption.underlying
+        : getInstrumentPrimaryLabel(holding.instrument) || symbol;
+      const avatarIdentity = getInstrumentAvatarIdentity(holding.instrument);
       const avatarSymbol = isCash
         ? `CASH:${holding.localCurrency}`
         : parsedOption
           ? parsedOption.underlying
-          : symbol;
+          : avatarIdentity.symbol;
 
       // Option subtitle: "Mar 29 $150.00 CALL"
       const optionSubtitle = parsedOption
@@ -369,7 +383,9 @@ const getColumns = (
         <div className="flex items-center">
           <TickerAvatar
             symbol={avatarSymbol}
-            exchangeMic={holding.instrument?.exchangeMic}
+            exchangeMic={
+              isCash || parsedOption ? holding.instrument?.exchangeMic : avatarIdentity.exchangeMic
+            }
             instrumentType={holding.instrument?.instrumentType}
             assetId={holding.instrument?.id}
             className="me-2 h-8 w-8"
@@ -392,7 +408,9 @@ const getColumns = (
                 at the end and a clipped name its start; RTL pages keep it on the right. */}
             <span dir="auto" className="text-muted-foreground line-clamp-1 text-xs rtl:text-right">
               {optionSubtitle ??
-                (isCash ? t("holdings:cash_balance") : holding.instrument?.name) ??
+                (isCash
+                  ? t("holdings:cash_balance")
+                  : getInstrumentSecondaryLabel(holding.instrument)) ??
                 null}
             </span>
           </div>

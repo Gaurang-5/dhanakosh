@@ -270,6 +270,7 @@
   "runStatus": {
     "applied": "تم التطبيق",
     "cancelled": "أُلغيت",
+    "reverted": "تم التراجع",
     "failed": "فشلت",
     "needsReview": "تحتاج إلى مراجعة",
     "running": "قيد التشغيل"

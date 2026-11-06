@@ -2,7 +2,7 @@ import { Button, Icons, Input } from "@wealthfolio/ui";
 import { ActivityType } from "@/lib/constants";
 import { Account, AccountScope, PortfolioWithAccounts } from "@/lib/types";
 import type { ActivityStatusFilter } from "../hooks/use-activity-search";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { DateRange } from "react-day-picker";
 import { ActivityMobileFilterSheet } from "./activity-mobile-filter-sheet";
@@ -33,6 +33,8 @@ interface ActivityMobileControlsProps {
     statusFilter: ActivityStatusFilter;
     instrumentTypes: string[];
   }) => void;
+  /** Page actions that share this toolbar, so the page has one header row. */
+  trailing?: ReactNode;
 }
 
 export function ActivityMobileControls({
@@ -49,6 +51,7 @@ export function ActivityMobileControls({
   isCompactView,
   onCompactViewChange,
   onFilterChange,
+  trailing,
 }: ActivityMobileControlsProps) {
   const { t } = useTranslation();
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
@@ -71,6 +74,7 @@ export function ActivityMobileControls({
           onChange={(e) => onSearchQueryChange(e.target.value)}
           className="bg-secondary/30 h-10 flex-1 rounded-full border-none md:h-12"
         />
+        {trailing}
         <Button
           variant="outline"
           size="icon"

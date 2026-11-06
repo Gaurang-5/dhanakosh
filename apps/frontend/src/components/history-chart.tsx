@@ -26,6 +26,8 @@ export interface HistoryChartData {
 }
 
 interface HistoryChartProps {
+  valueLabel?: string;
+  contributionLabel?: string;
   data: HistoryChartData[];
   isLoading?: boolean;
   /** Dates with manual snapshots (YYYY-MM-DD format) */
@@ -53,6 +55,8 @@ interface TooltipBaseProps {
 }
 
 interface CustomTooltipProps extends TooltipBaseProps {
+  valueLabel?: string;
+  contributionLabel?: string;
   isBalanceHidden: boolean;
   isChartHovered: boolean;
 }
@@ -62,6 +66,8 @@ const CustomTooltip = ({
   payload,
   isBalanceHidden,
   isChartHovered,
+  valueLabel,
+  contributionLabel,
 }: CustomTooltipProps) => {
   const dateFormatting = useDateFormatting();
 
@@ -97,7 +103,7 @@ const CustomTooltip = ({
         <div className="flex items-center space-x-1.5">
           <span className="block h-0.5 w-3" style={{ backgroundColor: tooltipColor }} />
           <span className="text-muted-foreground text-xs">
-            {t("common:component.total_value_label")}
+            {valueLabel ?? t("common:component.total_value_label")}
           </span>
         </div>
         <AmountDisplay
@@ -115,7 +121,7 @@ const CustomTooltip = ({
               style={{ borderColor: "var(--muted-foreground)" }}
             />
             <span className="text-muted-foreground text-xs">
-              {t("common:component.net_deposit_label")}
+              {contributionLabel ?? t("common:component.net_deposit_label")}
             </span>
           </div>
           <AmountDisplay
@@ -139,6 +145,8 @@ export function HistoryChart({
   scaleMode,
   netContributionMaxDomainSpanRatio,
   minDomainSpanRatio,
+  valueLabel,
+  contributionLabel,
 }: HistoryChartProps) {
   const { t } = useTranslation();
   const { triggerHaptic } = useHapticFeedback();
@@ -166,10 +174,10 @@ export function HistoryChart({
 
   const chartConfig = {
     totalValue: {
-      label: t("common:component.total_value"),
+      label: valueLabel ?? t("common:component.total_value"),
     },
     netContribution: {
-      label: t("common:component.net_contribution"),
+      label: contributionLabel ?? t("common:component.net_contribution"),
     },
   } satisfies ChartConfig;
 
@@ -313,9 +321,9 @@ export function HistoryChart({
           <linearGradient id={fillGradientId} x1="0" y1="0" x2="0" y2="1">
             {allNegative ? (
               <>
-                <stop offset="5%" stopColor="var(--destructive)" stopOpacity={0.2} />
-                <stop offset="70%" stopColor="var(--destructive)" stopOpacity={0.12} />
-                <stop offset="100%" stopColor="var(--destructive)" stopOpacity={0} />
+                <stop offset="5%" stopColor="var(--loss)" stopOpacity={0.2} />
+                <stop offset="70%" stopColor="var(--loss)" stopOpacity={0.12} />
+                <stop offset="100%" stopColor="var(--loss)" stopOpacity={0} />
               </>
             ) : allPositive ? (
               <>
@@ -334,7 +342,7 @@ export function HistoryChart({
           </linearGradient>
           <linearGradient id={strokeGradientId} x1="0" y1="0" x2="0" y2="1">
             {allNegative ? (
-              <stop offset="0%" stopColor="var(--destructive)" />
+              <stop offset="0%" stopColor="var(--loss)" />
             ) : allPositive ? (
               <stop offset="0%" stopColor="var(--success)" />
             ) : (
@@ -354,6 +362,8 @@ export function HistoryChart({
               {...(props as unknown as TooltipBaseProps)}
               isBalanceHidden={isBalanceHidden}
               isChartHovered={isChartHovered}
+              valueLabel={valueLabel}
+              contributionLabel={contributionLabel}
             />
           )}
         />

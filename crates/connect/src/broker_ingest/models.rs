@@ -127,6 +127,7 @@ pub enum ImportRunStatus {
     NeedsReview,
     Failed,
     Cancelled,
+    Reverted,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -171,6 +172,8 @@ pub struct ImportRunSummary {
     pub errors: u32,
     pub removed: u32,
     pub assets_created: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub file_name: Option<String>,
 }
 
 impl ImportRun {
@@ -310,6 +313,7 @@ impl From<wealthfolio_core::activities::ImportRunStatus> for ImportRunStatus {
             wealthfolio_core::activities::ImportRunStatus::NeedsReview => Self::NeedsReview,
             wealthfolio_core::activities::ImportRunStatus::Failed => Self::Failed,
             wealthfolio_core::activities::ImportRunStatus::Cancelled => Self::Cancelled,
+            wealthfolio_core::activities::ImportRunStatus::Reverted => Self::Reverted,
         }
     }
 }
@@ -322,6 +326,7 @@ impl From<ImportRunStatus> for wealthfolio_core::activities::ImportRunStatus {
             ImportRunStatus::NeedsReview => Self::NeedsReview,
             ImportRunStatus::Failed => Self::Failed,
             ImportRunStatus::Cancelled => Self::Cancelled,
+            ImportRunStatus::Reverted => Self::Reverted,
         }
     }
 }
@@ -357,6 +362,7 @@ impl From<wealthfolio_core::activities::ImportRunSummary> for ImportRunSummary {
             errors: value.errors,
             removed: value.removed,
             assets_created: value.assets_created,
+            file_name: value.file_name,
         }
     }
 }
@@ -372,6 +378,7 @@ impl From<ImportRunSummary> for wealthfolio_core::activities::ImportRunSummary {
             errors: value.errors,
             removed: value.removed,
             assets_created: value.assets_created,
+            file_name: value.file_name,
         }
     }
 }

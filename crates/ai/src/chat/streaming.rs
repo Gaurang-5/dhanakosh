@@ -39,6 +39,7 @@ use crate::types::{
 };
 
 use super::history::build_user_prompt;
+use super::local_cli::{is_local_cli_provider, run_local_cli_chat};
 use super::provider_clients::{
     create_anthropic_client, create_gemini_client, create_groq_client, create_ollama_client,
     create_openai_client, create_openrouter_client, redact_secret, remap_provider_error,
@@ -101,6 +102,23 @@ pub(super) async fn spawn_chat_stream<E: AiEnvironment + 'static>(
     tx.send(AiStreamEvent::system(&thread_id, &run_id, &message_id))
         .await
         .map_err(|e| AiError::Internal(e.to_string()))?;
+
+    if is_local_cli_provider(&provider_id) {
+        return run_local_cli_chat(
+            env,
+            tx,
+            user_message,
+            history_messages,
+            attachments,
+            provider_id,
+            model_id,
+            thread_id,
+            run_id,
+            message_id,
+            working_context,
+        )
+        .await;
+    }
 
     // Get provider settings and model capabilities
     let provider_service = ProviderService::new(env.clone());

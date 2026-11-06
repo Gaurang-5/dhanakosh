@@ -124,7 +124,8 @@
     "applied": "적용됨",
     "needsReview": "검토 필요",
     "failed": "실패",
-    "cancelled": "취소됨"
+    "cancelled": "취소됨",
+    "reverted": "실행 취소됨"
   },
   "syncRuns": {
     "title": "최근 동기화 실행",

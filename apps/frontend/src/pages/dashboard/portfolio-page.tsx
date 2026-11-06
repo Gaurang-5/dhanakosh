@@ -1,4 +1,7 @@
+import { MemberPortfolioRequired } from "@/features/household/member-portfolio-required";
+import { useHouseholdReport } from "@/features/household/household-report-context";
 import { HealthStatusIndicator } from "@/components/health-status-icon";
+import { HOUSEHOLD_MODE } from "@/features/household/household-config";
 import { SwipablePage, SwipablePageView } from "@/components/page";
 import { PrivacyToggle } from "@/components/privacy-toggle";
 import { AlternativeAssetQuickAddModal } from "@/pages/asset/alternative-assets/components";
@@ -45,7 +48,8 @@ const PageLoader = () => (
   </div>
 );
 
-export default function PortfolioPage() {
+function MemberPortfolioPage() {
+  const family = useHouseholdReport();
   const { t } = useTranslation();
   const dashboardPortfolio = useDashboardPortfolio();
   const { isFocusMode, toggleFocusMode } = useNavigationMode();
@@ -80,7 +84,7 @@ export default function PortfolioPage() {
 
   const commonActions = (
     <>
-      <HealthStatusIndicator />
+      {!family && <HealthStatusIndicator />}
       {isFocusMode && (
         <Button
           variant="secondary"
@@ -98,10 +102,12 @@ export default function PortfolioPage() {
   const investmentActions = (
     <>
       {commonActions}
-      <DashboardPortfolioSelector
-        scope={dashboardPortfolio.scope}
-        onSelect={dashboardPortfolio.setPortfolioId}
-      />
+      {!HOUSEHOLD_MODE && (
+        <DashboardPortfolioSelector
+          scope={dashboardPortfolio.scope}
+          onSelect={dashboardPortfolio.setPortfolioId}
+        />
+      )}
       <DashboardActions />
     </>
   );
@@ -138,7 +144,13 @@ export default function PortfolioPage() {
                 key={dashboardPortfolio.portfolio?.id ?? "all"}
                 scope={dashboardPortfolio.scope}
                 scopeLabel={dashboardPortfolio.portfolio?.name}
-                accountIds={dashboardPortfolio.portfolio?.accountIds}
+                accountIds={
+                  dashboardPortfolio.scope.type === "accounts"
+                    ? dashboardPortfolio.scope.accountIds
+                    : dashboardPortfolio.scope.type === "account"
+                      ? [dashboardPortfolio.scope.accountId]
+                      : dashboardPortfolio.portfolio?.accountIds
+                }
               />
             )}
           </Suspense>
@@ -157,7 +169,7 @@ export default function PortfolioPage() {
         actions: netWorthActions,
       },
     ];
-    if (spendingEnabled) {
+    if (spendingEnabled && !HOUSEHOLD_MODE) {
       items.push({
         value: "spending",
         label: t("dashboard:tabs.spending"),
@@ -186,6 +198,13 @@ export default function PortfolioPage() {
     spendingEnabled,
     dashboardPortfolio,
   ]);
+
+  if (family && isQuickAddOpen)
+    return (
+      <MemberPortfolioRequired>
+        <span />
+      </MemberPortfolioRequired>
+    );
 
   return (
     <>
@@ -217,4 +236,8 @@ export default function PortfolioPage() {
       />
     </>
   );
+}
+
+export default function PortfolioPage() {
+  return <MemberPortfolioPage />;
 }

@@ -8,7 +8,7 @@ import { QueryKeys } from "@/lib/query-keys";
 import type { IncomeSummary } from "@/lib/types";
 
 const mocks = vi.hoisted(() => ({ getIncomeSummary: vi.fn() }));
-vi.mock("@/adapters", () => ({ getIncomeSummary: mocks.getIncomeSummary }));
+vi.mock("@/adapters", () => ({ isWeb: false, getIncomeSummary: mocks.getIncomeSummary }));
 vi.mock("./income-history-chart", () => ({ IncomeHistoryChart: () => null }));
 vi.mock("@/hooks/use-balance-privacy", () => ({
   useBalancePrivacy: () => ({ isBalanceHidden: false }),

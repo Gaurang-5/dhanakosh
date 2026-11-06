@@ -1,6 +1,6 @@
 {
   "title": "仪表盘",
-  "welcome_message": "欢迎使用 Wealthfolio",
+  "welcome_message": "欢迎使用 Dhanakosh",
   "total_value": "总价值",
   "total_gain": "总收益",
   "total_gain_percent": "总收益率",
@@ -100,7 +100,7 @@
     "values_without_returns": "账户价值显示为不含期间收益。",
     "failed_to_load": "加载账户失败",
     "failed_to_load_performance": "加载业绩指标失败",
-    "try_restarting": "请重试。如果问题仍然存在，请重启 Wealthfolio 或联系支持团队。"
+    "try_restarting": "请重试。如果问题仍然存在，请重启 Dhanakosh 或联系支持团队。"
   },
   "accounts_count_one": "{{count}} 个账户",
   "accounts_count_other": "{{count}} 个账户",

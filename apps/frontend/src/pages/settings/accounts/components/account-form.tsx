@@ -1,3 +1,4 @@
+import { usePortfolios } from "@/hooks/use-portfolios";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -7,6 +8,7 @@ import * as z from "zod";
 import { Button } from "@wealthfolio/ui/components/ui/button";
 import { Switch } from "@wealthfolio/ui/components/ui/switch";
 
+import { isPpfAccount, ppfAccountMeta } from "@/features/ppf/ppf-account";
 import { newAccountSchema } from "@/lib/schemas";
 import { AccountType } from "@/lib/constants";
 import { useTaxonomy } from "@/hooks/use-taxonomies";
@@ -154,6 +156,16 @@ interface AccountFormlProps {
 
 export function AccountForm({ defaultValues, onSuccess = () => undefined }: AccountFormlProps) {
   const { t } = useTranslation();
+  const { data: portfolios = [] } = usePortfolios();
+  const [selectedPortfolio, setSelectedPortfolio] = useState<string>();
+  const [country, setCountry] = useState(() => {
+    const meta = parseMetaObject(defaultValues?.meta);
+    return typeof meta?.country === "string" ? meta.country : "IN";
+  });
+  const owner =
+    selectedPortfolio ??
+    portfolios.find((p) => p.accountIds.includes(defaultValues?.id ?? ""))?.id ??
+    "";
   const { createAccountMutation, updateAccountMutation } = useAccountMutations({ onSuccess });
 
   const accountTypes: ResponsiveSelectOption[] = useMemo(
@@ -188,11 +200,17 @@ export function AccountForm({ defaultValues, onSuccess = () => undefined }: Acco
   const currentAccountType = form.watch("accountType");
   const isCreditCardAccount = currentAccountType === AccountType.CREDIT_CARD;
   const isCashAccount = currentAccountType === AccountType.CASH;
+  const currentMeta = form.watch("meta");
+  const isPpf = isPpfAccount({
+    meta: currentMeta,
+    accountType: currentAccountType,
+    currency: form.watch("currency"),
+    trackingMode: currentTrackingMode,
+  });
   // Only transactions accounts that hold securities keep lots.
   const showsCostBasisMethod =
-    currentTrackingMode === "TRANSACTIONS" && !isCashAccount && !isCreditCardAccount;
+    currentTrackingMode === "TRANSACTIONS" && !isCashAccount && !isCreditCardAccount && !isPpf;
 
-  const currentMeta = form.watch("meta");
   const costBasisMethod = getCostBasisMethodFromMeta(currentMeta);
   const savedCostBasisMethod = getCostBasisMethodFromMeta(defaultValues?.meta);
   // Collapsed while the account uses the default; open when it does not, so
@@ -259,6 +277,11 @@ export function AccountForm({ defaultValues, onSuccess = () => undefined }: Acco
   );
 
   function onSubmit(data: AccountFormOutput) {
+    if (!owner || !/^[A-Z]{2}$/.test(country)) return;
+    data = {
+      ...data,
+      meta: JSON.stringify({ ...(parseMetaObject(data.meta) ?? {}), portfolioId: owner, country }),
+    };
     // Archiving asks first, as it does from the account menu
     const isArchiving = !!data.id && data.isArchived && !defaultValues?.isArchived;
     if (isArchiving) {
@@ -347,6 +370,64 @@ export function AccountForm({ defaultValues, onSuccess = () => undefined }: Acco
           </div>
         </DialogHeader>
 
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <label htmlFor="account-portfolio">{t("settings:workspace.portfolio")}</label>
+            <select
+              id="account-portfolio"
+              required
+              className="bg-background w-full rounded-md border p-2"
+              value={owner}
+              onChange={(e) => setSelectedPortfolio(e.target.value)}
+            >
+              <option value="">{t("settings:workspace.choosePortfolio")}</option>
+              {portfolios.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="account-country">{t("settings:workspace.country")}</label>
+            <input
+              id="account-country"
+              required
+              pattern="[A-Z]{2}"
+              maxLength={2}
+              className="bg-background w-full rounded-md border p-2"
+              value={country}
+              onChange={(e) => setCountry(e.target.value.toUpperCase())}
+              placeholder="IN / US"
+            />
+          </div>
+        </div>
+        {!portfolios.length && (
+          <a className="text-primary underline" href="/settings/portfolios">
+            {t("settings:workspace.createPortfolioFirst")}
+          </a>
+        )}
+        {!defaultValues?.id && !isPpf && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              form.setValue("accountType", "SECURITIES", { shouldDirty: true });
+              form.setValue("currency", "INR", { shouldDirty: true });
+              form.setValue("trackingMode", "TRANSACTIONS", { shouldDirty: true });
+              form.setValue("group", "PPF", { shouldDirty: true });
+              if (!form.getValues("name")) form.setValue("name", "Public Provident Fund");
+              form.setValue("meta", ppfAccountMeta(form.getValues("meta")), { shouldDirty: true });
+            }}
+          >
+            {t("settings:accounts.ppf_preset")}
+          </Button>
+        )}
+        {isPpf && (
+          <Alert>
+            <AlertDescription>{t("settings:accounts.ppf_description")}</AlertDescription>
+          </Alert>
+        )}
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.9fr)]">
           <input type="hidden" name="id" />
           <div className="contents lg:grid lg:content-start lg:gap-4">
@@ -387,28 +468,30 @@ export function AccountForm({ defaultValues, onSuccess = () => undefined }: Acco
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="accountType"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>{t("settings:accounts_form_type_label")}</FormLabel>
-                      <FormControl>
-                        <ResponsiveSelect
-                          value={field.value}
-                          onValueChange={field.onChange}
-                          options={accountTypes}
-                          placeholder={t("settings:accounts_form_type_placeholder")}
-                          sheetTitle={t("settings:accounts_form_type_sheet_title")}
-                          sheetDescription={t("settings:accounts_form_type_sheet_description")}
-                          triggerClassName="h-11"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                {!defaultValues?.id ? (
+                {!isPpf && (
+                  <FormField
+                    control={form.control}
+                    name="accountType"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>{t("settings:accounts_form_type_label")}</FormLabel>
+                        <FormControl>
+                          <ResponsiveSelect
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            options={accountTypes}
+                            placeholder={t("settings:accounts_form_type_placeholder")}
+                            sheetTitle={t("settings:accounts_form_type_sheet_title")}
+                            sheetDescription={t("settings:accounts_form_type_sheet_description")}
+                            triggerClassName="h-11"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+                {!defaultValues?.id && !isPpf ? (
                   <FormField
                     control={form.control}
                     name="currency"
@@ -568,7 +651,7 @@ export function AccountForm({ defaultValues, onSuccess = () => undefined }: Acco
                           </span>
                         </div>
                       </label>
-                      {!isCreditCardAccount && (
+                      {!isCreditCardAccount && !isPpf && (
                         <label
                           data-testid="tracking-mode-holdings"
                           className={cn(

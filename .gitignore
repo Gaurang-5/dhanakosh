@@ -123,3 +123,21 @@ apps/tauri/db/
 tasks
 **/*.local.md
 wealthfolio.db
+
+/.venv-portfolio/
+
+# Local Python statement-parser test caches
+__pycache__/
+
+# Local household data. Never publish portfolios, backups, or the profile registry.
+/profiles/
+/profiles.json
+/profiles.lock
+**/*backup*.db
+*.db-wal
+*.db-shm
+
+# Generated code graph and scratch files
+/graphify-out/
+/tmp/
+

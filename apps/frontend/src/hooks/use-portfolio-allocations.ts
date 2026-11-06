@@ -1,3 +1,4 @@
+import { useHouseholdReport } from "@/features/household/household-report-context";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { AccountScope, PortfolioAllocations } from "@/lib/types";
 import { getPortfolioAllocations } from "@/adapters";
@@ -11,6 +12,7 @@ export function usePortfolioAllocations(
   accountFilter: AccountScope,
   options: UsePortfolioAllocationsOptions = {},
 ) {
+  const family = useHouseholdReport();
   const isEnabled = accountFilter.type !== "account" || accountFilter.accountId.trim().length > 0;
 
   const {
@@ -21,9 +23,14 @@ export function usePortfolioAllocations(
   } = useQuery<PortfolioAllocations, Error>({
     queryKey: [QueryKeys.PORTFOLIO_ALLOCATIONS, accountFilter],
     queryFn: () => getPortfolioAllocations(accountFilter),
-    enabled: isEnabled,
+    enabled: isEnabled && !family,
     placeholderData: options.keepPreviousData ? keepPreviousData : undefined,
   });
 
-  return { allocations, isLoading, isError, error };
+  return {
+    allocations: family?.allocations ?? allocations,
+    isLoading: family ? false : isLoading,
+    isError: family ? false : isError,
+    error: family ? null : error,
+  };
 }

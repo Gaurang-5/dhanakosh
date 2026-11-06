@@ -1,3 +1,4 @@
+import { getInstrumentPrimaryLabel, getInstrumentSecondaryLabel } from "@/lib/instrument-display";
 import {
   CurrencyInput,
   DatePickerInput,
@@ -547,10 +548,12 @@ export const HoldingsEditMode = ({
                               className="h-7 w-7 shrink-0"
                             />
                             <div className="min-w-0">
-                              <div className="truncate text-sm font-medium">{holding.symbol}</div>
-                              {holding.name && (
+                              <div className="truncate text-sm font-medium">
+                                {getInstrumentPrimaryLabel(holding)}
+                              </div>
+                              {getInstrumentSecondaryLabel(holding) && (
                                 <div className="text-muted-foreground truncate text-xs">
-                                  {holding.name}
+                                  {getInstrumentSecondaryLabel(holding)}
                                 </div>
                               )}
                             </div>

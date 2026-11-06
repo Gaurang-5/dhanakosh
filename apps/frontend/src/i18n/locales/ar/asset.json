@@ -786,9 +786,9 @@
     "fx_rate": "سعر الصرف",
     "health": {
       "add_price_for_date": "أضف سعرًا لتاريخ {{date}}",
-      "carrying_forward_add_date": "يقوم Wealthfolio بترحيل آخر سعر. أضف هذا التاريخ فقط إذا كان يحتاج إلى قيمة خاصة به.",
-      "carrying_forward_refetch": "يقوم Wealthfolio بترحيل آخر سعر متاح. أعد جلب الأسعار إذا كان هذا يوم تداول.",
-      "cost_basis_description": "حدّث المبلغ الذي دفعته مقابل هذا الأصل المملوك ليتمكن Wealthfolio من حساب الربح/الخسارة.",
+      "carrying_forward_add_date": "يقوم Dhanakosh بترحيل آخر سعر. أضف هذا التاريخ فقط إذا كان يحتاج إلى قيمة خاصة به.",
+      "carrying_forward_refetch": "يقوم Dhanakosh بترحيل آخر سعر متاح. أعد جلب الأسعار إذا كان هذا يوم تداول.",
+      "cost_basis_description": "حدّث المبلغ الذي دفعته مقابل هذا الأصل المملوك ليتمكن Dhanakosh من حساب الربح/الخسارة.",
       "cost_basis_needs_review": "أساس التكلفة بحاجة إلى مراجعة",
       "manual_prices_need_review": "الأسعار اليدوية بحاجة إلى مراجعة",
       "price_history_needs_review": "سجل الأسعار بحاجة إلى مراجعة",

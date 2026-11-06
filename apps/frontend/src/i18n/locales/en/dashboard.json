@@ -1,6 +1,6 @@
 {
   "title": "Dashboard",
-  "welcome_message": "Welcome to Wealthfolio",
+  "welcome_message": "Welcome to Dhanakosh",
   "total_value": "Total Value",
   "total_gain": "Total Gain",
   "total_gain_percent": "Total Gain %",
@@ -102,7 +102,7 @@
     "values_without_returns": "Account values are shown without period returns.",
     "failed_to_load": "Failed to load accounts",
     "failed_to_load_performance": "Failed to load performance metrics",
-    "try_restarting": "Try again. If the problem persists, restart Wealthfolio or contact support."
+    "try_restarting": "Try again. If the problem persists, restart Dhanakosh or contact support."
   },
   "accounts_count_one": "{{count}} account",
   "accounts_count_other": "{{count}} accounts",

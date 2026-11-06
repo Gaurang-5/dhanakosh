@@ -259,6 +259,7 @@ fn policy(base_currency: &str, timezone: &str, as_of: NaiveDate) -> Result<Polic
 /// as none, since such an account has no results to measure.
 pub(super) fn raw_account(a: &crate::accounts::Account) -> RawAccount {
     RawAccount {
+        separate_cash_ledger: a.tracks_cash_separately(),
         id: a.id.clone(),
         currency: a.currency.clone(),
         account_type: a.account_type.clone(),
@@ -581,6 +582,7 @@ pub fn load(
         .iter()
         .filter(|a| closure.contains(&a.id))
         .map(|a| RawAccount {
+            separate_cash_ledger: a.tracks_cash_separately(),
             id: a.id.clone(),
             currency: a.currency.clone(),
             account_type: a.account_type.clone(),

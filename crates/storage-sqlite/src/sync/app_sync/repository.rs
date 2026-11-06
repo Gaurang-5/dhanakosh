@@ -36,7 +36,7 @@ use super::model::{
     SyncOutboxEventDB, SyncTableStateDB,
 };
 use super::outbox_models::{is_syncable_app_preference_key, is_syncable_spending_setting_key};
-use wealthfolio_core::settings::INSIGHTS_OVERVIEW_LAYOUT_KEY;
+use wealthfolio_core::settings::{GAIN_COLORS_KEY, INSIGHTS_OVERVIEW_LAYOUT_KEY};
 
 fn enum_to_db<T: serde::Serialize>(value: &T) -> Result<String> {
     Ok(serde_json::to_string(value)?.trim_matches('"').to_string())
@@ -191,7 +191,7 @@ impl SyncRowFilter {
                 )"
             }
             Self::SyncableSettings => {
-                static FILTER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| format!("setting_key IN ('spending.enabled', 'spending.account_ids', 'spending.excluded_category_ids', '{}')", INSIGHTS_OVERVIEW_LAYOUT_KEY));
+                static FILTER: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| format!("setting_key IN ('spending.enabled', 'spending.account_ids', 'spending.excluded_category_ids', '{}', '{}')", INSIGHTS_OVERVIEW_LAYOUT_KEY, GAIN_COLORS_KEY));
                 FILTER.as_str()
             },
             Self::UserTaxonomies => "is_system = 0",

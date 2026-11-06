@@ -107,6 +107,40 @@ describe("TickerAvatar", () => {
     expect(screen.getByTitle("ABCDE")).toHaveTextContent("ABCD");
   });
 
+  it("uses the company name when an ISIN has no available logo", async () => {
+    failingSources.add("https://api.dharun.dev/v1/logos/INE467B01029?format=png&size=128");
+    const { container } = render(
+      <TickerAvatar symbol="INE467B01029" fallbackName="Tata Consultancy Services" />,
+    );
+    await waitFor(() =>
+      expect(container.querySelector('[data-logo-source="initials"]')).not.toBeNull(),
+    );
+    expect(screen.getByTitle("INE467B01029")).toHaveTextContent("TC");
+  });
+
+  it("uses a general Indian logo provider only after the local logo fails", async () => {
+    failingSources.add("/ticker-logos/LICI-XNSE.png");
+    const { container } = render(<TickerAvatar symbol="LICI" exchangeMic="XNSE" />);
+    await waitFor(() =>
+      expect(container.querySelector('[data-logo-source="remote"]')).not.toBeNull(),
+    );
+    expect(screen.getByRole("img")).toHaveAttribute(
+      "src",
+      "https://api.dharun.dev/v1/logos/NSE%3ALICI?format=png&size=128",
+    );
+    expect(screen.getByRole("img")).toHaveAttribute("referrerpolicy", "no-referrer");
+  });
+
+  it("falls back to initials if the Indian logo provider fails", async () => {
+    failingSources.add("/ticker-logos/LICI-XNSE.png");
+    failingSources.add("https://api.dharun.dev/v1/logos/NSE%3ALICI?format=png&size=128");
+    const { container } = render(<TickerAvatar symbol="LICI" exchangeMic="XNSE" />);
+    await waitFor(() =>
+      expect(container.querySelector('[data-logo-source="initials"]')).not.toBeNull(),
+    );
+    expect(screen.getByTitle("LICI")).toHaveTextContent("LICI");
+  });
+
   it("shows the bundled logo when no override exists", async () => {
     const view = render(<TickerAvatar symbol="AAPL" />);
 

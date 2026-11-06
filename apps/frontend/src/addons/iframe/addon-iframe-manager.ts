@@ -261,7 +261,7 @@ export function classifyAddonErrorHint(rawMessage: string | undefined): string |
     return "This add-on uses browser storage (localStorage/sessionStorage), which is unavailable in the add-on sandbox. Update the add-on to use the storage API.";
   }
   if (message.includes("unknown addon host api method")) {
-    return "This add-on called an API this version of Wealthfolio does not provide. Update the add-on, or update Wealthfolio.";
+    return "This add-on called an API this version of Dhanakosh does not provide. Update the add-on, or update Dhanakosh.";
   }
   // A contributed route whose id does not match a route the add-on registers
   // at runtime (contributes.routes[].id must equal router.add({ id })).
@@ -1229,7 +1229,7 @@ export class AddonIframeManager {
 
     this.themeObserver = new MutationObserver(this.scheduleThemeBroadcast);
     this.themeObserver.observe(document.documentElement, {
-      attributeFilter: ["class", "style"],
+      attributeFilter: ["class", "style", "data-theme", "data-text-size", "data-gain-colors"],
       attributes: true,
     });
     this.themeObserver.observe(document.body, {

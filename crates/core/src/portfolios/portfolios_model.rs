@@ -45,11 +45,6 @@ impl NewPortfolio {
                 "Portfolio name cannot be empty".to_string(),
             )));
         }
-        if self.account_ids.is_empty() {
-            return Err(Error::Validation(ValidationError::InvalidInput(
-                "Portfolio must contain at least one account".to_string(),
-            )));
-        }
         let mut seen = std::collections::HashSet::new();
         for id in &self.account_ids {
             if !seen.insert(id) {
@@ -85,11 +80,6 @@ impl PortfolioUpdate {
         if self.name.trim().is_empty() {
             return Err(Error::Validation(ValidationError::InvalidInput(
                 "Portfolio name cannot be empty".to_string(),
-            )));
-        }
-        if self.account_ids.is_empty() {
-            return Err(Error::Validation(ValidationError::InvalidInput(
-                "Portfolio must contain at least one account".to_string(),
             )));
         }
         let mut seen = std::collections::HashSet::new();

@@ -300,6 +300,7 @@ mod tests {
                 NaiveDate::from_ymd_opt(2026, 4, 30).expect("as-of date"),
             ),
             accounts: vec![RawAccount {
+                separate_cash_ledger: false,
                 id: account.id.clone(),
                 currency: account.currency.clone(),
                 account_type: account.account_type.clone(),

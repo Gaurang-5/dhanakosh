@@ -1,3 +1,5 @@
+import { accountLabel } from "@/lib/account-label";
+import { usePortfolios } from "@/hooks/use-portfolios";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
@@ -134,13 +136,14 @@ function useImportReviewColumns({
   importProfile,
 }: UseImportReviewColumnsOptions): ColumnDef<DraftActivity>[] {
   const { t } = useTranslation();
+  const { data: portfolios = [] } = usePortfolios();
   const accountOptions = useMemo(
     () =>
       accounts.map((account) => ({
         value: account.id,
-        label: account.name,
+        label: accountLabel(account, portfolios),
       })),
-    [accounts],
+    [accounts, portfolios],
   );
 
   const activityTypeOptions = useMemo(

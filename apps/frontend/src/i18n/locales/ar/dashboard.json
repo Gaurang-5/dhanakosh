@@ -105,7 +105,7 @@
     "failed_to_load_performance": "فشل تحميل مقاييس الأداء",
     "return_unavailable_activity": "نسبة العائد % غير متاحة - قد يكون سجل الأنشطة غير متسق.",
     "return_unavailable_holdings": "نسبة العائد % غير متاحة - أساس التكلفة أو القيمة الابتدائية للحيازات مفقودة.",
-    "try_restarting": "حاول مرة أخرى. إذا استمرت المشكلة، فأعد تشغيل Wealthfolio أو تواصل مع الدعم.",
+    "try_restarting": "حاول مرة أخرى. إذا استمرت المشكلة، فأعد تشغيل Dhanakosh أو تواصل مع الدعم.",
     "unexpected_error": "حدث خطأ غير متوقع",
     "values_without_returns": "يتم عرض قيم الحسابات دون عوائد الفترة."
   },
@@ -133,5 +133,5 @@
     "updating_quotes": "جارٍ تحديث الأسعار..."
   },
   "view_all": "عرض الكل",
-  "welcome_message": "مرحبًا بك في Wealthfolio"
+  "welcome_message": "مرحبًا بك في Dhanakosh"
 }

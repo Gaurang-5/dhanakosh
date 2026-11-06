@@ -81,7 +81,7 @@ export default function AboutSettingsPage() {
             className="h-12 w-12 rounded-md shadow"
           />
           <div className="flex flex-col">
-            <CardTitle className="text-xl">Wealthfolio</CardTitle>
+            <CardTitle className="text-xl">{t("settings:about_app_name")}</CardTitle>
             <CardDescription>
               {t("settings:about_version", { version: version || "N/A" })}
             </CardDescription>
@@ -90,6 +90,7 @@ export default function AboutSettingsPage() {
         <CardContent className="space-y-6">
           <div className="space-y-4">
             <p className="text-muted-foreground text-sm">{t("settings:about_tagline")}</p>
+            <p className="text-muted-foreground text-sm">{t("settings:about_attribution")}</p>
             <div className="flex flex-wrap items-center gap-2">
               {!isMobile && (
                 <Button size="sm" onClick={handleCheckForUpdates} disabled={isCheckingUpdate}>
@@ -181,21 +182,8 @@ export default function AboutSettingsPage() {
           <Separator />
 
           <div className="space-y-4">
-            <p className="text-muted-foreground text-sm">
-              {t("settings:about_support_message")}{" "}
-              <span className="select-all font-mono font-semibold">support@wealthfolio.app</span>
-            </p>
+            <p className="text-muted-foreground text-sm">{t("settings:about_support_message")}</p>
             <div className="flex flex-wrap items-center gap-2">
-              <ExternalLink
-                href="mailto:support@wealthfolio.app"
-                className={cn(
-                  buttonVariants({ variant: "outline", size: "sm" }),
-                  "inline-flex items-center gap-2",
-                )}
-              >
-                <Icons.ExternalLink className="h-4 w-4" />
-                {t("settings:about_email_button")}
-              </ExternalLink>
               <ExternalLink
                 href="https://github.com/wealthfolio/wealthfolio/issues"
                 className={cn(

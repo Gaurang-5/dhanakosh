@@ -184,6 +184,8 @@ pub enum Direction {
 /// where lots and FX are known).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Contribution {
+    /// Opposite of settlement: externally funded purchases or withdrawn sale proceeds.
+    ExternalSettlement,
     None,
     /// Signed gross cash, converted to account and base currency.
     CashGross,

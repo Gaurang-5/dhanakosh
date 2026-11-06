@@ -30,6 +30,7 @@ import { createDefaultActivityMapping } from "./utils/default-activity-template"
 
 // Components
 import { CancelConfirmationDialog } from "./components/cancel-confirmation-dialog";
+import { PastImportsCard } from "./components/past-imports-card";
 import { StepNavigation } from "./components/step-navigation";
 import { WizardStepIndicator, type WizardStep } from "./components/wizard-step-indicator";
 import { ImportHelpPopover } from "./import-help";
@@ -57,7 +58,7 @@ import {
 } from "./utils/asset-review-utils";
 import { autoMatchAccountMappings, collectCsvAccountValues } from "./utils/account-matching";
 import { ACTIVITY_SKIP, isFieldMapped, primaryHeader } from "./utils/draft-utils";
-import { findMappedActivityType, validateTickerSymbol } from "./utils/validation-utils";
+import { canResolveImportAssetIdentifier, findMappedActivityType } from "./utils/validation-utils";
 import {
   activityTypeAllowedForImportProfile,
   getActivityImportProfileForImportContext,
@@ -203,6 +204,8 @@ function useStepValidation(
         const symbolColumn = primaryHeader(mapping.fieldMappings[ImportFormat.SYMBOL]);
         if (symbolColumn) {
           const symbolHeaderIndex = headers.indexOf(symbolColumn);
+          const isinColumn = primaryHeader(mapping.fieldMappings[ImportFormat.ISIN]);
+          const isinHeaderIndex = isinColumn ? headers.indexOf(isinColumn) : -1;
 
           // Activity type indices for per-row type resolution
           const atMapping = mapping.fieldMappings[ImportFormat.ACTIVITY_TYPE];
@@ -253,14 +256,14 @@ function useStepValidation(
                 }
               }
 
+              const isin = isinHeaderIndex !== -1 ? row[isinHeaderIndex]?.trim() : undefined;
+              if (canResolveImportAssetIdentifier(symbol, isin, mapping.symbolMappings?.[symbol])) {
+                return;
+              }
               symbolsNeedingResolution.add(symbol);
             });
 
-            for (const symbol of symbolsNeedingResolution) {
-              if (!mapping.symbolMappings?.[symbol] && !validateTickerSymbol(symbol)) {
-                return false;
-              }
-            }
+            if (symbolsNeedingResolution.size > 0) return false;
           }
         }
 
@@ -353,6 +356,7 @@ function ImportWizardContent() {
   );
 
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [pastImportsOpen, setPastImportsOpen] = useState(false);
   const [isNextLoading, setIsNextLoading] = useState(false);
 
   // Fetch accounts to determine tracking mode based on selected account
@@ -665,6 +669,7 @@ function ImportWizardContent() {
             <Button variant="outline" onClick={() => navigate(`/account/${selectedAccount.id}`)}>
               {t("activity:import.page.goToAccount")}
             </Button>
+            <PastImportsCard />
           </div>
         </PageContent>
       </Page>
@@ -678,6 +683,20 @@ function ImportWizardContent() {
         onBack={isMobile ? handleCancelClick : undefined}
         actions={
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setPastImportsOpen(true);
+                document.getElementById("past-imports")?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "start",
+                });
+              }}
+            >
+              <Icons.History className="me-2 h-4 w-4" />
+              {t("activity:import.history.show")}
+            </Button>
             <ImportHelpPopover
               defaultTab={isHoldingsMode ? "holdings" : "activities"}
               transactionImport={isTransactionImport}
@@ -699,7 +718,7 @@ function ImportWizardContent() {
 
       <PageContent withPadding={false}>
         <ErrorBoundary fallbackTitle={t("activity:import.page.somethingWentWrong")}>
-          <div className="px-2 pb-6 pt-2 sm:px-4 sm:pt-4 md:px-6 md:pt-6">
+          <div className="space-y-4 px-2 pb-6 pt-2 sm:px-4 sm:pt-4 md:px-6 md:pt-6">
             <Card className="flex max-h-[calc(100dvh-9rem)] w-full flex-col overflow-hidden">
               {/* Step indicator — hidden on result step */}
               {state.step !== "result" && (
@@ -743,6 +762,7 @@ function ImportWizardContent() {
                 </div>
               )}
             </Card>
+            <PastImportsCard open={pastImportsOpen} onOpenChange={setPastImportsOpen} />
           </div>
         </ErrorBoundary>
       </PageContent>

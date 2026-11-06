@@ -1,3 +1,5 @@
+import { accountLabel } from "@/lib/account-label";
+import { usePortfolios } from "@/hooks/use-portfolios";
 import { AccountSelector } from "@/components/account-selector";
 import TickerSearchInput from "@/components/ticker-search";
 import { Button } from "@wealthfolio/ui/components/ui/button";
@@ -402,6 +404,7 @@ export function MappingCell({
   allowedActivityTypes?: readonly ActivityType[];
   getActivityTypeLabel?: (activityType: ActivityType) => string;
 }) {
+  const { data: portfolios = [] } = usePortfolios();
   // Get the field's value from the row
   const value = getMappedValue(row, field);
 
@@ -465,12 +468,12 @@ export function MappingCell({
   if (field === ImportFormat.ACCOUNT) {
     const mappingKey = value?.trim() || "";
     const isInvalid = mappingKey === "" || invalidAccounts.includes(mappingKey);
-    const mappedAccountId = mapping.accountMappings?.[mappingKey];
+    const mappedAccountId = mapping.accountMappings?.[mappingKey] ?? mappingKey;
     const account = accounts.find((acc) => acc.id === mappedAccountId);
     return (
       <AccountIdDisplayCell
         csvAccountId={value}
-        mappedAccountId={account?.name}
+        mappedAccountId={account ? accountLabel(account, portfolios) : undefined}
         isInvalid={isInvalid}
         handleAccountIdMapping={handleAccountIdMapping!}
       />

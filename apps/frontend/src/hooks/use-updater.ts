@@ -79,10 +79,7 @@ export function useCheckForUpdates() {
   return useMutation({
     mutationFn: () => checkForUpdates({ force: true }),
     onSuccess: (updateInfo: UpdateInfo | null) => {
-      // Clear snooze so the dialog shows for manual checks
       clearUpdateSnooze();
-
-      // Update the query cache so dialog can show
       queryClient.setQueryData(UPDATE_QUERY_KEY, updateInfo);
 
       if (!updateInfo) {
@@ -90,8 +87,13 @@ export function useCheckForUpdates() {
           title: "You're up to date",
           description: "You already have the latest version installed.",
         });
+        return;
       }
-      // If update available, the UpdateDialog will show via the query data
+
+      toast({
+        title: "Update available",
+        description: `Version ${updateInfo.latestVersion} is available.`,
+      });
     },
     onError: (error: Error) => {
       logger.error("Update check failed: " + error.message);

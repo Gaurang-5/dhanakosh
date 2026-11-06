@@ -1,3 +1,4 @@
+import { accountLabel } from "@/lib/account-label";
 import { Button } from "@wealthfolio/ui/components/ui/button";
 import { ScrollArea } from "@wealthfolio/ui/components/ui/scroll-area";
 import {
@@ -238,7 +239,7 @@ export const AccountSelectorMobile = forwardRef<HTMLButtonElement, AccountSelect
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="text-foreground truncate font-medium">
-                              {account.name}
+                              {accountLabel(account, portfolios)}
                             </div>
                             <div className="text-muted-foreground text-sm">{account.currency}</div>
                           </div>

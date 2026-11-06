@@ -129,5 +129,5 @@ test("a server-side lock without a tab broadcast covers the idle screen", async 
   // Only the server ending the event stream can tell the page.
   await command(context, "lock_profile");
   await expect(page.locator(".app-shell")).toHaveCount(0, { timeout: 5000 });
-  await expect(page.getByRole("heading", { name: "Who's using Wealthfolio?" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "My wealth" })).toBeVisible();
 });

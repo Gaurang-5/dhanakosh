@@ -65,7 +65,7 @@ it("preserves authority through an outage but revokes it when a remounted shell 
     view.unmount();
     mocks.command.mockResolvedValue({ ...active, session: null });
     mount();
-    await screen.findByRole("heading", { name: "Who's using Wealthfolio?" });
+    await screen.findByRole("heading", { name: "My wealth" });
     expect(screen.queryByText("Private portfolio")).not.toBeInTheDocument();
     expect(() => profileScope()).toThrow("PROFILE_LOCKED");
     expect(matchesProfileScope("original-grant")).toBe(false);

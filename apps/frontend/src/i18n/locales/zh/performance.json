@@ -93,7 +93,9 @@
     "annualized_return": "年化回报",
     "annualized_short": "年化",
     "gain_loss": "盈亏",
-    "gain_loss_info": "所选时间段内的总盈利或亏损。打开指标查看归因详情。"
+    "gain_loss_info": "所选时间段内的总盈利或亏损。打开指标查看归因详情。",
+    "today": "今日",
+    "today_info": "有当日价格的持仓相对前收盘的变动。不含现金。"
   },
   "section": {
     "returns": "回报",

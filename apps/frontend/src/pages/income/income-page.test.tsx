@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => ({
   isBalanceHidden: false,
 }));
 
-vi.mock("@/adapters", () => ({ getIncomeSummary: mocks.getIncomeSummary }));
+vi.mock("@/adapters", () => ({ isWeb: false, getIncomeSummary: mocks.getIncomeSummary }));
 vi.mock("@tanstack/react-query", () => ({ useQuery: mocks.useQuery }));
 vi.mock("@/hooks/use-balance-privacy", () => ({
   useBalancePrivacy: () => ({ isBalanceHidden: mocks.isBalanceHidden }),

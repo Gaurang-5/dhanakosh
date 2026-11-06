@@ -94,7 +94,9 @@
     "annualized_return": "Rentabilidade anualizada",
     "annualized_short": "Anualizada",
     "gain_loss": "Ganho / perda",
-    "gain_loss_info": "Ganho ou perda total durante o período selecionado. Abra a métrica para ver os detalhes de atribuição."
+    "gain_loss_info": "Ganho ou perda total durante o período selecionado. Abra a métrica para ver os detalhes de atribuição.",
+    "today": "Hoje",
+    "today_info": "Variação desde o fecho anterior das posições com preço diário. O dinheiro não entra na conta."
   },
   "section": {
     "returns": "Rentabilidades",

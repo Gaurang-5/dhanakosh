@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { WorkspaceFilterHost } from "@/features/workspace/workspace-filter";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AssistantRuntimeProvider, useThreadRuntime } from "@assistant-ui/react";
@@ -151,6 +152,7 @@ function Header({
       </ButtonWithTooltip>
       <ProviderPicker />
       <div className="flex-1" />
+      <WorkspaceFilterHost />
     </header>
   );
 }

@@ -35,6 +35,11 @@ function buildStatusConfig(t: TFunction): Record<
       variant: "secondary",
       icon: Icons.X,
     },
+    REVERTED: {
+      label: t("connect:runStatus.reverted"),
+      variant: "secondary",
+      icon: Icons.Undo,
+    },
   };
 }
 

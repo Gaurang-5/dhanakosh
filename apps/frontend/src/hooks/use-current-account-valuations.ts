@@ -1,3 +1,4 @@
+import { useHouseholdReport } from "@/features/household/household-report-context";
 import { useQuery } from "@tanstack/react-query";
 import { getCurrentValuation } from "@/adapters";
 import { QueryKeys } from "@/lib/query-keys";
@@ -28,7 +29,6 @@ function currentValuationScopeKey(filter: AccountScope): string {
 function isScopeEnabled(filter: AccountScope): boolean {
   if (filter.type === "account") return filter.accountId.trim().length > 0;
   if (filter.type === "portfolio") return filter.portfolioId.trim().length > 0;
-  if (filter.type === "accounts") return filter.accountIds.length > 0;
   return true;
 }
 
@@ -36,6 +36,7 @@ export function useCurrentValuation(
   filter: AccountScope,
   options: UseCurrentValuationOptions = {},
 ) {
+  const family = useHouseholdReport();
   const includeAccounts = options.includeAccounts ?? false;
   const enabled = (options.enabled ?? true) && isScopeEnabled(filter);
 
@@ -51,14 +52,14 @@ export function useCurrentValuation(
       includeAccounts ? "with-accounts" : "summary-only",
     ],
     queryFn: () => getCurrentValuation({ filter, includeAccounts }),
-    enabled,
+    enabled: enabled && !family,
   });
 
   return {
-    currentValuation,
-    isLoading,
-    isFetching,
-    error,
+    currentValuation: family?.currentValuation ?? currentValuation,
+    isLoading: family ? false : isLoading,
+    isFetching: family ? false : isFetching,
+    error: family ? null : error,
   };
 }
 

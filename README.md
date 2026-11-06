@@ -3,57 +3,110 @@
     <img src="assets/brand/icon.png" alt="Logo" width="80" height="80">
   </a>
 
-  <h3 align="center">Wealthfolio</h3>
+  <h3 align="center">Dhanakosh</h3>
 
   <p align="center">
-    The open-source, private portfolio tracker — investments, net worth, spending, and simulations.
+    A private household portfolio tracker for India and global markets.
     <br />
-    Local-first: your data lives on your device.
+    Based on <a href="https://wealthfolio.app/">Wealthfolio</a>. Wealthfolio is a trademark of Teymz Inc.
     <br />
     <br />
-    <a href="https://wealthfolio.app?utm_source=github&utm_medium=readme">Website</a>
-    ·
-    <a href="https://discord.gg/WDMCY6aPWK">Discord</a>
-    ·
-    <a href="https://x.com/intent/follow?screen_name=WealthfolioApp">Twitter</a>
-    ·
-    <a href="https://github.com/wealthfolio/wealthfolio/releases">Releases</a>
+    <a href="https://github.com/wealthfolio/wealthfolio">Upstream source</a>
   </p>
-
-  <p align="center">
-    <a href="https://wealthfolio.app/download?utm_source=github&utm_medium=readme&utm_campaign=cta"><strong>⬇️&nbsp;&nbsp;Download for macOS · Windows · Linux</strong></a>
-    &nbsp;·&nbsp;
-    <a href="https://apps.apple.com/us/app/wealthfolio-private-finance/id6732888445">📱&nbsp;iOS&nbsp;App</a>
-    &nbsp;·&nbsp;
-    <a href="https://wealthfolio.app/docs/guide/self-hosting/docker?utm_source=github&utm_medium=readme">🐳&nbsp;Docker</a>
-  </p>
-</div>
-<div align="center">
-
-[<img src="./apps/frontend/public/button-buy-me-a-coffee.png" width="180" alt="Buy me a coffee button"/>](https://www.buymeacoffee.com/afadil)
-
-</div>
-
-<div align="center">
-<a href="https://news.ycombinator.com/item?id=41465735">
-  <img
-    alt="Featured on Hacker News"
-    src="https://hackerbadge.now.sh/api?id=41465735"
-    style="width: 250px; height: 55px;" width="250" height="55"
-  />
-</a>
-  <a href="https://www.producthunt.com/posts/wealthfolio?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_souce=badge-wealthfolio" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=461640&amp;theme=light" alt="Wealthfolio - A beautiful, local-first personal finance tracker | Product Hunt" class="h-[55px] w-[250px]" width="250" height="55"></a>
-
-  <a href="https://trendshift.io/repositories/11701" target="_blank">
-  <img src="https://trendshift.io/api/badge/repositories/11701" alt="wealthfolio%2Fwealthfolio | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
-
 </div>
 
 ## Introduction
 
-**Wealthfolio** is an open-source, private portfolio tracker — investments, net
-worth, spending, and simulations. All your data is stored locally on your
-device: no cloud database, no account required, free forever.
+**Dhanakosh** (धनकोश) is an independent household portfolio tracker built on
+Wealthfolio. It is for one local installation or one private server, with India
+and global holdings in the same books. Wealthfolio is a trademark of Teymz Inc.
+This project is not the official Wealthfolio app.
+
+## Open it on your computer
+
+There is no App Store download for this copy. You open Dhanakosh from the folder
+that contains this file. Your portfolios stay on that computer. The first time
+takes a while, because the app is built on your machine. After that, the same
+last step opens it again.
+
+Do not install the app from [wealthfolio.app](https://wealthfolio.app/). That is
+the official Wealthfolio app, which is a different product.
+
+### On a Mac
+
+You only install the tools once.
+
+1. Open **Terminal**. It is in Applications → Utilities → Terminal.
+2. Install Apple’s compiler. Paste this line, press Return, and click Install if
+   a window appears. If it says the tools are already installed, continue.
+
+   ```bash
+   xcode-select --install
+   ```
+
+3. Install Node.js 24 from [nodejs.org](https://nodejs.org/). Use the version
+   numbered 24. Open a new Terminal window after the installer finishes.
+4. Install pnpm, the tool that fetches the app’s pieces. Paste this, then press
+   Return:
+
+   ```bash
+   corepack enable
+   corepack prepare pnpm@10.33.4 --activate
+   ```
+
+5. Install Rust, which builds the part of the app that stores your data. Paste
+   this and press Return. When it asks, accept the defaults.
+
+   ```bash
+   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+   ```
+
+   Close Terminal and open it again so it can find Rust.
+
+6. Go to the Dhanakosh folder. Type `cd` and a space. Do not press Return yet.
+   Drag the folder onto the Terminal window, then press Return.
+7. Fetch the pieces and open the app:
+
+   ```bash
+   pnpm install
+   pnpm tauri dev
+   ```
+
+The first build often takes 10 to 20 minutes. Leave the window alone while text
+is still scrolling. When it finishes, a Dhanakosh window opens. Leave Terminal
+open while you use the app. Closing Terminal closes Dhanakosh.
+
+On the first screen, create the household password and the first family member.
+That password is not stored by anyone else. Write it down somewhere safe.
+Dhanakosh cannot reset it for you.
+
+Next time, repeat only step 6 and `pnpm tauri dev`.
+
+### In a browser, on the same computer
+
+Use this if you want Dhanakosh in Chrome or Safari instead of its own window.
+The tools from the Mac steps still have to be installed.
+
+From the Dhanakosh folder:
+
+```bash
+pnpm install
+pnpm dev:web
+```
+
+When the text stops moving, open [http://localhost:1420](http://localhost:1420).
+Leave Terminal open. The address only works on this computer.
+
+### If it does not open
+
+- **command not found** means a tool from the list above is missing. Install
+  that tool, close Terminal, open it again, and repeat the last command.
+- The window is still missing, but text is still scrolling. The first build is
+  not finished. Wait.
+- Red text, and the scrolling has stopped. Copy the last 20 lines and send them
+  to the person who gave you this folder.
+
+The rest of this file is for people who change the app.
 
 For automatic brokerage syncing (30+ institutions, read-only) and encrypted
 multi-device sync, there's
@@ -223,11 +276,11 @@ pnpm tauri dev
 ```
 
 The command automatically applies `apps/tauri/tauri.dev.conf.json`, which sets
-`com.teymz.wealthfolio.dev` and `Wealthfolio (Development)`. This identity
-remains in effect when additional `--config` overrides are supplied, including
-when running `pnpm tauri dev --release`. Production builds (`pnpm tauri build`)
-retain the production identity. For an isolated packaged debug build, select the
-same configuration explicitly:
+`com.teymz.wealthfolio.dev` and `Dhanakosh`. This identity remains in effect
+when additional `--config` overrides are supplied, including when running
+`pnpm tauri dev --release`. Production builds (`pnpm tauri build`) retain the
+production identity. For an isolated packaged debug build, select the same
+configuration explicitly:
 
 ```bash
 pnpm tauri build --debug --config apps/tauri/tauri.dev.conf.json
@@ -921,11 +974,12 @@ Brand assets in `assets/brand/` are trademarks; see
 
 ---
 
-Wealthfolio and the Wealthfolio logo are trademarks of Teymz Inc. The code is
-licensed under AGPL-3.0; trademarks are not granted under that license.
+Dhanakosh is an independent project based on Wealthfolio. Wealthfolio and the
+Wealthfolio logo are trademarks of Teymz Inc. The code is licensed under
+AGPL-3.0; those trademarks are not granted under that license.
 
 ## 🌟 Star History
 
 ## [![Star History Chart](https://api.star-history.com/svg?repos=wealthfolio/wealthfolio&type=Timeline)](https://star-history.com/#wealthfolio/wealthfolio&Date)
 
-Enjoy managing your wealth with **Wealthfolio**! 🚀
+Enjoy managing your wealth with **Dhanakosh**.

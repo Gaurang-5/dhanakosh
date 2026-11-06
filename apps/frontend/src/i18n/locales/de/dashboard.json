@@ -23,7 +23,7 @@
   "current_value": "Aktueller Wert:",
   "target_value": "Zielwert:",
   "progress_calculation_pending": "Fortschrittsberechnung ausstehend oder nicht anwendbar.",
-  "welcome_message": "Willkommen bei Wealthfolio",
+  "welcome_message": "Willkommen bei Dhanakosh",
   "total_gain": "Gesamtgewinn",
   "total_gain_percent": "Gesamtgewinn %",
   "today_gain": "Heutiger Gewinn",
@@ -102,7 +102,7 @@
     "values_without_returns": "Kontowerte werden ohne Periodenrenditen angezeigt.",
     "failed_to_load": "Konten konnten nicht geladen werden",
     "failed_to_load_performance": "Wertentwicklungskennzahlen konnten nicht geladen werden",
-    "try_restarting": "Versuchen Sie es erneut. Wenn das Problem weiterhin besteht, starten Sie Wealthfolio neu oder wenden Sie sich an den Support."
+    "try_restarting": "Versuchen Sie es erneut. Wenn das Problem weiterhin besteht, starten Sie Dhanakosh neu oder wenden Sie sich an den Support."
   },
   "accounts_count_one": "{{count}} Konto",
   "accounts_count_other": "{{count}} Konten",

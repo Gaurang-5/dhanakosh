@@ -155,7 +155,7 @@
     "transferringData": "Transfert de vos données",
     "transferringDataDescription": "Chiffrement d'une copie de vos données pour votre nouvel appareil. Cela peut prendre une minute.",
     "preparingData": "Préparation de vos données",
-    "preparingDataDescription": "Connexion confirmée. Gardez Wealthfolio ouvert sur les deux appareils pendant la préparation de vos données.",
+    "preparingDataDescription": "Connexion confirmée. Gardez Dhanakosh ouvert sur les deux appareils pendant la préparation de vos données.",
     "securingConnection": "Sécurisation de la connexion",
     "securingConnectionDescription": "Échange des clés de chiffrement avec votre autre appareil."
   },

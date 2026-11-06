@@ -20,6 +20,22 @@ describe("account scope store", () => {
     expect(state.bridgedItemId).toBeNull();
   });
 
+  it("ignores a scope that is already applied", () => {
+    let calls = 0;
+    const unsubscribe = useAccountScopeStore.subscribe(() => {
+      calls += 1;
+    });
+
+    useAccountScopeStore.getState().setScope({ type: "all" });
+    expect(calls).toBe(0);
+
+    useAccountScopeStore.getState().setScope({ type: "account", accountId: "acc-1" });
+    useAccountScopeStore.getState().setScope({ type: "account", accountId: "acc-1" });
+    expect(calls).toBe(1);
+
+    unsubscribe();
+  });
+
   it("shares the scope with every other reader", () => {
     useAccountScopeStore.getState().setScope({ type: "account", accountId: "acc-1" });
 

@@ -94,9 +94,9 @@ impl AiProviderService {
     fn create_default_settings(&self) -> AiProviderSettings {
         let mut settings = AiProviderSettings::default();
 
-        // Find first provider marked as enabled by default in catalog
-        // and set recommended providers as favorites
-        let mut first_enabled_provider: Option<String> = None;
+        // Several local accounts can be enabled by default. Pick the catalog's
+        // highest-priority one consistently instead of HashMap iteration order.
+        let mut default_provider: Option<(&str, i32)> = None;
 
         for (id, provider) in &self.catalog.providers {
             if provider.default_config.enabled {
@@ -108,14 +108,16 @@ impl AiProviderService {
                 };
                 settings.providers.insert(id.clone(), user_settings);
 
-                if first_enabled_provider.is_none() {
-                    first_enabled_provider = Some(id.clone());
+                let priority = provider.default_config.priority;
+                if default_provider.is_none_or(|(current_id, current_priority)| {
+                    (priority, id.as_str()) < (current_priority, current_id)
+                }) {
+                    default_provider = Some((id, priority));
                 }
             }
         }
 
-        // Set first enabled provider as default
-        settings.default_provider = first_enabled_provider;
+        settings.default_provider = default_provider.map(|(id, _)| id.to_string());
 
         settings
     }

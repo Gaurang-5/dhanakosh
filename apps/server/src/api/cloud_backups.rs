@@ -185,7 +185,7 @@ async fn capture_in_phases(
         image,
         trigger,
         wealthfolio_device_sync::backups::client::BackupMetadata {
-            device_name: Some("Wealthfolio Server".into()),
+            device_name: Some("Dhanakosh Server".into()),
             profile_name: state
                 .profile_binding
                 .get()

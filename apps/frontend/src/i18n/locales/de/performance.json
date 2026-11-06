@@ -93,7 +93,9 @@
     "annualized_return": "Annualisierte Rendite",
     "annualized_short": "Annualisiert",
     "gain_loss": "Gewinn / Verlust",
-    "gain_loss_info": "Gesamtgewinn oder -verlust über den ausgewählten Zeitraum. Öffnen Sie die Kennzahl für Attributionsdetails."
+    "gain_loss_info": "Gesamtgewinn oder -verlust über den ausgewählten Zeitraum. Öffnen Sie die Kennzahl für Attributionsdetails.",
+    "today": "Heute",
+    "today_info": "Kursbewegung seit dem vorherigen Schlusskurs für Positionen mit einem Tageskurs. Bargeld ist nicht enthalten."
   },
   "section": {
     "returns": "Renditen",

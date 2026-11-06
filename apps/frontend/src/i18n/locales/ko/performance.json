@@ -93,7 +93,9 @@
     "annualized_return": "연환산 수익률",
     "annualized_short": "연환산",
     "gain_loss": "손익",
-    "gain_loss_info": "선택한 기간 동안의 총 손익입니다. 지표를 열면 손익 기여 상세 내역을 볼 수 있습니다."
+    "gain_loss_info": "선택한 기간 동안의 총 손익입니다. 지표를 열면 손익 기여 상세 내역을 볼 수 있습니다.",
+    "today": "오늘",
+    "today_info": "일일 가격이 있는 보유 종목의 전일 종가 대비 변동입니다. 현금은 포함하지 않습니다."
   },
   "section": {
     "returns": "수익률",

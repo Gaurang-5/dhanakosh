@@ -44,7 +44,7 @@ export interface DatabaseBackup {
   sizeBytes: number;
   modifiedAt: string;
   protection: "encrypted" | "unencrypted" | "unavailable";
-  reason: "manual" | "before-restore" | "before-maintenance" | "before-migration" | "legacy";
+  reason: "scheduled" | "manual" | "before-restore" | "before-maintenance" | "before-migration" | "legacy";
 }
 
 export const backupDatabase = async (): Promise<{ filename: string }> => {

@@ -382,7 +382,10 @@ export function ConfirmStep() {
         }),
       );
 
-      confirmImportMutation.mutate({ activities: activitiesToImport });
+      confirmImportMutation.mutate({
+        activities: activitiesToImport,
+        fileName: state.file?.name,
+      });
     } catch (error) {
       persistCreatedAssets(createdAssetIdsByKey);
       setImportError(

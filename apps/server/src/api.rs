@@ -28,6 +28,7 @@ use utoipa::OpenApi;
 
 mod accounts;
 mod activities;
+pub(crate) use activities::{search_activities, ActivitySearchBody};
 mod addon_network;
 mod addons;
 mod agent_access;
@@ -35,6 +36,7 @@ mod ai_chat;
 mod ai_providers;
 mod allocation_targets;
 mod alternative_assets;
+pub(crate) use alternative_assets::get_alternative_holdings;
 mod assets;
 #[cfg(any(feature = "connect-sync", feature = "device-sync"))]
 pub(crate) mod cloud_backups;
@@ -85,7 +87,7 @@ pub async fn readyz() -> &'static str {
 pub struct ApiDoc;
 
 // Keep the addon bootstrap hash as well as the application's inline theme script.
-const SERVER_CSP: &str = "default-src 'self'; script-src 'self' 'sha256-OUUXM+aKkYdqwM38Z84FhgHpIYOk/e5Dz9UaAnwYXk8=' 'sha256-s/UhdlprnzFxx+iXOtDj2n/Jk+MSRz1g/1lyBtFatVw=' 'wasm-unsafe-eval' blob:; style-src 'self' 'unsafe-inline' blob:; img-src 'self' data: blob: https:; font-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' https://wealthfolio.app https://auth.wealthfolio.app https://connect.wealthfolio.app https://connect-staging.wealthfolio.app; frame-src 'none'; child-src 'self' blob: about:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; worker-src 'self' blob:";
+const SERVER_CSP: &str = "default-src 'self'; script-src 'self' 'sha256-D1v4ywjanIFjwd0sc3hfrECnF+RP8rCRJUbNae2k1+s=' 'sha256-s/UhdlprnzFxx+iXOtDj2n/Jk+MSRz1g/1lyBtFatVw=' 'wasm-unsafe-eval' blob:; style-src 'self' 'unsafe-inline' blob:; img-src 'self' data: blob: https:; font-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' https://wealthfolio.app https://auth.wealthfolio.app https://connect.wealthfolio.app https://connect-staging.wealthfolio.app; frame-src 'none'; child-src 'self' blob: about:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; worker-src 'self' blob:";
 const ADDON_SANDBOX_CSP: &str = "default-src 'none'; script-src 'sha256-s/UhdlprnzFxx+iXOtDj2n/Jk+MSRz1g/1lyBtFatVw=' 'wasm-unsafe-eval' blob:; style-src 'unsafe-inline' blob:; img-src data: blob:; font-src data: blob:; media-src data: blob:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'";
 
 // Match the configured Connect issuer without granting access to arbitrary HTTPS hosts.

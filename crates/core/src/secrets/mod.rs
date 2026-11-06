@@ -99,7 +99,8 @@ pub fn validate_unscoped_secret_service_id(service: &str) -> std::result::Result
         return Err("Addon-scoped secrets must use the addon secret API".to_string());
     }
 
-    if normalized.starts_with(CLOUD_BACKUP_MASTER_KEY_PREFIX)
+    if normalized.starts_with(crate::broker_connections::SECRET_PREFIX)
+        || normalized.starts_with(CLOUD_BACKUP_MASTER_KEY_PREFIX)
         || normalized.starts_with(CLOUD_BACKUP_PENDING_MASTER_PREFIX)
         || normalized.starts_with(CLOUD_BACKUP_SOURCE_ID_PREFIX)
         || normalized.starts_with("profile:")
@@ -162,6 +163,8 @@ mod tests {
             "cloud_backup_source_v1:user",
             "cloud_backup_pending_master_v1:user",
             "CLOUD_BACKUP_MASTER_V1:user",
+            "direct_broker_v1:zerodha:account",
+            "DIRECT_BROKER_V1:icici:account",
         ] {
             assert!(validate_unscoped_secret_service_id(name).is_err());
         }

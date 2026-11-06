@@ -33,6 +33,7 @@ const accountTypeConfig: Record<AccountType, { icon: Icon; bgClass: string; icon
 
 export interface AccountItemProps {
   account: Account;
+  portfolioName?: string;
   platform?: Platform | null;
   onEdit: (account: Account) => void;
   onDelete: (account: Account) => void;
@@ -42,6 +43,7 @@ export interface AccountItemProps {
 
 export function AccountItem({
   account,
+  portfolioName,
   platform,
   onEdit,
   onDelete,
@@ -88,6 +90,7 @@ export function AccountItem({
             {isSynced && <Icons.CloudSync2 className="text-muted-foreground h-3.5 w-3.5" />}
           </div>
           <div className="text-muted-foreground flex items-center gap-1.5 text-sm">
+            {portfolioName && <span>{portfolioName} · </span>}
             <span>{account.currency}</span>
             {account.group && (
               <>

@@ -1,11 +1,9 @@
-import { getAccounts } from "@/adapters";
+import { useAccounts } from "@/hooks/use-accounts";
 import { AllocationBreadcrumb } from "@/components/allocation-breadcrumb";
 import { useAccountsSimplePerformance } from "@/hooks/use-accounts-simple-performance";
 import { useDrillDownState } from "@/hooks/use-drill-down-state";
-import { QueryKeys } from "@/lib/query-keys";
 import { useSettingsContext } from "@/lib/settings-provider";
-import type { Account, AccountValueSource } from "@/lib/types";
-import { useQuery } from "@tanstack/react-query";
+import type { AccountValueSource } from "@/lib/types";
 import {
   Card,
   CardContent,
@@ -24,6 +22,7 @@ interface DrillableAccountChartProps {
   isLoading?: boolean;
   accountIds?: string[];
   accountValuations?: AccountValueSource[];
+  displayCurrency?: string;
   onAccountClick?: (accountId: string, accountName: string) => void;
 }
 
@@ -36,17 +35,17 @@ export function DrillableAccountChart({
   isLoading: isLoadingProp,
   accountIds,
   accountValuations,
+  displayCurrency,
   onAccountClick,
 }: DrillableAccountChartProps) {
   const { t } = useTranslation();
   const { settings } = useSettingsContext();
-  const baseCurrency = settings?.baseCurrency ?? "USD";
+  const baseCurrency = displayCurrency ?? settings?.baseCurrency ?? "USD";
   const [activeIndex, setActiveIndex] = useState(0);
   const { path, drillDown, navigateTo, isAtRoot } = useDrillDownState();
 
-  const { data: allAccounts = [], isLoading: isLoadingAccounts } = useQuery<Account[], Error>({
-    queryKey: [QueryKeys.ACCOUNTS],
-    queryFn: () => getAccounts(),
+  const { accounts: allAccounts, isLoading: isLoadingAccounts } = useAccounts({
+    filterActive: false,
   });
 
   const accounts = accountIds ? allAccounts.filter((a) => accountIds.includes(a.id)) : allAccounts;

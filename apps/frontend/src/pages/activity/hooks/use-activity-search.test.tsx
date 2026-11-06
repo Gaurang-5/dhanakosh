@@ -8,7 +8,7 @@ const adapterMocks = vi.hoisted(() => ({
   searchActivities: vi.fn(),
 }));
 
-vi.mock("@/adapters", () => adapterMocks);
+vi.mock("@/adapters", () => ({ ...adapterMocks, isWeb: false }));
 
 function createWrapper() {
   const queryClient = new QueryClient({

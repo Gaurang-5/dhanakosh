@@ -1,3 +1,4 @@
+vi.mock("@/features/household/household-config", () => ({ HOUSEHOLD_MODE: true }));
 import { calculatePerformanceSummaries } from "@/adapters";
 import { useAccounts } from "@/hooks/use-accounts";
 import { useCurrentAccountValuations } from "@/hooks/use-current-account-valuations";
@@ -262,6 +263,7 @@ function renderAccountsSummary({
   accounts,
   valuations,
   currentValuations,
+  investmentsOnly = false,
   performanceByAccountId = {},
   performanceByScopeKey = {},
   isPerformanceLoading = false,
@@ -270,6 +272,7 @@ function renderAccountsSummary({
   accounts: Account[];
   valuations: AccountValuation[];
   currentValuations?: CurrentAccountValuation[];
+  investmentsOnly?: boolean;
   performanceByAccountId?: Record<string, PerformanceFixture>;
   performanceByScopeKey?: Record<string, PerformanceFixture>;
   isPerformanceLoading?: boolean;
@@ -362,7 +365,7 @@ function renderAccountsSummary({
 
   return render(
     <MemoryRouter>
-      <AccountsSummary accountIds={accountIds} />
+      <AccountsSummary accountIds={accountIds} investmentsOnly={investmentsOnly} />
     </MemoryRouter>,
   );
 }
@@ -370,7 +373,7 @@ function renderAccountsSummary({
 function getLastPerformanceScopes(): PerformanceSummaryScope[] {
   const lastCall = mockUseQuery.mock.calls[mockUseQuery.mock.calls.length - 1];
   const options = lastCall?.[0] as { queryKey?: unknown[] } | undefined;
-  return (options?.queryKey?.[2] ?? []) as PerformanceSummaryScope[];
+  return (options?.queryKey?.[4] ?? []) as PerformanceSummaryScope[];
 }
 
 function getLastPerformanceQueryPlaceholderData(): unknown {
@@ -382,6 +385,35 @@ function getLastPerformanceQueryPlaceholderData(): unknown {
 describe("AccountsSummary", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it("shows a PPF ledger balance in the investments-only account list", () => {
+    renderAccountsSummary({
+      investmentsOnly: true,
+      accounts: [
+        createAccount({
+          id: "ppf",
+          name: "Deepa's PPF",
+          currency: "INR",
+          meta: JSON.stringify({ investmentProduct: "PPF" }),
+        }),
+      ],
+      valuations: [],
+      currentValuations: [
+        createCurrentValuation({
+          accountId: "ppf",
+          accountCurrency: "INR",
+          baseCurrency: "USD",
+          cashBalance: 3066442,
+          cashBalanceBase: 36797.3,
+          totalValue: 3066442,
+          totalValueBase: 36797.3,
+        }),
+      ],
+    });
+
+    expect(screen.getByText("Deepa's PPF")).toBeInTheDocument();
+    expect(screen.getByText("value:INR:3066442")).toBeInTheDocument();
   });
 
   it("requests performance for visible grouped dashboard rows only", async () => {

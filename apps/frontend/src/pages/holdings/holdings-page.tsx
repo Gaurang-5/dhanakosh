@@ -1,5 +1,10 @@
+import { separateCashHoldings } from "./components/separate-cash-holdings";
+import { CashBalancesSection } from "./components/cash-balances-section";
+import { useHouseholdReport } from "@/features/household/household-report-context";
+import { MemberPortfolioRequired } from "@/features/household/member-portfolio-required";
 import { Button } from "@wealthfolio/ui/components/ui/button";
 import { Icons } from "@wealthfolio/ui/components/ui/icons";
+import { AnimatedToggleGroup } from "@wealthfolio/ui/components/ui/animated-toggle-group";
 import {
   Empty,
   EmptyHeader,
@@ -76,8 +81,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { QueryKeys } from "@/lib/query-keys";
 import { useSettingsContext } from "@/lib/settings-provider";
 import type { LoanSetup } from "@/adapters/shared/alternative-assets";
+import { TotalExposureHoldings } from "@/features/fund-exposure/total-exposure-holdings";
 
 export const HoldingsPage = () => {
+  const family = useHouseholdReport();
   const { t } = useTranslation();
   const isMobileViewport = useIsMobileViewport();
   const navigate = useNavigate();
@@ -145,6 +152,11 @@ export const HoldingsPage = () => {
   const [performanceMode, setPerformanceMode] = usePersistentState<"daily" | "pnl" | "return">(
     "holdings-performance-mode",
     "pnl",
+  );
+  const [showConvertedValues, setShowConvertedValues] = useState(false);
+  const [exposureMode, setExposureMode] = usePersistentState<"direct" | "total">(
+    "holdings-exposure-mode",
+    "direct",
   );
 
   // Alternative asset action state
@@ -261,9 +273,13 @@ export const HoldingsPage = () => {
   // Handler to delete an asset
   const handleDeleteAsset = useCallback(
     (holding: AlternativeAssetHolding) => {
+      if (family) {
+        navigate(`/holdings/${encodeURIComponent(holding.id)}`);
+        return;
+      }
       deleteAsset(holding.id);
     },
-    [deleteAsset],
+    [deleteAsset, family, navigate],
   );
 
   // Handler to view value history for an asset
@@ -429,6 +445,11 @@ export const HoldingsPage = () => {
     };
   }, [holdings, effectiveVisibilityFilters, selectedTypes, investmentsFilter, healthFilter, t]);
 
+  const separatedHoldings = useMemo(
+    () => separateCashHoldings(filteredHoldings),
+    [filteredHoldings],
+  );
+
   // Combined loading state
   const isDataLoading = isLoading || isAccountsLoading || isAlternativeHoldingsLoading;
   const hasHiddenInvestmentPositions =
@@ -546,61 +567,74 @@ export const HoldingsPage = () => {
         </div>
       ) : (
         <>
-          {/* Desktop View */}
-          <div className="hidden md:block">
-            <HoldingsTable
-              holdings={filteredHoldings ?? []}
-              isLoading={isDataLoading}
-              visibilityFilters={effectiveVisibilityFilters}
-              setVisibilityFilters={handleVisibilityFiltersChange}
-              showClosedPositions={showClosedPositions}
-              onClassify={handleClassify}
-            />
-          </div>
+          {exposureMode === "total" ? (
+            <TotalExposureHoldings currency={baseCurrency} filter={accountFilter} />
+          ) : (
+            <>
+              {/* Desktop View */}
+              <div className="hidden md:block">
+                <HoldingsTable
+                  holdings={separatedHoldings.investments}
+                  isLoading={isDataLoading}
+                  visibilityFilters={effectiveVisibilityFilters}
+                  setVisibilityFilters={handleVisibilityFiltersChange}
+                  showClosedPositions={showClosedPositions}
+                  onClassify={handleClassify}
+                  showConvertedValues={showConvertedValues}
+                  onShowConvertedValuesChange={setShowConvertedValues}
+                />
+              </div>
 
-          {/* Mobile View */}
-          <div className="block md:hidden">
-            <HoldingsTableMobile
-              holdings={filteredHoldings ?? []}
-              isLoading={isDataLoading}
-              selectedTypes={selectedTypes}
-              setSelectedTypes={setSelectedTypes}
-              accountFilter={accountFilter}
-              onAccountScopeChange={handleAccountScopeChange}
-              accounts={accounts ?? []}
-              portfolios={portfolios}
-              showSearch={true}
-              showFilterButton={true}
-              sortBy={sortBy}
-              setSortBy={setSortBy}
-              performanceMode={performanceMode}
-              setPerformanceMode={setPerformanceMode}
-              typeOptions={availableTypeOptions}
-              visibilityFilters={effectiveVisibilityFilters}
-              setVisibilityFilters={handleVisibilityFiltersChange}
-              showClosedPositions={showClosedPositions}
-              hasHiddenPositions={hasHiddenInvestmentPositions}
-              toolbarActions={
-                isMobileViewport && currentTab === "investments" ? (
-                  <ActionPalette
-                    open={isActionPaletteOpen}
-                    onOpenChange={setIsActionPaletteOpen}
-                    groups={actionPaletteGroups}
-                    trigger={
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="size-10 shrink-0 rounded-full"
-                        aria-label={t("holdings:open_actions")}
-                      >
-                        <Icons.DotsThreeVertical className="h-5 w-5" weight="fill" />
-                      </Button>
-                    }
-                  />
-                ) : undefined
-              }
-            />
-          </div>
+              {/* Mobile View */}
+              <div className="block md:hidden">
+                <HoldingsTableMobile
+                  holdings={separatedHoldings.investments}
+                  isLoading={isDataLoading}
+                  selectedTypes={selectedTypes}
+                  setSelectedTypes={setSelectedTypes}
+                  accountFilter={accountFilter}
+                  onAccountScopeChange={handleAccountScopeChange}
+                  accounts={accounts ?? []}
+                  portfolios={portfolios}
+                  showSearch={true}
+                  showFilterButton={true}
+                  sortBy={sortBy}
+                  setSortBy={setSortBy}
+                  performanceMode={performanceMode}
+                  setPerformanceMode={setPerformanceMode}
+                  typeOptions={availableTypeOptions}
+                  visibilityFilters={effectiveVisibilityFilters}
+                  setVisibilityFilters={handleVisibilityFiltersChange}
+                  showClosedPositions={showClosedPositions}
+                  hasHiddenPositions={hasHiddenInvestmentPositions}
+                  toolbarActions={
+                    isMobileViewport && currentTab === "investments" ? (
+                      <ActionPalette
+                        open={isActionPaletteOpen}
+                        onOpenChange={setIsActionPaletteOpen}
+                        groups={actionPaletteGroups}
+                        trigger={
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="size-10 shrink-0 rounded-full"
+                            aria-label={t("holdings:open_actions")}
+                          >
+                            <Icons.DotsThreeVertical className="h-5 w-5" weight="fill" />
+                          </Button>
+                        }
+                      />
+                    ) : undefined
+                  }
+                />
+              </div>
+              <CashBalancesSection
+                holdings={separatedHoldings.cash}
+                currency={baseCurrency}
+                showConvertedValues={showConvertedValues}
+              />
+            </>
+          )}
         </>
       )}
     </>
@@ -695,6 +729,18 @@ export const HoldingsPage = () => {
   const sharedActions = useMemo(
     () => (
       <>
+        {currentTab === "investments" && (
+          <AnimatedToggleGroup<"direct" | "total">
+            value={exposureMode}
+            onValueChange={setExposureMode}
+            size="sm"
+            aria-label={t("holdings:exposure_view")}
+            items={[
+              { value: "direct", label: t("holdings:direct_holdings") },
+              { value: "total", label: t("holdings:total_exposure") },
+            ]}
+          />
+        )}
         {!hasMobileInvestmentsToolbar && (
           <AccountScopeSelector value={accountFilter} onChange={handleAccountScopeChange} />
         )}
@@ -723,6 +769,8 @@ export const HoldingsPage = () => {
       currentTab,
       isActionPaletteOpen,
       actionPaletteGroups,
+      exposureMode,
+      setExposureMode,
       t,
     ],
   );
@@ -761,6 +809,16 @@ export const HoldingsPage = () => {
     if (currentTab === "liabilities") return AlternativeAssetKind.LIABILITY;
     return undefined;
   };
+
+  if (
+    family &&
+    (isAlternativeAssetModalOpen || editAsset || updateValueAsset || classifyAsset || isEditMode)
+  )
+    return (
+      <MemberPortfolioRequired>
+        <span />
+      </MemberPortfolioRequired>
+    );
 
   return (
     <>

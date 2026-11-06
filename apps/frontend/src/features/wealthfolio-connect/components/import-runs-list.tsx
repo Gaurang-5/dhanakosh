@@ -31,6 +31,7 @@ function buildStatusConfig(
     NEEDS_REVIEW: { label: t("connect:runStatus.needsReview"), variant: "destructive" },
     FAILED: { label: t("connect:runStatus.failed"), variant: "destructive" },
     CANCELLED: { label: t("connect:runStatus.cancelled"), variant: "secondary" },
+    REVERTED: { label: t("connect:runStatus.reverted"), variant: "secondary" },
   };
 }
 

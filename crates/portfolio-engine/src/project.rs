@@ -928,7 +928,7 @@ impl Projector<'_> {
             // Charges of zero: no cash change (legacy warns and returns).
             return Ok(());
         }
-        self.book_cash(state, event, cash)?;
+        self.book_cash(state, event, cash, run)?;
         if event.contribution == Contribution::CashGross {
             let gross = cash.gross.unwrap_or(Decimal::ZERO);
             let account_currency = state.currency.clone();
@@ -946,7 +946,16 @@ impl Projector<'_> {
         state: &mut AccountState,
         event: &EconomicEvent,
         cash: &CashEffect,
+        run: &mut RunLog,
     ) -> Result<(), String> {
+        if event.contribution == Contribution::ExternalSettlement {
+            let contribution = -cash.amount;
+            let currency = state.currency.clone();
+            state.net_contribution +=
+                self.to_account_currency(contribution, event, currency.as_str(), run)?;
+            state.net_contribution_base += self.gross_to_base(contribution, event, run);
+            return Ok(());
+        }
         let (currency, amount) = cash
             .booked(&event.currency, &state.currency)
             .ok_or_else(|| "cash at the supplied rate is outside the kernel range".to_string())?;
@@ -1190,7 +1199,7 @@ impl Projector<'_> {
                 gross: cash.gross,
                 booking: cash.booking,
             };
-            self.book_cash(state, event, &effect)?;
+            self.book_cash(state, event, &effect, run)?;
         }
         Ok(())
     }
@@ -1249,7 +1258,7 @@ impl Projector<'_> {
         let account_currency = state.currency.clone();
         let account_id = state.account.clone();
         if let Some(cash) = &event.cash {
-            self.book_cash(state, event, cash)?;
+            self.book_cash(state, event, cash, run)?;
         }
         let total_proceeds = event
             .cash

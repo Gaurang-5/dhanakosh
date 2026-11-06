@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { StrictMode, type ReactNode } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import PerformancePage from "./performance-page";
 import { ALL_PORTFOLIO_ITEM } from "./performance-selection";
@@ -18,6 +19,9 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/lib/settings-provider", () => ({
   useSettingsContext: () => ({ settings: mocks.settings }),
 }));
+vi.mock("@/features/household/household-report-context", () => ({
+  useHouseholdReport: () => null,
+}));
 vi.mock("@/adapters", () => ({ getAccounts: mocks.getAccounts }));
 vi.mock("@/hooks/use-portfolios", () => ({
   usePortfolios: () => ({ data: [{ id: "p", name: "Retirement" }] }),
@@ -25,6 +29,15 @@ vi.mock("@/hooks/use-portfolios", () => ({
 vi.mock("@/hooks/use-platform", () => ({ useIsMobileViewport: () => mocks.mobile }));
 vi.mock("./hooks/use-performance-data", () => ({
   useCalculatePerformanceHistory: mocks.performance,
+}));
+vi.mock("@/hooks/use-holdings", () => ({
+  useHoldings: () => ({
+    holdings: [],
+    isLoading: false,
+    isError: false,
+    error: null,
+    dataUpdatedAt: 0,
+  }),
 }));
 vi.mock("@/components/account-filter-selector", () => ({ AccountScopeSelector: () => null }));
 vi.mock("@/components/account-selector", () => ({
@@ -116,7 +129,9 @@ function renderPage(seedAccounts = true) {
     ...render(
       <StrictMode>
         <QueryClientProvider client={client}>
-          <PerformancePage />
+          <MemoryRouter>
+            <PerformancePage />
+          </MemoryRouter>
         </QueryClientProvider>
       </StrictMode>,
     ),
@@ -138,6 +153,28 @@ describe("PerformancePage shared scope", () => {
     mocks.getAccounts.mockResolvedValue(accounts);
   });
 
+  it("marks an unavailable active return as not plotted and links to Data Health", async () => {
+    mocks.performance.mockReturnValue({
+      data: [{ ...resultWithWarning, returns: { ...resultWithWarning.returns, twr: null } }],
+      isLoading: false,
+      hasErrors: false,
+      errorMessages: [],
+    });
+    renderPage();
+    expect(
+      (await screen.findAllByRole("button", { name: /All Portfolio Not plotted/ }))[0],
+    ).toBeVisible();
+    expect(screen.getByRole("button", { name: "Data Health" })).toHaveAttribute("href", "/health");
+    expect(
+      screen.queryByText("Select accounts to compare their performance over time."),
+    ).toBeNull();
+    expect(
+      screen.queryByText(
+        "These selected items do not have enough overlapping chart dates with the active chart.",
+      ),
+    ).toBeNull();
+  });
+
   it("updates the default range when settings arrive after the initial render", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-12-31T16:30:00Z"));
@@ -147,7 +184,9 @@ describe("PerformancePage shared scope", () => {
     rerender(
       <StrictMode>
         <QueryClientProvider client={client}>
-          <PerformancePage />
+          <MemoryRouter>
+            <PerformancePage />
+          </MemoryRouter>
         </QueryClientProvider>
       </StrictMode>,
     );

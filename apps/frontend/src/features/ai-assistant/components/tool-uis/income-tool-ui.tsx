@@ -1,3 +1,4 @@
+import { getInstrumentPrimaryLabel, getInstrumentSecondaryLabel } from "@/lib/instrument-display";
 import { useBalancePrivacy } from "@/hooks/use-balance-privacy";
 import { UnconvertedCurrenciesNotice } from "@/pages/income/unconverted-currencies-notice";
 import { Alert, AlertTitle } from "@wealthfolio/ui/components/ui/alert";
@@ -471,13 +472,13 @@ export function IncomeContentImpl({ args, result, status }: IncomeContentProps) 
                       >
                         {widthPercent > 14 && (
                           <span className="text-background text-2xs truncate px-1 font-medium">
-                            {asset.symbol}
+                            {getInstrumentPrimaryLabel(asset)}
                           </span>
                         )}
                       </TooltipTrigger>
                       <TooltipContent side="top" align="center">
                         <div className="text-center">
-                          <div className="font-medium">{asset.symbol}</div>
+                          <div className="font-medium">{getInstrumentPrimaryLabel(asset)}</div>
                           <div className="text-background/70 text-xs">
                             {formatValue(asset.income)} (
                             {formatting.formatPercent(asset.percentage / 100)})
@@ -501,8 +502,12 @@ export function IncomeContentImpl({ args, result, status }: IncomeContentProps) 
                       style={{ backgroundColor: `var(--chart-${(index % 9) + 1})` }}
                     />
                     <div className="flex min-w-0 flex-1 items-baseline gap-1.5">
-                      <span className="font-medium">{asset.symbol}</span>
-                      <span className="text-muted-foreground truncate">{asset.name}</span>
+                      <span className="font-medium">{getInstrumentPrimaryLabel(asset)}</span>
+                      {getInstrumentSecondaryLabel(asset) && (
+                        <span className="text-muted-foreground truncate">
+                          {getInstrumentSecondaryLabel(asset)}
+                        </span>
+                      )}
                     </div>
                     <span className="text-muted-foreground flex-shrink-0 tabular-nums">
                       {formatting.formatPercent(asset.percentage / 100)}

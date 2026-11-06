@@ -27,6 +27,16 @@ use crate::utils::time_utils::{parse_user_timezone_or_default, user_today};
 #[allow(clippy::too_many_arguments)]
 #[async_trait]
 pub trait PerformanceServiceTrait: Send + Sync {
+    /// Prepare read-only engine inputs for aggregation across isolated member stores.
+    async fn prepare_combined_inputs(
+        &self,
+        _account_ids: &[String],
+    ) -> Result<super::combined::PreparedPerformance> {
+        Err(Error::Validation(ValidationError::InvalidInput(
+            "Combined performance is unavailable".to_string(),
+        )))
+    }
+
     async fn calculate_performance_history(
         &self,
         item_type: &str,
@@ -372,6 +382,36 @@ impl PerformanceService {
             MeasureTarget::Account(id) => std::slice::from_ref(id),
             MeasureTarget::Scope { accounts, .. } => accounts,
         };
+        let prepared = self.prepare_rows(account_ids, settings, profile).await?;
+        let window = engine::Window { start, end };
+        let kernel_profile = match profile {
+            PerformanceSummaryProfile::Full => engine::MeasureProfile::Full,
+            PerformanceSummaryProfile::Summary => engine::MeasureProfile::Summary,
+            PerformanceSummaryProfile::Dashboard => engine::MeasureProfile::Dashboard,
+        };
+        let inputs = prepared.inputs();
+        let result = match target {
+            MeasureTarget::Account(id) => engine::measure_account(
+                &inputs,
+                &AccountId::new(id),
+                window,
+                kernel_profile,
+                include_series,
+            )?,
+            MeasureTarget::Scope { id, accounts } => {
+                let scope: Vec<AccountId> = accounts.iter().map(AccountId::new).collect();
+                engine::measure_scope(&inputs, id, &scope, window, kernel_profile, include_series)?
+            }
+        };
+        Ok(from_kernel(result))
+    }
+
+    async fn prepare_rows(
+        &self,
+        account_ids: &[String],
+        settings: &ReadSettings,
+        profile: PerformanceSummaryProfile,
+    ) -> Result<super::combined::PreparedPerformance> {
         let measured = rows::measure_engine(
             &self.sources,
             account_ids,
@@ -395,27 +435,19 @@ impl PerformanceService {
         let lots = rows::stored_lots(&lot_rows);
         let disposals = rows::stored_disposals(&disposal_rows);
         let rejected = rows::stored_rejections(&self.sources, &measured)?;
-        let window = engine::Window { start, end };
         let kernel_profile = match profile {
             PerformanceSummaryProfile::Full => engine::MeasureProfile::Full,
             PerformanceSummaryProfile::Summary => engine::MeasureProfile::Summary,
             PerformanceSummaryProfile::Dashboard => engine::MeasureProfile::Dashboard,
         };
         let inputs = measured.measure_inputs(&series, &lots, &disposals, &rejected, kernel_profile);
-        let result = match target {
-            MeasureTarget::Account(id) => engine::measure_account(
-                &inputs,
-                &AccountId::new(id),
-                window,
-                kernel_profile,
-                include_series,
-            )?,
-            MeasureTarget::Scope { id, accounts } => {
-                let scope: Vec<AccountId> = accounts.iter().map(AccountId::new).collect();
-                engine::measure_scope(&inputs, id, &scope, window, kernel_profile, include_series)?
-            }
-        };
-        Ok(from_kernel(result))
+        Ok(super::combined::PreparedPerformance {
+            effects: inputs.effects,
+            cash_fx: inputs.cash_fx,
+            series,
+            lots,
+            disposals,
+        })
     }
 
     async fn symbol_performance(
@@ -626,6 +658,25 @@ pub fn from_kernel(result: engine::model::PerformanceResult) -> PerformanceResul
 
 #[async_trait]
 impl PerformanceServiceTrait for PerformanceService {
+    async fn prepare_combined_inputs(
+        &self,
+        account_ids: &[String],
+    ) -> Result<super::combined::PreparedPerformance> {
+        let timezone = self.timezone();
+        let settings = ReadSettings {
+            base_currency: self.base_currency(),
+            as_of: user_today(parse_user_timezone_or_default(&timezone)),
+            timezone,
+        };
+        let service = self.clone();
+        let ids = account_ids.to_vec();
+        let handle = tokio::runtime::Handle::current();
+        blocking(move || {
+            handle.block_on(service.prepare_rows(&ids, &settings, PerformanceSummaryProfile::Full))
+        })
+        .await
+    }
+
     async fn calculate_performance_history(
         &self,
         item_type: &str,

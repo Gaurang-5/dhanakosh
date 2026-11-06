@@ -1,3 +1,6 @@
+import { useHouseholdScope } from "@/features/household/household-scope";
+import { useHouseholdReport } from "@/features/household/household-report-context";
+import { getHouseholdPerformance } from "@/features/household/household-performance";
 import { calculatePerformanceHistory } from "@/adapters";
 import { QueryKeys } from "@/lib/query-keys";
 import { PerformanceResult, TrackedItem } from "@/lib/types";
@@ -42,6 +45,10 @@ export function useCalculatePerformanceHistory({
   trackingMode?: "HOLDINGS" | "TRANSACTIONS";
 }) {
   const formatting = useDateFormatting();
+  const family = useHouseholdReport();
+  const scope = useHouseholdScope();
+  const memberIds = family ? scope?.memberIds : undefined;
+  const currency = family?.currentValuation.summary.baseCurrency;
   // Filter out invalid items (defensive: handles stale localStorage data)
   const validItems = selectedItems.filter(
     (item) =>
@@ -66,6 +73,8 @@ export function useCalculatePerformanceHistory({
     return {
       queryKey: [
         QueryKeys.PERFORMANCE_HISTORY,
+        memberIds,
+        currency,
         item.type,
         item.id,
         accountFilter,
@@ -74,19 +83,27 @@ export function useCalculatePerformanceHistory({
         trackingMode,
       ],
       queryFn: () =>
-        calculatePerformanceHistory(
-          item.type,
-          item.id,
-          itemStartDate,
-          endDate,
-          // Only pass trackingMode for accounts, not for symbols
-          item.type === "account" ? trackingMode : undefined,
-          accountFilter,
-        ),
+        memberIds && currency && item.type === "account"
+          ? getHouseholdPerformance(
+              memberIds,
+              currency,
+              itemStartDate,
+              endDate,
+              accountFilter ?? { type: "account", accountId: item.id },
+            )
+          : calculatePerformanceHistory(
+              item.type,
+              item.id,
+              itemStartDate,
+              endDate,
+              // Only pass trackingMode for accounts, not for symbols
+              item.type === "account" ? trackingMode : undefined,
+              accountFilter,
+            ),
       enabled: itemEnabled,
       staleTime: 30 * 1000,
       retry: false,
-      placeholderData: keepPreviousData,
+      placeholderData: family ? undefined : keepPreviousData,
     };
   };
 

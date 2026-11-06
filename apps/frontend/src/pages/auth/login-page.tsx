@@ -81,7 +81,7 @@ export function LoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <CardTitle>Wealthfolio</CardTitle>
+              <CardTitle>{t("auth:login.title")}</CardTitle>
               <CardDescription>{t("auth:login.description")}</CardDescription>
             </div>
           </CardHeader>

@@ -1,3 +1,5 @@
+import { MemberPortfolioRequired } from "@/features/household/member-portfolio-required";
+import { useHouseholdReport } from "@/features/household/household-report-context";
 import {
   useRecalculatePortfolioMutation,
   useUpdatePortfolioMutation,
@@ -29,6 +31,7 @@ export function PortfolioUpdateTrigger({
   children,
   notices = [],
 }: PortfolioUpdateTriggerProps) {
+  const family = useHouseholdReport();
   const dateFormatting = useDateFormatting();
 
   const { t } = useTranslation();
@@ -55,6 +58,7 @@ export function PortfolioUpdateTrigger({
       </HoverCardTrigger>
       <HoverCardContent align="start" className="w-80 shadow-none">
         <div className="flex flex-col space-y-4">
+          {family && <MemberPortfolioRequired>{null}</MemberPortfolioRequired>}
           {notices.length > 0 && (
             <div className="border-warning/20 bg-warning/10 flex gap-2.5 rounded-lg border p-3">
               <Icons.AlertTriangle className="text-warning mt-0.5 h-4 w-4 shrink-0" />
@@ -84,7 +88,7 @@ export function PortfolioUpdateTrigger({
             variant="outline"
             size="sm"
             className="rounded-full"
-            disabled={updatePortfolioMutation.isPending} // Use internal mutation state
+            disabled={!!family || updatePortfolioMutation.isPending} // Use internal mutation state
           >
             {updatePortfolioMutation.isPending ? (
               <Spinner className="me-2 h-4 w-4" />
@@ -100,7 +104,7 @@ export function PortfolioUpdateTrigger({
             variant="outline"
             size="sm"
             className="rounded-full"
-            disabled={recalculatePortfolioMutation.isPending}
+            disabled={!!family || recalculatePortfolioMutation.isPending}
           >
             {recalculatePortfolioMutation.isPending ? (
               <Spinner className="me-2 h-4 w-4" />

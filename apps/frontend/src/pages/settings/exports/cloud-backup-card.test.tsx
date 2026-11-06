@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
   compact: false,
 }));
 vi.mock("@/adapters", () => ({
+  isWeb: false,
   cloudBackupAction: mocks.action,
   captureCloudBackup: mocks.capture,
   downloadCloudBackup: mocks.download,

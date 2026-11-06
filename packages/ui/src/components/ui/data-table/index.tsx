@@ -46,6 +46,11 @@ interface DataTableProps<TData, TValue> {
   pinRowsToTop?: (row: TData) => boolean;
   /** Draw the table on a Card. Pass false for a table already inside a card or dialog. */
   card?: boolean;
+  isRowExpanded?: (row: TData) => boolean;
+  /** Extra `<tr>` elements drawn under an expanded data row, in the same table body. */
+  renderExpandedRows?: (row: TData) => React.ReactNode;
+  onRowClick?: (row: TData) => void;
+  rowClassName?: (row: TData) => string | undefined;
 }
 
 /**
@@ -89,6 +94,10 @@ export function DataTable<TData, TValue>({
   toolbarActions,
   pinRowsToTop,
   card = true,
+  isRowExpanded,
+  renderExpandedRows,
+  onRowClick,
+  rowClassName,
 }: DataTableProps<TData, TValue>) {
   const Frame = card ? Card : "div";
   const [rowSelection, setRowSelection] = React.useState({});
@@ -233,11 +242,18 @@ export function DataTable<TData, TValue>({
           <TableBody>
             {displayRows.length ? (
               displayRows.map((row) => (
-                <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
-                  ))}
-                </TableRow>
+                <React.Fragment key={row.id}>
+                  <TableRow
+                    data-state={row.getIsSelected() && "selected"}
+                    className={rowClassName?.(row.original)}
+                    onClick={onRowClick ? () => onRowClick(row.original) : undefined}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+                    ))}
+                  </TableRow>
+                  {isRowExpanded?.(row.original) ? renderExpandedRows?.(row.original) : null}
+                </React.Fragment>
               ))
             ) : (
               <TableRow>

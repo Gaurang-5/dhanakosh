@@ -1,3 +1,4 @@
+import { getInstrumentPrimaryLabel, getInstrumentSecondaryLabel } from "@/lib/instrument-display";
 import { useAccounts } from "@/hooks/use-accounts";
 import { useBalancePrivacy } from "@/hooks/use-balance-privacy";
 import {
@@ -51,6 +52,9 @@ const MAX_RECENT_ITEMS = 5;
 const RECENT_ITEMS_KEY = "app-launcher-recent-items";
 
 interface LauncherHoldingItem {
+  primaryLabel: string;
+  secondaryLabel: string | null;
+  isClosed?: boolean;
   id: string;
   symbol: string;
   name?: string | null;
@@ -86,7 +90,10 @@ export function AppLauncher() {
   const [search, setSearch] = useState("");
   const navigation = useNavigation();
   const { accounts, isLoading: isAccountsLoading } = useAccounts();
-  const { holdings, isLoading: isHoldingsLoading } = useHoldings({ type: "all" });
+  const { holdings, isLoading: isHoldingsLoading } = useHoldings(
+    { type: "all" },
+    { includeClosed: true },
+  );
   const { isBalanceHidden, toggleBalanceVisibility } = useBalancePrivacy();
   const { updateSettings } = useSettingsContext();
   const { mutate: updatePortfolio, isPending: isUpdatingPortfolio } = useUpdatePortfolioMutation();
@@ -419,13 +426,16 @@ export function AppLauncher() {
       .map((holding) => ({
         id: holding.instrument?.id ?? holding.id,
         symbol: holding.instrument?.symbol ?? "",
+        primaryLabel: getInstrumentPrimaryLabel(holding.instrument),
+        secondaryLabel: getInstrumentSecondaryLabel(holding.instrument),
         name: holding.instrument?.name ?? null,
+        isClosed: holding.isClosed,
       }))
       .filter((holding) => {
-        if (seenSymbols.has(holding.symbol)) {
+        if (seenSymbols.has(holding.id)) {
           return false;
         }
-        seenSymbols.add(holding.symbol);
+        seenSymbols.add(holding.id);
         return true;
       })
       .sort((a, b) => a.symbol.localeCompare(b.symbol));
@@ -710,13 +720,20 @@ export function AppLauncher() {
                     "asset",
                     "stock",
                   ].filter((keyword): keyword is string => Boolean(keyword))}
-                  onSelect={() => handleSelectHolding(holding.id, holding.symbol, holding.name)}
+                  onSelect={() =>
+                    handleSelectHolding(holding.id, holding.primaryLabel, holding.secondaryLabel)
+                  }
                   className={cn(isMobileViewport ? "gap-3 py-4 text-base" : undefined)}
                 >
                   <Icons.TrendingUp className={iconClassName} />
-                  <span className="font-medium">{holding.symbol}</span>
-                  {holding.name ? (
-                    <span className="text-muted-foreground ms-2 truncate">{holding.name}</span>
+                  <span className="font-medium">{holding.primaryLabel}</span>
+                  {holding.isClosed && (
+                    <span className="text-muted-foreground text-xs">{t("holdings:closed")}</span>
+                  )}
+                  {holding.secondaryLabel ? (
+                    <span className="text-muted-foreground ms-2 truncate">
+                      {holding.secondaryLabel}
+                    </span>
                   ) : null}
                 </CommandItem>
               ))

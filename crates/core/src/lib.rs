@@ -40,3 +40,9 @@ pub use portfolio::*;
 // Re-export error types
 pub use errors::Error;
 pub use errors::Result;
+
+pub mod investment_plans;
+
+pub mod fund_exposure;
+
+pub mod broker_connections;

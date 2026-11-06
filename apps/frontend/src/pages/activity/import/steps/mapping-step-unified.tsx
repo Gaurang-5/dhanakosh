@@ -31,7 +31,7 @@ import { TemplatePicker } from "../components/template-picker";
 import { computeFieldMappings, useImportMapping } from "../hooks/use-import-mapping";
 import { autoMatchAccountMappings, collectCsvAccountValues } from "../utils/account-matching";
 import { ACTIVITY_SKIP, isFieldMapped } from "../utils/draft-utils";
-import { validateTickerSymbol, findMappedActivityType } from "../utils/validation-utils";
+import { canResolveImportAssetIdentifier, findMappedActivityType } from "../utils/validation-utils";
 import {
   createDefaultActivityMapping,
   createDefaultParseConfig,
@@ -257,14 +257,23 @@ export function MappingStepUnified() {
       }
 
       needed.add(symbol);
-      if (!validateTickerSymbol(symbol)) invalid.add(symbol);
+      const isin = getMappedValue(row, ImportFormat.ISIN)?.trim();
+      if (!canResolveImportAssetIdentifier(symbol, isin, localMapping.symbolMappings?.[symbol])) {
+        invalid.add(symbol);
+      }
     });
 
     return {
       distinctSymbols: Array.from(needed),
       invalidSymbols: Array.from(invalid),
     };
-  }, [data, effectiveActivityMappings, getMappedValue, importProfile.assetResolutionEnabled]);
+  }, [
+    data,
+    effectiveActivityMappings,
+    getMappedValue,
+    importProfile.assetResolutionEnabled,
+    localMapping.symbolMappings,
+  ]);
 
   // Account ID mappings
   const distinctAccountIds = useMemo(() => {
@@ -279,7 +288,7 @@ export function MappingStepUnified() {
   const validAccountIds = useMemo(() => new Set(accounts.map((account) => account.id)), [accounts]);
   const invalidAccounts = useMemo(() => {
     return distinctAccountIds.filter(
-      (account) => !validAccountIds.has(account) && !localMapping.accountMappings?.[account],
+      (account) => !validAccountIds.has(localMapping.accountMappings?.[account] || account),
     );
   }, [distinctAccountIds, localMapping.accountMappings, validAccountIds]);
 
@@ -417,7 +426,10 @@ export function MappingStepUnified() {
       if (appType && !shouldResolveImportAsset(appType, csvSubtype, symbol)) {
         return;
       }
-      if (validateTickerSymbol(symbol) || localMapping.symbolMappings?.[symbol]) return;
+      const isin = getMappedValue(row, ImportFormat.ISIN)?.trim();
+      if (canResolveImportAssetIdentifier(symbol, isin, localMapping.symbolMappings?.[symbol])) {
+        return;
+      }
       unresolved.add(symbol);
     });
     return unresolved.size;

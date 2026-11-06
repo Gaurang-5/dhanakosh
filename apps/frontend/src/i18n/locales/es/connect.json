@@ -130,7 +130,8 @@
     "applied": "Aplicado",
     "needsReview": "Requiere revisión",
     "failed": "Fallido",
-    "cancelled": "Cancelado"
+    "cancelled": "Cancelado",
+    "reverted": "Deshecha"
   },
   "syncRuns": {
     "title": "Ejecuciones de sincronización recientes",

@@ -69,8 +69,11 @@ export const unlinkLiability = async (liabilityId: string): Promise<void> => {
  * Get the net worth calculation
  * @param date Optional date for as-of calculation (ISO format: YYYY-MM-DD). Defaults to today.
  */
-export const getNetWorth = async (date?: string): Promise<NetWorthResponse> => {
-  return invoke<NetWorthResponse>("get_net_worth", { date });
+export const getNetWorth = async (
+  date?: string,
+  accountIds?: string[],
+): Promise<NetWorthResponse> => {
+  return invoke<NetWorthResponse>("get_net_worth", { date, accountIds });
 };
 
 /**
@@ -113,8 +116,10 @@ export const getAlternativeHoldings = async (): Promise<AlternativeAssetHolding[
 export const getNetWorthHistory = async (
   startDate: string,
   endDate: string,
+  accountIds?: string[],
 ): Promise<NetWorthHistoryPoint[]> => {
   return invoke<NetWorthHistoryPoint[]>("get_net_worth_history", {
+    accountIds,
     startDate,
     endDate,
   });

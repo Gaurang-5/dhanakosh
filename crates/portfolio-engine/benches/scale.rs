@@ -23,6 +23,7 @@ fn generated_facts() -> RawFacts {
     let policy = Policy::new(Currency::parse("USD").unwrap(), chrono_tz::Tz::UTC, as_of);
     let accounts = (0..ACCOUNTS)
         .map(|i| RawAccount {
+            separate_cash_ledger: false,
             id: format!("acc-{i}"),
             currency: if i % 3 == 0 { "CAD" } else { "USD" }.to_string(),
             account_type: "SECURITIES".to_string(),

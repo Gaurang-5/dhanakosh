@@ -10,7 +10,7 @@ function StartupFailure() {
   return (
     <StartupScreen
       profile={null}
-      message={t("profiles.startupFailed", { defaultValue: "Couldn't open Wealthfolio" })}
+      message={t("profiles.startupFailed", { defaultValue: "Couldn't open Dhanakosh" })}
       error={t("profiles.reloadHelp", {
         defaultValue: "Reload to try opening your profile again.",
       })}

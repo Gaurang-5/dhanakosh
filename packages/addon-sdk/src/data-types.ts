@@ -1320,7 +1320,8 @@ export type ImportRunStatus =
   | 'APPLIED'
   | 'NEEDS_REVIEW'
   | 'FAILED'
-  | 'CANCELLED';
+  | 'CANCELLED'
+  | 'REVERTED';
 export type ReviewMode = 'NEVER' | 'ALWAYS' | 'IF_WARNINGS';
 
 export interface ImportRunSummary {
@@ -1331,6 +1332,7 @@ export interface ImportRunSummary {
   warnings: number;
   errors: number;
   removed: number;
+  fileName?: string;
 }
 
 export interface ImportRun {

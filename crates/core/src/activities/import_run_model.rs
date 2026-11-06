@@ -45,6 +45,8 @@ pub enum ImportRunStatus {
     Failed,
     /// User cancelled
     Cancelled,
+    /// Applied import whose activities were removed
+    Reverted,
 }
 
 /// Review mode for import runs
@@ -120,6 +122,17 @@ pub struct ImportRunSummary {
     pub removed: u32,
     /// Number of assets created during import
     pub assets_created: u32,
+    /// Original file name for a CSV import, when the client sent one
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub file_name: Option<String>,
+}
+
+/// Result of undoing one CSV activity import
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UndoActivityImportResult {
+    pub import_run: ImportRun,
+    pub removed: u32,
 }
 
 impl ImportRun {

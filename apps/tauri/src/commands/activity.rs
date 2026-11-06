@@ -4,10 +4,10 @@ use std::collections::HashMap;
 use log::debug;
 use wealthfolio_core::activities::{
     Activity, ActivityBulkMutationRequest, ActivityBulkMutationResult, ActivityImport,
-    ActivitySearchResponse, ActivityUpdate, ImportActivitiesResult, ImportAssetCandidate,
-    ImportAssetPreviewItem, ImportMappingData, ImportTemplateData, InternalTransferPairRequest,
-    InternalTransferPairResponse, NewActivity, ParseConfig, ParsedCsvResult, Sort,
-    TransferMatchCandidate, TransferMatchCandidateRequest,
+    ActivitySearchResponse, ActivityServiceTrait, ActivityUpdate, ImportActivitiesResult,
+    ImportAssetCandidate, ImportAssetPreviewItem, ImportMappingData, ImportTemplateData,
+    InternalTransferPairRequest, InternalTransferPairResponse, NewActivity, ParseConfig,
+    ParsedCsvResult, Sort, TransferMatchCandidate, TransferMatchCandidateRequest,
 };
 use wealthfolio_core::health::HealthServiceTrait;
 use wealthfolio_core::utils::time_utils::{
@@ -335,6 +335,7 @@ pub async fn preview_import_assets(
 #[tauri::command]
 pub async fn import_activities(
     activities: Vec<ActivityImport>,
+    file_name: Option<String>,
     state: ProfileAccess,
 ) -> Result<ImportActivitiesResult, String> {
     let context = state.context()?;
@@ -342,7 +343,23 @@ pub async fn import_activities(
     // Domain events handle recalculation and asset enrichment automatically
     let result = context
         .activity_service()
-        .import_activities(activities)
+        .import_activities_with_file_name(activities, file_name)
+        .await
+        .map_err(|e| e.to_string())?;
+    context.health_service().clear_cache().await;
+    Ok(result)
+}
+
+#[tauri::command]
+pub async fn undo_activity_import(
+    import_run_id: String,
+    state: ProfileAccess,
+) -> Result<wealthfolio_core::activities::UndoActivityImportResult, String> {
+    let context = state.context()?;
+    debug!("Undoing activity import {}", import_run_id);
+    let result = context
+        .activity_service()
+        .undo_activity_import(import_run_id)
         .await
         .map_err(|e| e.to_string())?;
     context.health_service().clear_cache().await;
@@ -384,4 +401,167 @@ pub async fn parse_csv(
             debug!("CSV parse error: {}", e);
             e.to_string()
         })
+}
+
+#[tauri::command]
+pub async fn parse_cas(
+    content: String,
+    password: String,
+    state: ProfileAccess,
+) -> Result<wealthfolio_core::activities::cas_import::CasImportPreview, String> {
+    let _context = state.context()?;
+    wealthfolio_core::activities::cas_import::parse_cas(
+        wealthfolio_core::activities::cas_import::CasImportRequest { content, password },
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn get_investment_plans(
+    state: ProfileAccess,
+) -> Result<Vec<wealthfolio_core::investment_plans::InvestmentPlan>, String> {
+    let ctx = state.context()?;
+    wealthfolio_core::investment_plans::list(ctx.settings_service().as_ref())
+        .map_err(|e| e.to_string())
+}
+#[tauri::command]
+pub async fn save_investment_plans(
+    plans: Vec<wealthfolio_core::investment_plans::InvestmentPlan>,
+    state: ProfileAccess,
+) -> Result<Vec<wealthfolio_core::investment_plans::InvestmentPlan>, String> {
+    let ctx = state.context()?;
+    wealthfolio_core::investment_plans::save(
+        ctx.settings_service().as_ref(),
+        ctx.account_service().as_ref(),
+        ctx.asset_service().as_ref(),
+        &plans,
+    )
+    .await
+    .map_err(|e| e.to_string())?;
+    Ok(plans)
+}
+
+#[tauri::command]
+pub async fn preview_broker(
+    provider: wealthfolio_core::activities::broker_import::Broker,
+    api_key: String,
+    access_token: String,
+    state: ProfileAccess,
+) -> Result<wealthfolio_core::activities::broker_import::BrokerPreview, String> {
+    let _context = state.context()?;
+    wealthfolio_core::activities::broker_import::preview_broker(
+        wealthfolio_core::activities::broker_import::BrokerRequest {
+            provider,
+            api_key,
+            access_token,
+        },
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn get_fund_exposure(
+    currency: String,
+    filter: wealthfolio_core::portfolios::AccountScope,
+    state: ProfileAccess,
+) -> Result<wealthfolio_core::fund_exposure::ExposureView, String> {
+    let ctx = state.context()?;
+    wealthfolio_core::fund_exposure::read(
+        ctx.settings_service().as_ref(),
+        ctx.account_service().as_ref(),
+        ctx.asset_service().as_ref(),
+        ctx.holdings_service().as_ref(),
+        &currency,
+        Some(
+            &ctx.portfolio_service()
+                .resolve_account_scope(&filter, &currency)
+                .map_err(|e| e.to_string())?
+                .account_ids,
+        ),
+    )
+    .await
+    .map_err(|e| e.to_string())
+}
+#[tauri::command]
+pub async fn save_fund_composition(
+    mut snapshot: wealthfolio_core::fund_exposure::FundComposition,
+    state: ProfileAccess,
+) -> Result<wealthfolio_core::fund_exposure::FundComposition, String> {
+    let ctx = state.context()?;
+    snapshot.imported = true;
+    let saved = wealthfolio_core::fund_exposure::save(
+        ctx.settings_service().as_ref(),
+        ctx.asset_service().as_ref(),
+        snapshot,
+    )
+    .await
+    .map_err(|e| e.to_string())?;
+    wealthfolio_core::fund_exposure::sync_sector_classification(ctx.taxonomy_service(), &saved)
+        .await;
+    Ok(saved)
+}
+#[tauri::command]
+pub async fn refresh_fund_composition(
+    asset_id: String,
+    state: ProfileAccess,
+) -> Result<wealthfolio_core::fund_exposure::FundComposition, String> {
+    let ctx = state.context()?;
+    let saved = wealthfolio_core::fund_exposure::refresh(
+        ctx.settings_service().as_ref(),
+        ctx.asset_service().as_ref(),
+        ctx.quote_service().as_ref(),
+        ctx.secret_store.as_ref(),
+        &asset_id,
+    )
+    .await
+    .map_err(|e| e.to_string())?;
+    wealthfolio_core::fund_exposure::sync_sector_classification(ctx.taxonomy_service(), &saved)
+        .await;
+    Ok(saved)
+}
+#[tauri::command]
+pub async fn remove_fund_composition(asset_id: String, state: ProfileAccess) -> Result<(), String> {
+    let ctx = state.context()?;
+    let had_imported_sectors =
+        wealthfolio_core::fund_exposure::list(ctx.settings_service().as_ref())
+            .map_err(|e| e.to_string())?
+            .iter()
+            .find(|snapshot| snapshot.asset_id == asset_id)
+            .is_some_and(|snapshot| snapshot.constituents.iter().any(|row| row.sector.is_some()));
+    wealthfolio_core::fund_exposure::remove(ctx.settings_service().as_ref(), &asset_id)
+        .await
+        .map_err(|e| e.to_string())?;
+    if had_imported_sectors {
+        wealthfolio_core::fund_exposure::clear_sector_classification(
+            ctx.taxonomy_service(),
+            &asset_id,
+        )
+        .await;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn preview_fund_composition(
+    asset_id: String,
+    source: String,
+    as_of: chrono::NaiveDate,
+    csv_text: String,
+) -> Result<wealthfolio_core::fund_exposure::FundComposition, String> {
+    wealthfolio_core::fund_exposure::preview_csv(asset_id, source, as_of, &csv_text)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn broker_connection(
+    request: wealthfolio_core::broker_connections::Request,
+    state: ProfileAccess,
+) -> Result<wealthfolio_core::broker_connections::Response, String> {
+    let ctx = state.context()?;
+    wealthfolio_core::broker_connections::execute(
+        ctx.account_service().as_ref(),
+        state.secret_store.as_ref(),
+        request,
+    )
+    .await
 }

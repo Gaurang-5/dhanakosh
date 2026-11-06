@@ -1,10 +1,7 @@
-import { buttonVariants } from "@wealthfolio/ui";
-import { ExternalLink } from "@/components/external-link";
 import { StartupError } from "@/components/startup-error";
 import { StartupScreen } from "@/components/startup-screen";
 import { usePlatform } from "@/hooks/use-platform";
 import { useSettings } from "@/hooks/use-settings";
-import { useConnectUrl } from "@/features/wealthfolio-connect/hooks/use-connect-url";
 import { useSettingsContext } from "@/lib/settings-provider";
 import { cn } from "@/lib/utils";
 import { Button } from "@wealthfolio/ui/components/ui/button";
@@ -14,16 +11,14 @@ import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate } from "react-router-dom";
 import { OnboardingAppearance, OnboardingAppearanceHandle } from "./onboarding-appearance";
-import { OnboardingConnect } from "./onboarding-connect";
 import { OnboardingStep1 } from "./onboarding-step1";
 import { OnboardingStep2, OnboardingStep2Handle } from "./onboarding-step2";
 
-const DESKTOP_MAX_STEPS = 4;
+const DESKTOP_MAX_STEPS = 3;
 const MOBILE_MAX_STEPS = 3;
 
 const OnboardingPage = () => {
   const { t } = useTranslation();
-  const connectLink = useConnectUrl("app_onboarding");
   const {
     data: settings,
     error: settingsError,
@@ -85,7 +80,7 @@ const OnboardingPage = () => {
         <div className="flex flex-col items-center">
           {/* Logo */}
           <img
-            alt="Wealthfolio"
+            alt={t("common:app_name", { defaultValue: "Dhanakosh" })}
             className={cn(isAppearanceStep ? "mb-2 h-12 w-12" : "mb-3 h-16 w-16 sm:h-16 sm:w-16")}
             src="/logo-vantage.png"
           />
@@ -134,7 +129,6 @@ const OnboardingPage = () => {
                 onValidityChange={setIsStepValid}
               />
             )}
-            {!isMobile && currentStep === 4 && <OnboardingConnect />}
           </motion.div>
         </AnimatePresence>
       </main>
@@ -156,15 +150,6 @@ const OnboardingPage = () => {
                 </Button>
               </div>
               <div className="order-1 flex flex-col gap-2 sm:order-2 sm:flex-row sm:gap-3">
-                {!isMobile && (
-                  <ExternalLink
-                    href={connectLink}
-                    className={cn(buttonVariants({ variant: "outline" }), "order-2 sm:order-1")}
-                  >
-                    {t("onboarding:buttons.subscribeConnect")}
-                    <Icons.ExternalLink className="ms-1.5 h-4 w-4" />
-                  </ExternalLink>
-                )}
                 <Button
                   data-testid="onboarding-finish-button"
                   className="from-primary to-primary/90 bg-linear-to-r order-1 sm:order-2"

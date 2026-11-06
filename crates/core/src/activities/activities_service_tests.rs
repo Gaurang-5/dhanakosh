@@ -9509,6 +9509,24 @@ pub(crate) mod tests {
         assert_eq!(preview[1].asset_id.as_deref(), Some("shop-nasdaq"));
     }
 
+    #[test]
+    fn amfi_mutual_fund_does_not_require_a_stock_exchange() {
+        assert!(!ActivityService::import_preview_requires_exchange(
+            Some(&InstrumentType::Equity),
+            None,
+            Some("MARKET"),
+            Some("AMFI"),
+            Some("AMFI-120503"),
+        ));
+        assert!(ActivityService::import_preview_requires_exchange(
+            Some(&InstrumentType::Equity),
+            None,
+            Some("MARKET"),
+            Some("YAHOO"),
+            Some("UNKNOWN"),
+        ));
+    }
+
     #[tokio::test]
     async fn test_preview_import_assets_returns_backend_review_symbol_for_suffix_mic() {
         let account_service = Arc::new(MockAccountService::new());
@@ -11243,6 +11261,218 @@ pub(crate) mod tests {
             .expect("import run lookup should succeed")
             .expect("import run should be stored");
         assert_eq!(import_run.status, ImportRunStatus::Applied);
+    }
+
+    fn activity_for_import_undo(
+        id: &str,
+        account_id: &str,
+        activity_type: &str,
+        import_run_id: Option<&str>,
+        source_group_id: Option<&str>,
+    ) -> Activity {
+        let now = Utc::now();
+        Activity {
+            id: id.to_string(),
+            account_id: account_id.to_string(),
+            asset_id: None,
+            activity_type: activity_type.to_string(),
+            activity_type_override: None,
+            source_type: None,
+            subtype: None,
+            status: ActivityStatus::Posted,
+            activity_date: now,
+            settlement_date: None,
+            quantity: None,
+            unit_price: None,
+            amount: Some(dec!(25)),
+            fee: None,
+            tax: None,
+            currency: "USD".to_string(),
+            fx_rate: None,
+            notes: None,
+            metadata: Some(json!({ "flow": { "is_external": false } })),
+            source_system: Some("csv".to_string()),
+            source_record_id: None,
+            source_group_id: source_group_id.map(str::to_string),
+            idempotency_key: Some(format!("key-{id}")),
+            import_run_id: import_run_id.map(str::to_string),
+            is_user_modified: true,
+            needs_review: false,
+            created_at: now,
+            updated_at: now,
+        }
+    }
+
+    #[tokio::test]
+    async fn undo_activity_import_removes_only_that_run_and_unlinks_a_mixed_transfer() {
+        let account_service = Arc::new(MockAccountService::new());
+        let asset_service = Arc::new(MockAssetService::new());
+        let fx_service = Arc::new(MockFxService::new());
+        let activity_repository = Arc::new(MockActivityRepository::new());
+        let import_run_repository = Arc::new(MockImportRunRepository::default());
+        account_service.add_account(create_test_account("acc-1", "USD"));
+
+        let quote_service = Arc::new(MockQuoteService);
+        let activity_service = ActivityService::with_import_run_repository(
+            activity_repository.clone(),
+            account_service,
+            asset_service,
+            fx_service,
+            quote_service,
+            import_run_repository.clone(),
+        );
+
+        let imported = activity_service
+            .import_activities_with_file_name(
+                vec![ActivityImport {
+                    id: None,
+                    date: "2026-01-07".to_string(),
+                    symbol: String::new(),
+                    activity_type: "DEPOSIT".to_string(),
+                    quantity: None,
+                    unit_price: None,
+                    currency: "USD".to_string(),
+                    fee: Some(dec!(0)),
+                    tax: None,
+                    amount: Some(dec!(100)),
+                    comment: None,
+                    account_id: Some("acc-1".to_string()),
+                    account_name: None,
+                    symbol_name: None,
+                    exchange_mic: None,
+                    quote_ccy: None,
+                    instrument_type: None,
+                    quote_mode: None,
+                    provider_id: None,
+                    provider_symbol: None,
+                    errors: None,
+                    warnings: None,
+                    duplicate_of_id: None,
+                    duplicate_of_line_number: None,
+                    is_draft: false,
+                    is_valid: true,
+                    line_number: Some(1),
+                    fx_rate: None,
+                    subtype: None,
+                    asset_id: None,
+                    isin: None,
+                    force_import: false,
+                    is_external: None,
+                }],
+                Some(" trades.csv ".to_string()),
+            )
+            .await
+            .expect("import");
+
+        let mut other_run = ImportRun::new(
+            "acc-1".to_string(),
+            "csv".to_string(),
+            crate::activities::ImportRunType::Import,
+            crate::activities::ImportRunMode::Incremental,
+            crate::activities::ReviewMode::Never,
+        );
+        other_run.complete();
+        let other_run = import_run_repository
+            .create(other_run)
+            .await
+            .expect("other run");
+        activity_repository.add_activity(activity_for_import_undo(
+            "kept-deposit",
+            "acc-1",
+            "DEPOSIT",
+            Some(&other_run.id),
+            None,
+        ));
+
+        let mut mixed_run = ImportRun::new(
+            "acc-1".to_string(),
+            "csv".to_string(),
+            crate::activities::ImportRunType::Import,
+            crate::activities::ImportRunMode::Incremental,
+            crate::activities::ReviewMode::Never,
+        );
+        mixed_run.complete();
+        let mixed_run = import_run_repository
+            .create(mixed_run)
+            .await
+            .expect("mixed run");
+        activity_repository.add_activity(activity_for_import_undo(
+            "imported-out",
+            "acc-1",
+            "TRANSFER_OUT",
+            Some(&mixed_run.id),
+            Some("pair-1"),
+        ));
+        activity_repository.add_activity(activity_for_import_undo(
+            "external-in",
+            "acc-2",
+            "TRANSFER_IN",
+            None,
+            Some("pair-1"),
+        ));
+
+        let imported_activity_id = activity_repository
+            .get_activities_by_import_run_id(&imported.import_run_id)
+            .expect("imported activities")
+            .into_iter()
+            .next()
+            .expect("imported deposit")
+            .id;
+
+        let undone = activity_service
+            .undo_activity_import(imported.import_run_id.clone())
+            .await
+            .expect("undo deposit import");
+        assert_eq!(undone.removed, 1);
+        assert_eq!(undone.import_run.status, ImportRunStatus::Reverted);
+        assert_eq!(
+            undone
+                .import_run
+                .summary
+                .and_then(|summary| summary.file_name),
+            Some("trades.csv".to_string())
+        );
+
+        let stored = activity_repository.get_activities().expect("activities");
+        assert!(stored
+            .iter()
+            .all(|activity| activity.id != imported_activity_id));
+        assert!(stored.iter().any(|activity| activity.id == "kept-deposit"));
+        assert!(activity_service
+            .undo_activity_import(imported.import_run_id)
+            .await
+            .is_err());
+
+        let unlinked = activity_service
+            .undo_activity_import(mixed_run.id)
+            .await
+            .expect("undo mixed transfer");
+        assert_eq!(unlinked.removed, 1);
+        let stored = activity_repository.get_activities().expect("activities");
+        assert!(stored.iter().all(|activity| activity.id != "imported-out"));
+        let survivor = stored
+            .iter()
+            .find(|activity| activity.id == "external-in")
+            .expect("external leg stays");
+        assert!(survivor.source_group_id.is_none());
+        assert!(stored.iter().any(|activity| activity.id == "kept-deposit"));
+
+        let mut sync_run = ImportRun::new(
+            "acc-1".to_string(),
+            "snaptrade".to_string(),
+            crate::activities::ImportRunType::Sync,
+            crate::activities::ImportRunMode::Incremental,
+            crate::activities::ReviewMode::Never,
+        );
+        sync_run.complete();
+        let sync_run = import_run_repository
+            .create(sync_run)
+            .await
+            .expect("sync run");
+        assert!(activity_service
+            .undo_activity_import(sync_run.id)
+            .await
+            .is_err());
     }
 
     #[tokio::test]

@@ -12,14 +12,18 @@ use axum::{
     http::{Request, StatusCode},
     middleware::Next,
     response::{IntoResponse, Response},
-    routing::post,
+    routing::{get, post},
     Extension, Json, Router,
 };
 use futures::StreamExt;
 use serde_json::{json, Value};
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{BTreeMap, HashMap},
+    sync::Arc,
+};
 use tokio::sync::Mutex;
 use uuid::Uuid;
+use wealthfolio_core::accounts::AccountServiceTrait;
 use wealthfolio_core::profiles::{ProfileRegistry, ProfileSession, PROFILE_SCOPE_HEADER};
 
 type Result<T> = std::result::Result<T, (StatusCode, String)>;
@@ -332,6 +336,12 @@ impl WebProfiles {
         tokio::spawn(async move {
             if let Ok(profiles) = root.registry.list() {
                 for profile in profiles {
+                    if crate::local_maintenance::enabled() && !profile.lock_enabled {
+                        if root.runtime(profile.id).await.is_err() {
+                            tracing::warn!("Local backup startup could not open a member database");
+                        }
+                        continue;
+                    }
                     if root
                         .registry
                         .profile(profile.id)
@@ -368,8 +378,988 @@ async fn close_mcp_sessions(
 
 pub fn router<S: Clone + Send + Sync + 'static>(root: Arc<WebProfiles>) -> Router<S> {
     Router::new()
+        .route("/profiles/household-summary", get(household_summary))
+        .route("/profiles/household-history", get(household_history))
+        .route("/profiles/household-activities", get(household_activities))
+        .route("/profiles/household-goals", get(household_goals))
+        .route(
+            "/profiles/household-investment-plans",
+            get(household_investment_plans),
+        )
+        .route("/profiles/household-exposure", get(household_exposure))
+        .route("/profiles/household-overview", get(household_overview))
+        .route("/profiles/household-income", get(household_income))
+        .route(
+            "/profiles/household-performance",
+            post(household_performance),
+        )
+        .route(
+            "/profiles/household-activity-search",
+            post(household_activity_search),
+        )
         .route("/profiles/{command}", post(command))
         .with_state(root)
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct HouseholdOverviewQuery {
+    member_ids: String,
+    currency: String,
+    taxonomy_id: Option<String>,
+    category_id: Option<String>,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct HouseholdPerformanceQuery {
+    member_ids: Vec<Uuid>,
+    currency: String,
+    account_ids: Option<Vec<String>>,
+    start_date: Option<chrono::NaiveDate>,
+    end_date: Option<chrono::NaiveDate>,
+}
+
+async fn household_performance(
+    State(root): State<Arc<WebProfiles>>,
+    Json(query): Json<HouseholdPerformanceQuery>,
+) -> Result<Json<wealthfolio_core::portfolio::performance::PerformanceResult>> {
+    use wealthfolio_core::{
+        accounts::{account_supports_portfolio_scope, AccountPurpose},
+        portfolio::performance::{combined::measure_combined, empty_performance_metrics},
+    };
+    let profiles = root.registry.list().map_err(failure)?;
+    if query.member_ids.is_empty()
+        || query
+            .member_ids
+            .iter()
+            .any(|id| !profiles.iter().any(|p| p.id == *id && !p.lock_enabled))
+        || query
+            .start_date
+            .zip(query.end_date)
+            .is_some_and(|(a, b)| a > b)
+    {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "Invalid member scope or dates".to_string(),
+        ));
+    }
+    let unavailable = |_| {
+        (
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Household performance is unavailable".to_string(),
+        )
+    };
+    let mut members = Vec::new();
+    for profile in profiles
+        .into_iter()
+        .filter(|p| query.member_ids.contains(&p.id))
+    {
+        let runtime = root.runtime(profile.id).await?;
+        let currency = runtime
+            .base_currency
+            .read()
+            .unwrap_or_else(|p| p.into_inner())
+            .clone();
+        if currency != query.currency {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                "Members must use the same reporting currency".to_string(),
+            ));
+        }
+        let prefix = format!("{}::", profile.id);
+        let accounts = runtime
+            .account_service
+            .get_all_accounts()
+            .map_err(unavailable)?
+            .into_iter()
+            .filter(|a| account_supports_portfolio_scope(a, AccountPurpose::Performance))
+            .filter(|a| {
+                query
+                    .account_ids
+                    .as_ref()
+                    .is_none_or(|ids| ids.contains(&format!("{prefix}{}", a.id)))
+            })
+            .map(|a| a.id)
+            .collect::<Vec<_>>();
+        if accounts.is_empty() {
+            continue;
+        }
+        let prepared = runtime
+            .performance_service
+            .prepare_combined_inputs(&accounts)
+            .await
+            .map_err(unavailable)?;
+        members.push((profile.id.to_string(), prepared, accounts));
+    }
+    if members.is_empty() {
+        return Ok(Json(empty_performance_metrics(
+            "portfolio:all",
+            query.currency,
+            query.start_date,
+            query.end_date,
+        )));
+    }
+    Ok(Json(
+        measure_combined(members, query.currency, query.start_date, query.end_date)
+            .await
+            .map_err(unavailable)?,
+    ))
+}
+
+async fn household_income(
+    State(root): State<Arc<WebProfiles>>,
+    axum::extract::Query(query): axum::extract::Query<HouseholdOverviewQuery>,
+) -> Result<Json<Vec<Value>>> {
+    use wealthfolio_core::accounts::{account_supports_portfolio_scope, AccountPurpose};
+    let ids = query
+        .member_ids
+        .split(',')
+        .map(Uuid::parse_str)
+        .collect::<std::result::Result<std::collections::HashSet<_>, _>>()
+        .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid member IDs".to_string()))?;
+    let profiles = root.registry.list().map_err(failure)?;
+    if ids
+        .iter()
+        .any(|id| !profiles.iter().any(|p| p.id == *id && !p.lock_enabled))
+    {
+        return Err((StatusCode::BAD_REQUEST, "Member is unavailable".to_string()));
+    }
+    let mut reports = Vec::new();
+    for profile in profiles.into_iter().filter(|p| ids.contains(&p.id)) {
+        let runtime = root.runtime(profile.id).await?;
+        let currency = runtime
+            .base_currency
+            .read()
+            .unwrap_or_else(|p| p.into_inner())
+            .clone();
+        if currency != query.currency {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                "Members must use the same reporting currency for combined income".to_string(),
+            ));
+        }
+        let unavailable = |_| {
+            (
+                StatusCode::SERVICE_UNAVAILABLE,
+                "Household income is unavailable".to_string(),
+            )
+        };
+        let accounts = runtime
+            .account_service
+            .get_all_accounts()
+            .map_err(unavailable)?;
+        let account_ids = accounts
+            .into_iter()
+            .filter(|a| account_supports_portfolio_scope(a, AccountPurpose::Income))
+            .map(|a| a.id)
+            .collect::<Vec<_>>();
+        if account_ids.is_empty() {
+            continue;
+        }
+        let income = runtime
+            .income_service
+            .get_income_summary(Some(&account_ids))
+            .map_err(unavailable)?;
+        let first_activity = runtime
+            .activity_service
+            .get_first_activity_date(Some(&account_ids))
+            .map_err(unavailable)?;
+        let timezone = runtime
+            .timezone
+            .read()
+            .unwrap_or_else(|p| p.into_inner())
+            .clone();
+        let tz = wealthfolio_core::utils::time_utils::parse_user_timezone_or_default(&timezone);
+        let first_activity = first_activity
+            .map(|date| wealthfolio_core::utils::time_utils::activity_date_in_tz(date, tz));
+        let today = wealthfolio_core::utils::time_utils::user_today(tz);
+        reports.push(json!({"memberId": profile.id, "memberName": profile.name, "income": income, "firstActivity": first_activity, "today": today}));
+    }
+    Ok(Json(reports))
+}
+
+// Read-only orchestration over the same core services used by the member overview.
+// No profile session is switched and no financial records are copied or persisted.
+async fn household_overview(
+    State(root): State<Arc<WebProfiles>>,
+    axum::extract::Query(query): axum::extract::Query<HouseholdOverviewQuery>,
+) -> Result<Json<Vec<Value>>> {
+    use wealthfolio_core::{
+        accounts::{account_supports_portfolio_scope, AccountPurpose},
+        portfolio::{holdings::HoldingListItem, valuation::CurrentAccountValuationService},
+        utils::time_utils::{parse_user_timezone_or_default, user_today},
+    };
+    let ids = query
+        .member_ids
+        .split(',')
+        .map(Uuid::parse_str)
+        .collect::<std::result::Result<std::collections::HashSet<_>, _>>()
+        .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid member IDs".to_string()))?;
+    if query.currency.len() != 3 || !query.currency.bytes().all(|b| b.is_ascii_uppercase()) {
+        return Err((StatusCode::BAD_REQUEST, "Invalid currency".to_string()));
+    }
+    let profiles = root.registry.list().map_err(failure)?;
+    if ids
+        .iter()
+        .any(|id| !profiles.iter().any(|p| p.id == *id && !p.lock_enabled))
+    {
+        return Err((StatusCode::BAD_REQUEST, "Member is unavailable".to_string()));
+    }
+    let unavailable = |_| {
+        (
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Household overview is unavailable".to_string(),
+        )
+    };
+    let mut reports = Vec::new();
+    for profile in profiles.into_iter().filter(|p| ids.contains(&p.id)) {
+        let runtime = root.runtime(profile.id).await?;
+        let accounts = runtime
+            .account_service
+            .get_all_accounts()
+            .map_err(unavailable)?
+            .into_iter()
+            .filter(|a| account_supports_portfolio_scope(a, AccountPurpose::Holdings))
+            .collect::<Vec<_>>();
+        let account_ids = accounts.iter().map(|a| a.id.clone()).collect::<Vec<_>>();
+        if let (Some(taxonomy), Some(category)) = (&query.taxonomy_id, &query.category_id) {
+            let allocation = runtime
+                .allocation_service
+                .get_holdings_by_allocation_for_accounts(
+                    &account_ids,
+                    &query.currency,
+                    taxonomy,
+                    category,
+                    "portfolio:all",
+                )
+                .await
+                .map_err(unavailable)?;
+            reports.push(json!({"memberId": profile.id, "allocation": allocation}));
+            continue;
+        }
+        let mut holdings = Vec::new();
+        for account in &accounts {
+            holdings.extend(
+                runtime
+                    .holdings_service
+                    .get_holdings_with_options(&account.id, &query.currency, true)
+                    .await
+                    .map_err(unavailable)?
+                    .into_iter()
+                    .map(HoldingListItem::from),
+            );
+        }
+        let allocations = runtime
+            .allocation_service
+            .get_portfolio_allocations_for_accounts(&account_ids, &query.currency, "portfolio:all")
+            .await
+            .map_err(unavailable)?;
+        let timezone = runtime
+            .timezone
+            .read()
+            .unwrap_or_else(|p| p.into_inner())
+            .clone();
+        let today = user_today(parse_user_timezone_or_default(&timezone));
+        let service = CurrentAccountValuationService::new(
+            runtime.account_service.as_ref(),
+            runtime.snapshot_service.as_ref(),
+            runtime.asset_service.as_ref(),
+            runtime.quote_service.as_ref(),
+            runtime.fx_service.as_ref(),
+        );
+        let current = service
+            .get_current_valuation_for_scope(
+                "portfolio:all",
+                &account_ids,
+                &query.currency,
+                today,
+                true,
+            )
+            .await
+            .map_err(unavailable)?;
+        let net_worth = runtime
+            .net_worth_service
+            .get_net_worth(today)
+            .await
+            .map_err(unavailable)?;
+        let Json(alternatives) =
+            crate::api::get_alternative_holdings(axum::Extension(runtime.clone()))
+                .await
+                .map_err(|_| {
+                    (
+                        StatusCode::SERVICE_UNAVAILABLE,
+                        "Household assets unavailable".to_string(),
+                    )
+                })?;
+        reports.push(json!({"memberId": profile.id, "memberName": profile.name, "accounts": accounts, "holdings": holdings, "allocations": allocations, "currentValuation": current, "netWorth": net_worth, "alternativeHoldings": alternatives}));
+    }
+    Ok(Json(reports))
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct HouseholdActivitySearch {
+    member_ids: Vec<Uuid>,
+    page: usize,
+    page_size: usize,
+    #[serde(flatten)]
+    filters: serde_json::Map<String, Value>,
+}
+
+async fn household_activity_search(
+    State(root): State<Arc<WebProfiles>>,
+    Json(query): Json<HouseholdActivitySearch>,
+) -> Result<Json<Value>> {
+    if query.page > 100 || !(1..=100).contains(&query.page_size) || query.member_ids.is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "Invalid search scope or page".to_string(),
+        ));
+    }
+    let profiles = root.registry.list().map_err(failure)?;
+    if query
+        .member_ids
+        .iter()
+        .any(|id| !profiles.iter().any(|p| p.id == *id && !p.lock_enabled))
+    {
+        return Err((StatusCode::BAD_REQUEST, "Member is unavailable".to_string()));
+    }
+    let sort_id = query
+        .filters
+        .get("sort")
+        .and_then(|s| s.get("id"))
+        .and_then(Value::as_str)
+        .unwrap_or("date");
+    if !["date", "activityType", "assetSymbol", "accountName"].contains(&sort_id) {
+        return Err((StatusCode::BAD_REQUEST, "Invalid sort".to_string()));
+    }
+    let desc = query
+        .filters
+        .get("sort")
+        .and_then(|s| s.get("desc"))
+        .and_then(Value::as_bool)
+        .unwrap_or(true);
+    let mut rows = Vec::new();
+    let mut total = 0;
+    for profile in profiles
+        .into_iter()
+        .filter(|p| query.member_ids.contains(&p.id))
+    {
+        let mut body = query.filters.clone();
+        let prefix = format!("{}::", profile.id);
+        let mut excluded = false;
+        for field in ["accountIdFilter", "activityIdFilter"] {
+            if let Some(values) = body.get(field).filter(|v| !v.is_null()) {
+                let values = values
+                    .as_array()
+                    .ok_or((StatusCode::BAD_REQUEST, "Invalid filter".to_string()))?;
+                let owned = values
+                    .iter()
+                    .filter_map(|v| v.as_str().and_then(|s| s.strip_prefix(&prefix)))
+                    .map(|s| json!(s))
+                    .collect::<Vec<_>>();
+                if owned.is_empty() {
+                    excluded = true;
+                }
+                body.insert(field.to_string(), json!(owned));
+            }
+        }
+        if excluded {
+            continue;
+        }
+        body.insert("page".to_string(), json!(0));
+        body.insert(
+            "pageSize".to_string(),
+            json!((query.page + 1) * query.page_size),
+        );
+        let body: crate::api::ActivitySearchBody = serde_json::from_value(Value::Object(body))
+            .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid filters".to_string()))?;
+        let runtime = root.runtime(profile.id).await?;
+        let response = crate::api::search_activities(axum::Extension(runtime), Json(body))
+            .await
+            .map_err(|_| {
+                (
+                    StatusCode::BAD_REQUEST,
+                    "Unable to search household activities; check filters".to_string(),
+                )
+            })?
+            .0;
+        total += response.meta.total_row_count;
+        for row in response.data {
+            rows.push((profile.id, profile.name.clone(), row));
+        }
+    }
+    rows.sort_by(|a, b| {
+        let order = match sort_id {
+            "activityType" => a.2.activity_type.cmp(&b.2.activity_type),
+            "assetSymbol" => a.2.asset_id.cmp(&b.2.asset_id),
+            "accountName" => a.2.account_name.cmp(&b.2.account_name),
+            _ => {
+                a.2.date
+                    .cmp(&b.2.date)
+                    .then_with(|| a.2.created_at.cmp(&b.2.created_at))
+                    .then_with(|| a.2.id.cmp(&b.2.id))
+            }
+        }
+        .then_with(|| a.0.cmp(&b.0));
+        if desc {
+            order.reverse()
+        } else {
+            order
+        }
+    });
+    let data = rows
+        .into_iter()
+        .skip(query.page * query.page_size)
+        .take(query.page_size)
+        .map(|(id, name, mut row)| {
+            row.id = format!("{id}::{}", row.id);
+            row.account_id = format!("{id}::{}", row.account_id);
+            row.asset_id = format!("{id}::{}", row.asset_id);
+            row.account_name = format!("{name} · {}", row.account_name);
+            row
+        })
+        .collect::<Vec<_>>();
+    Ok(Json(
+        json!({"data": data, "meta": {"totalRowCount": total}}),
+    ))
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct HouseholdSummaryQuery {
+    date: String,
+    #[serde(default)]
+    include_holdings: bool,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct HouseholdMemberSummary {
+    id: Uuid,
+    name: String,
+    avatar_id: String,
+    status: &'static str,
+    currency: Option<String>,
+    assets: Option<rust_decimal::Decimal>,
+    liabilities: Option<rust_decimal::Decimal>,
+    net_worth: Option<rust_decimal::Decimal>,
+    accounts_available: bool,
+    accounts: Vec<HouseholdAccountSummary>,
+    holdings_available: bool,
+    holdings: Vec<HouseholdHoldingSummary>,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct HouseholdHoldingSummary {
+    id: String,
+    asset_id: Option<String>,
+    account_id: String,
+    account_name: String,
+    symbol: Option<String>,
+    name: String,
+    currency: String,
+    quantity: rust_decimal::Decimal,
+    market_value: rust_decimal::Decimal,
+    market_value_base: rust_decimal::Decimal,
+    cost_basis_base: Option<rust_decimal::Decimal>,
+    unrealized_gain_base: Option<rust_decimal::Decimal>,
+    income_base: Option<rust_decimal::Decimal>,
+    instrument_type: Option<String>,
+    exchange_mic: Option<String>,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct HouseholdAccountSummary {
+    id: String,
+    name: String,
+    account_type: String,
+    group: Option<String>,
+    currency: String,
+    is_active: bool,
+    is_archived: bool,
+}
+
+#[derive(Default, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct HouseholdCurrencyTotal {
+    assets: rust_decimal::Decimal,
+    liabilities: rust_decimal::Decimal,
+    net_worth: rust_decimal::Decimal,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct HouseholdSummary {
+    date: chrono::NaiveDate,
+    members: Vec<HouseholdMemberSummary>,
+    totals_by_currency: BTreeMap<String, HouseholdCurrencyTotal>,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct HouseholdHistoryQuery {
+    start_date: String,
+    end_date: String,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct HouseholdMemberHistory {
+    member_id: Uuid,
+    currency: String,
+    points: Vec<HouseholdHistoryPoint>,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct HouseholdHistoryPoint {
+    date: chrono::NaiveDate,
+    net_worth: rust_decimal::Decimal,
+    total_assets: rust_decimal::Decimal,
+    total_liabilities: rust_decimal::Decimal,
+    portfolio_value: rust_decimal::Decimal,
+    net_contribution: rust_decimal::Decimal,
+    alternative_assets_value: rust_decimal::Decimal,
+    breakdown: BTreeMap<String, rust_decimal::Decimal>,
+}
+
+async fn household_history(
+    State(root): State<Arc<WebProfiles>>,
+    axum::extract::Query(query): axum::extract::Query<HouseholdHistoryQuery>,
+) -> Result<Json<Vec<HouseholdMemberHistory>>> {
+    let start = chrono::NaiveDate::parse_from_str(&query.start_date, "%Y-%m-%d")
+        .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid start date".to_string()))?;
+    let end = chrono::NaiveDate::parse_from_str(&query.end_date, "%Y-%m-%d")
+        .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid end date".to_string()))?;
+    if end < start || (end - start).num_days() > 36_600 {
+        return Err((StatusCode::BAD_REQUEST, "Invalid date range".to_string()));
+    }
+    let mut members = Vec::new();
+    for profile in root.registry.list().map_err(failure)? {
+        if profile.lock_enabled {
+            continue;
+        }
+        let runtime = root.runtime(profile.id).await?;
+        match runtime
+            .net_worth_service
+            .get_net_worth_history(start, end)
+            .await
+        {
+            Ok(history) => members.push(HouseholdMemberHistory {
+                member_id: profile.id,
+                currency: history
+                    .first()
+                    .map(|point| point.currency.clone())
+                    .unwrap_or_else(|| {
+                        runtime
+                            .base_currency
+                            .read()
+                            .unwrap_or_else(|poisoned| poisoned.into_inner())
+                            .clone()
+                    }),
+                points: history
+                    .into_iter()
+                    .map(|point| HouseholdHistoryPoint {
+                        date: point.date,
+                        net_worth: point.net_worth,
+                        total_assets: point.total_assets,
+                        total_liabilities: point.total_liabilities,
+                        portfolio_value: point.portfolio_value,
+                        net_contribution: point.net_contribution,
+                        alternative_assets_value: point.alternative_assets_value,
+                        breakdown: point.breakdown,
+                    })
+                    .collect(),
+            }),
+            Err(_) => {
+                return Err((
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    "Household history is unavailable".to_string(),
+                ))
+            }
+        }
+    }
+    Ok(Json(members))
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct HouseholdActivitiesQuery {
+    #[serde(default)]
+    page: i64,
+    #[serde(default = "default_household_page_size")]
+    page_size: i64,
+    member_ids: Option<String>,
+}
+
+fn default_household_page_size() -> i64 {
+    30
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct HouseholdActivity {
+    id: String,
+    member_id: Uuid,
+    member_name: String,
+    account_name: String,
+    asset_name: Option<String>,
+    symbol: String,
+    activity_type: String,
+    date: String,
+    quantity: Option<String>,
+    amount: Option<String>,
+    currency: String,
+    #[serde(skip_serializing)]
+    created_at: String,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct HouseholdActivitiesResponse {
+    data: Vec<HouseholdActivity>,
+    total: i64,
+}
+
+async fn household_activities(
+    State(root): State<Arc<WebProfiles>>,
+    axum::extract::Query(query): axum::extract::Query<HouseholdActivitiesQuery>,
+) -> Result<Json<HouseholdActivitiesResponse>> {
+    if query.page < 0 || query.page > 100 || query.page_size < 1 || query.page_size > 100 {
+        return Err((StatusCode::BAD_REQUEST, "Invalid page".to_string()));
+    }
+    let fetch_count = (query.page + 1) * query.page_size;
+    let selected_ids = query
+        .member_ids
+        .as_deref()
+        .map(|ids| {
+            ids.split(',')
+                .map(Uuid::parse_str)
+                .collect::<std::result::Result<std::collections::HashSet<_>, _>>()
+        })
+        .transpose()
+        .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid member IDs".to_string()))?;
+    let mut rows = Vec::new();
+    let mut total = 0;
+    for profile in root.registry.list().map_err(failure)? {
+        if profile.lock_enabled {
+            continue;
+        }
+        if selected_ids
+            .as_ref()
+            .is_some_and(|ids| !ids.contains(&profile.id))
+        {
+            continue;
+        }
+        let runtime = root.runtime(profile.id).await?;
+        let sort = wealthfolio_core::activities::Sort {
+            id: "date".to_string(),
+            desc: true,
+        };
+        match runtime.activity_service.search_activities(
+            0,
+            fetch_count,
+            None,
+            None,
+            None,
+            Some(sort),
+            None,
+            None,
+            None,
+            None,
+            None,
+        ) {
+            Ok(response) => {
+                total += response.meta.total_row_count;
+                rows.extend(response.data.into_iter().map(|activity| HouseholdActivity {
+                    id: activity.id,
+                    member_id: profile.id,
+                    member_name: profile.name.clone(),
+                    account_name: activity.account_name,
+                    asset_name: activity.asset_name,
+                    symbol: activity.asset_symbol,
+                    activity_type: activity.activity_type,
+                    date: activity.date,
+                    quantity: activity.quantity,
+                    amount: activity.amount,
+                    currency: activity.currency,
+                    created_at: activity.created_at,
+                }));
+            }
+            Err(_) => {
+                return Err((
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    "Household activities are unavailable".to_string(),
+                ))
+            }
+        }
+    }
+    rows.sort_by(|a, b| {
+        b.date
+            .cmp(&a.date)
+            .then_with(|| b.created_at.cmp(&a.created_at))
+            .then_with(|| b.id.cmp(&a.id))
+            .then_with(|| b.member_id.cmp(&a.member_id))
+    });
+    let start = (query.page * query.page_size) as usize;
+    let data = rows
+        .into_iter()
+        .skip(start)
+        .take(query.page_size as usize)
+        .collect();
+    Ok(Json(HouseholdActivitiesResponse { data, total }))
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct HouseholdGoal {
+    member_id: Uuid,
+    member_name: String,
+    goal: wealthfolio_core::goals::Goal,
+}
+
+async fn household_goals(State(root): State<Arc<WebProfiles>>) -> Result<Json<Vec<HouseholdGoal>>> {
+    let mut goals = Vec::new();
+    for profile in root.registry.list().map_err(failure)? {
+        if profile.lock_enabled {
+            continue;
+        }
+        let runtime = root.runtime(profile.id).await?;
+        match runtime.goal_service.get_goals() {
+            Ok(rows) => goals.extend(rows.into_iter().map(|goal| HouseholdGoal {
+                member_id: profile.id,
+                member_name: profile.name.clone(),
+                goal,
+            })),
+            Err(_) => {
+                return Err((
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    "Household goals are unavailable".to_string(),
+                ))
+            }
+        }
+    }
+    Ok(Json(goals))
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct HouseholdInvestmentPlans {
+    member_id: Uuid,
+    member_name: String,
+    plans: Vec<wealthfolio_core::investment_plans::InvestmentPlan>,
+}
+
+async fn household_investment_plans(
+    State(root): State<Arc<WebProfiles>>,
+) -> Result<Json<Vec<HouseholdInvestmentPlans>>> {
+    let mut members = Vec::new();
+    for profile in root.registry.list().map_err(failure)? {
+        if profile.lock_enabled {
+            continue;
+        }
+        let runtime = root.runtime(profile.id).await?;
+        let plans = wealthfolio_core::investment_plans::list(runtime.settings_service.as_ref())
+            .map_err(|_| {
+                (
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    "Household investment plans are unavailable".to_string(),
+                )
+            })?;
+        members.push(HouseholdInvestmentPlans {
+            member_id: profile.id,
+            member_name: profile.name,
+            plans,
+        });
+    }
+    Ok(Json(members))
+}
+
+async fn household_summary(
+    State(root): State<Arc<WebProfiles>>,
+    axum::extract::Query(query): axum::extract::Query<HouseholdSummaryQuery>,
+) -> Result<Json<HouseholdSummary>> {
+    let date = chrono::NaiveDate::parse_from_str(&query.date, "%Y-%m-%d")
+        .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid date".to_string()))?;
+    let profiles = root.registry.list().map_err(failure)?;
+    let mut members = Vec::with_capacity(profiles.len());
+    let mut totals_by_currency = BTreeMap::<String, HouseholdCurrencyTotal>::new();
+
+    for profile in profiles {
+        if profile.lock_enabled {
+            members.push(HouseholdMemberSummary {
+                id: profile.id,
+                name: profile.name,
+                avatar_id: profile.avatar_id,
+                status: "unavailable",
+                currency: None,
+                assets: None,
+                liabilities: None,
+                net_worth: None,
+                accounts_available: false,
+                accounts: Vec::new(),
+                holdings_available: false,
+                holdings: Vec::new(),
+            });
+            continue;
+        }
+        let runtime = match root.runtime(profile.id).await {
+            Ok(runtime) => runtime,
+            Err((status, _)) => {
+                tracing::warn!(profile_id = %profile.id, %status, "Household member runtime is unavailable");
+                members.push(HouseholdMemberSummary {
+                    id: profile.id,
+                    name: profile.name,
+                    avatar_id: profile.avatar_id,
+                    status: "unavailable",
+                    currency: None,
+                    assets: None,
+                    liabilities: None,
+                    net_worth: None,
+                    accounts_available: false,
+                    accounts: Vec::new(),
+                    holdings_available: false,
+                    holdings: Vec::new(),
+                });
+                continue;
+            }
+        };
+        let net_worth = match runtime.net_worth_service.get_net_worth(date).await {
+            Ok(net_worth) => net_worth,
+            Err(_) => {
+                tracing::warn!(profile_id = %profile.id, "Household member net worth is unavailable");
+                members.push(HouseholdMemberSummary {
+                    id: profile.id,
+                    name: profile.name,
+                    avatar_id: profile.avatar_id,
+                    status: "unavailable",
+                    currency: None,
+                    assets: None,
+                    liabilities: None,
+                    net_worth: None,
+                    accounts_available: false,
+                    accounts: Vec::new(),
+                    holdings_available: false,
+                    holdings: Vec::new(),
+                });
+                continue;
+            }
+        };
+        let total = totals_by_currency
+            .entry(net_worth.currency.clone())
+            .or_default();
+        total.assets += net_worth.assets.total;
+        total.liabilities += net_worth.liabilities.total;
+        total.net_worth += net_worth.net_worth;
+        let (accounts, accounts_available): (Vec<HouseholdAccountSummary>, bool) = match runtime
+            .account_service
+            .get_all_accounts()
+        {
+            Ok(accounts) => (
+                accounts
+                    .into_iter()
+                    .map(|account| HouseholdAccountSummary {
+                        id: account.id,
+                        name: account.name,
+                        account_type: account.account_type,
+                        group: account.group,
+                        currency: account.currency,
+                        is_active: account.is_active,
+                        is_archived: account.is_archived,
+                    })
+                    .collect(),
+                true,
+            ),
+            Err(_) => {
+                tracing::warn!(profile_id = %profile.id, "Household member accounts are unavailable");
+                (Vec::new(), false)
+            }
+        };
+        let mut holdings = Vec::new();
+        let mut holdings_available = accounts_available;
+        if query.include_holdings && accounts_available {
+            let base_currency = net_worth.currency.as_str();
+            for account in accounts
+                .iter()
+                .filter(|account| account.is_active && !account.is_archived)
+            {
+                match runtime
+                    .holdings_service
+                    .get_holdings_with_options(&account.id, base_currency, false)
+                    .await
+                {
+                    Ok(rows) => holdings.extend(rows.into_iter().map(|row| {
+                        let symbol = row
+                            .instrument
+                            .as_ref()
+                            .map(|instrument| instrument.symbol.clone());
+                        let name = row
+                            .instrument
+                            .as_ref()
+                            .and_then(|instrument| instrument.name.clone())
+                            .or_else(|| symbol.clone())
+                            .unwrap_or_else(|| "Cash".to_string());
+                        HouseholdHoldingSummary {
+                            asset_id: row
+                                .instrument
+                                .as_ref()
+                                .map(|instrument| instrument.id.clone()),
+                            id: row.id,
+                            account_id: account.id.clone(),
+                            account_name: account.name.clone(),
+                            symbol,
+                            name,
+                            currency: row.local_currency,
+                            quantity: row.quantity,
+                            market_value: row.market_value.local,
+                            market_value_base: row.market_value.base,
+                            cost_basis_base: row.cost_basis.map(|value| value.base),
+                            unrealized_gain_base: row.unrealized_gain.map(|value| value.base),
+                            income_base: row.income.map(|value| value.base),
+                            instrument_type: row.instrument.as_ref().and_then(|instrument| {
+                                instrument
+                                    .instrument_type
+                                    .as_ref()
+                                    .map(|kind| kind.as_db_str().to_string())
+                            }),
+                            exchange_mic: row
+                                .instrument
+                                .as_ref()
+                                .and_then(|instrument| instrument.exchange_mic.clone()),
+                        }
+                    })),
+                    Err(_) => {
+                        holdings_available = false;
+                        tracing::warn!(profile_id = %profile.id, account_id = %account.id, "Household account holdings are unavailable");
+                    }
+                }
+            }
+        }
+        members.push(HouseholdMemberSummary {
+            id: profile.id,
+            name: profile.name,
+            avatar_id: profile.avatar_id,
+            status: "ready",
+            currency: Some(net_worth.currency),
+            assets: Some(net_worth.assets.total),
+            liabilities: Some(net_worth.liabilities.total),
+            net_worth: Some(net_worth.net_worth),
+            accounts_available,
+            accounts,
+            holdings_available,
+            holdings,
+        });
+    }
+
+    Ok(Json(HouseholdSummary {
+        date,
+        members,
+        totals_by_currency,
+    }))
 }
 
 fn text<'a>(body: &'a Value, key: &str) -> Result<&'a str> {
@@ -943,4 +1933,44 @@ mod tests {
         headers.insert("sec-fetch-site", "same-site".parse().unwrap());
         assert!(!allowed_profile_origin(&headers, &[]));
     }
+}
+
+async fn household_exposure(
+    State(root): State<Arc<WebProfiles>>,
+    axum::extract::Query(query): axum::extract::Query<HouseholdOverviewQuery>,
+) -> Result<Json<Vec<Value>>> {
+    let ids = query
+        .member_ids
+        .split(',')
+        .map(Uuid::parse_str)
+        .collect::<std::result::Result<std::collections::HashSet<_>, _>>()
+        .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid member IDs".into()))?;
+    let profiles = root.registry.list().map_err(failure)?;
+    if ids
+        .iter()
+        .any(|id| !profiles.iter().any(|p| p.id == *id && !p.lock_enabled))
+    {
+        return Err((StatusCode::BAD_REQUEST, "Member is unavailable".into()));
+    }
+    let mut reports = vec![];
+    for profile in profiles.into_iter().filter(|p| ids.contains(&p.id)) {
+        let runtime = root.runtime(profile.id).await?;
+        let view = wealthfolio_core::fund_exposure::read(
+            runtime.settings_service.as_ref(),
+            runtime.account_service.as_ref(),
+            runtime.asset_service.as_ref(),
+            runtime.holdings_service.as_ref(),
+            &query.currency,
+            None,
+        )
+        .await
+        .map_err(|_| {
+            (
+                StatusCode::SERVICE_UNAVAILABLE,
+                "Fund exposure is unavailable".into(),
+            )
+        })?;
+        reports.push(json!({"memberId":profile.id,"memberName":profile.name,"view":view}));
+    }
+    Ok(Json(reports))
 }

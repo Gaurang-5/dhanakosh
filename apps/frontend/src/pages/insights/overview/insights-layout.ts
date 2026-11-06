@@ -6,6 +6,7 @@ export const WIDGET_IDS = [
   "invested",
   "bookCost",
   "pnl",
+  "daily",
   "accounts",
   "classes",
   "regions",
@@ -20,7 +21,7 @@ export type WidgetId = (typeof WIDGET_IDS)[number];
 export const GRID_COLUMNS = { desktop: 12, tablet: 6, mobile: 2 };
 export type LayoutBreakpoint = keyof typeof GRID_COLUMNS;
 export interface InsightsLayout {
-  version: 6;
+  version: 7;
   hiddenWidgets: WidgetId[];
   layouts: Record<LayoutBreakpoint, LayoutItem[]>;
 }
@@ -31,8 +32,10 @@ export const SUMMARY_WIDGET_IDS: readonly WidgetId[] = [
   "invested",
   "bookCost",
   "pnl",
+  "daily",
 ];
-const PREVIOUS_WIDGET_IDS = WIDGET_IDS.filter((id) => id !== "movers" && id !== "concentration");
+const V6_WIDGET_IDS = WIDGET_IDS.filter((id) => id !== "daily");
+const PREVIOUS_WIDGET_IDS = V6_WIDGET_IDS.filter((id) => id !== "movers" && id !== "concentration");
 const LEGACY_WIDGET_IDS = PREVIOUS_WIDGET_IDS.filter(
   (id) => !["cash", "invested", "bookCost", "pnl"].includes(id),
 );
@@ -63,7 +66,7 @@ export function repackMobile(items: LayoutItem[]): LayoutItem[] {
 
 function splitSummary(items: LayoutItem[], breakpoint: LayoutBreakpoint): LayoutItem[] {
   const summary = items.find((item) => item.i === "value")!;
-  const rows = breakpoint === "mobile" ? 5 : breakpoint === "tablet" ? 3 : 1;
+  const rows = breakpoint === "mobile" ? 6 : breakpoint === "tablet" ? 3 : 1;
   const extraHeight = (rows - 1) * summary.h;
   return items.flatMap<LayoutItem>((item) => {
     if (item.i !== "value") {
@@ -71,24 +74,19 @@ function splitSummary(items: LayoutItem[], breakpoint: LayoutBreakpoint): Layout
     }
     return SUMMARY_WIDGET_IDS.map((id, index) => ({
       i: id,
-      x:
-        breakpoint === "desktop"
-          ? [0, 4, 6, 8, 10][index]
-          : breakpoint === "tablet"
-            ? (index % 2) * 3
-            : 0,
+      x: breakpoint === "desktop" ? index * 2 : breakpoint === "tablet" ? (index % 2) * 3 : 0,
       y:
         summary.y +
         (breakpoint === "mobile" ? index : breakpoint === "tablet" ? Math.floor(index / 2) : 0) *
           summary.h,
-      w: breakpoint === "desktop" ? [4, 2, 2, 2, 2][index] : breakpoint === "tablet" ? 3 : 1,
+      w: breakpoint === "desktop" ? 2 : breakpoint === "tablet" ? 3 : 1,
       h: summary.h,
     }));
   });
 }
 
 function addPnl(items: LayoutItem[], breakpoint: LayoutBreakpoint): LayoutItem[] {
-  const summaries = SUMMARY_WIDGET_IDS.filter((id) => id !== "pnl").map(
+  const summaries = SUMMARY_WIDGET_IDS.filter((id) => id !== "pnl" && id !== "daily").map(
     (id) => items.find((item) => item.i === id)!,
   );
   const first = summaries[0];
@@ -167,6 +165,139 @@ function addPnl(items: LayoutItem[], breakpoint: LayoutBreakpoint): LayoutItem[]
   return migrated;
 }
 
+const SUMMARY_BEFORE_DAILY = ["value", "cash", "invested", "bookCost", "pnl"] as const;
+
+function insertAfterSummaries(items: LayoutItem[], daily: LayoutItem): LayoutItem[] {
+  const migrated = [...items];
+  const insertion =
+    Math.max(
+      ...migrated.map((item, index) =>
+        SUMMARY_WIDGET_IDS.includes(item.i as WidgetId) ? index : -1,
+      ),
+    ) + 1;
+  migrated.splice(Math.max(insertion, 0), 0, daily);
+  return migrated;
+}
+
+function overlaps(a: LayoutItem, b: LayoutItem): boolean {
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+}
+
+function addDaily(items: LayoutItem[], breakpoint: LayoutBreakpoint): LayoutItem[] {
+  if (items.some((item) => item.i === "daily")) return items;
+  const byId = (id: string) => items.find((item) => item.i === id);
+  const value = byId("value");
+  const cash = byId("cash");
+  const invested = byId("invested");
+  const book = byId("bookCost");
+  const pnl = byId("pnl");
+  const summaries = [value, cash, invested, book, pnl];
+  if (summaries.some((item) => item == null)) {
+    const height = value?.h ?? items[0]?.h ?? 100;
+    return insertAfterSummaries(items, {
+      i: "daily",
+      x: 0,
+      y: Math.max(0, ...items.map((item) => item.y + item.h)),
+      w: breakpoint === "mobile" ? 1 : 2,
+      h: height,
+    });
+  }
+  const [v, c, investedCard, bookCard, pnlCard] = summaries as LayoutItem[];
+  const h = v.h;
+  const standardDesktop =
+    breakpoint === "desktop" &&
+    v.x === 0 &&
+    v.w === 4 &&
+    c.y === v.y &&
+    c.x === 4 &&
+    c.w === 2 &&
+    investedCard.y === v.y &&
+    investedCard.x === 6 &&
+    investedCard.w === 2 &&
+    bookCard.y === v.y &&
+    bookCard.x === 8 &&
+    bookCard.w === 2 &&
+    pnlCard.y === v.y &&
+    pnlCard.x === 10 &&
+    pnlCard.w === 2;
+  if (standardDesktop) {
+    const migrated = items.map((item) => {
+      const index = SUMMARY_BEFORE_DAILY.indexOf(item.i as (typeof SUMMARY_BEFORE_DAILY)[number]);
+      return index < 0 ? item : { ...item, x: index * 2, w: 2 };
+    });
+    return insertAfterSummaries(migrated, { i: "daily", x: 10, y: v.y, w: 2, h });
+  }
+  const standardTablet =
+    breakpoint === "tablet" &&
+    v.x === 0 &&
+    v.w === 3 &&
+    c.x === 3 &&
+    c.y === v.y &&
+    c.w === 3 &&
+    investedCard.x === 0 &&
+    investedCard.y === v.y + h &&
+    investedCard.w === 3 &&
+    bookCard.x === 3 &&
+    bookCard.y === v.y + h &&
+    bookCard.w === 3 &&
+    pnlCard.x === 0 &&
+    pnlCard.y === v.y + 2 * h &&
+    pnlCard.w === 3;
+  if (standardTablet) {
+    return insertAfterSummaries(items, {
+      i: "daily",
+      x: 3,
+      y: pnlCard.y,
+      w: 3,
+      h: pnlCard.h,
+    });
+  }
+  const standardMobile =
+    breakpoint === "mobile" &&
+    v.x === 0 &&
+    v.w === 2 &&
+    c.x === 0 &&
+    c.w === 1 &&
+    c.y === v.y + h &&
+    investedCard.x === 1 &&
+    investedCard.w === 1 &&
+    investedCard.y === c.y &&
+    bookCard.x === 0 &&
+    bookCard.w === 1 &&
+    bookCard.y === v.y + 2 * h &&
+    pnlCard.x === 1 &&
+    pnlCard.w === 1 &&
+    pnlCard.y === bookCard.y;
+  if (standardMobile) {
+    const dailyY = v.y + 3 * h;
+    const shifted = items.map((item) =>
+      item.y >= dailyY ? { ...item, y: item.y + pnlCard.h } : item,
+    );
+    return insertAfterSummaries(shifted, {
+      i: "daily",
+      x: 0,
+      y: dailyY,
+      w: 1,
+      h: pnlCard.h,
+    });
+  }
+  const present = summaries as LayoutItem[];
+  const bottom = Math.max(...present.map((item) => item.y + item.h));
+  const daily: LayoutItem = {
+    i: "daily",
+    x: 0,
+    y: bottom,
+    w: breakpoint === "mobile" ? 1 : breakpoint === "tablet" ? 3 : 2,
+    h: pnlCard.h,
+  };
+  let collision = items.find((item) => overlaps(daily, item));
+  while (collision) {
+    daily.y = collision.y + collision.h;
+    collision = items.find((item) => overlaps(daily, item));
+  }
+  return insertAfterSummaries(items, daily);
+}
+
 function appendInsightWidgets(items: LayoutItem[], breakpoint: LayoutBreakpoint): LayoutItem[] {
   const bottom = Math.max(0, ...items.map((item) => item.y + item.h));
   const height = 360;
@@ -221,7 +352,7 @@ export function defaultInsightsLayout(): InsightsLayout {
     ),
   };
   return {
-    version: 6,
+    version: 7,
     hiddenWidgets: [],
     layouts: Object.fromEntries(
       (Object.keys(GRID_COLUMNS) as LayoutBreakpoint[]).map((key) => [
@@ -239,7 +370,7 @@ export function normalizeLayout(items: Layout, breakpoint: LayoutBreakpoint): La
     const minW =
       breakpoint === "mobile"
         ? mobileWidth(i)
-        : ["cash", "invested", "bookCost", "pnl"].includes(i)
+        : ["value", "cash", "invested", "bookCost", "pnl", "daily"].includes(i)
           ? 2
           : ["composition", "breakdown", "movers", "concentration"].includes(i)
             ? 6
@@ -266,19 +397,21 @@ export function readInsightsLayout(value: unknown): InsightsLayout {
   if (!value || typeof value !== "object") return fallback;
   const stored = value as Omit<Partial<InsightsLayout>, "version"> & { version?: number };
   if (
-    ![1, 2, 3, 4, 5, 6].includes(stored.version ?? 0) ||
+    ![1, 2, 3, 4, 5, 6, 7].includes(stored.version ?? 0) ||
     !Array.isArray(stored.hiddenWidgets) ||
     !stored.layouts
   )
     return fallback;
   const expectedIds: readonly WidgetId[] =
-    stored.version === 6
+    stored.version === 7
       ? WIDGET_IDS
-      : stored.version! >= 4
-        ? PREVIOUS_WIDGET_IDS
-        : stored.version === 3
-          ? PREVIOUS_WIDGET_IDS.filter((id) => id !== "pnl")
-          : LEGACY_WIDGET_IDS;
+      : stored.version === 6
+        ? V6_WIDGET_IDS
+        : stored.version! >= 4
+          ? PREVIOUS_WIDGET_IDS
+          : stored.version === 3
+            ? PREVIOUS_WIDGET_IDS.filter((id) => id !== "pnl")
+            : LEGACY_WIDGET_IDS;
   for (const breakpoint of Object.keys(GRID_COLUMNS) as LayoutBreakpoint[]) {
     const items = stored.layouts[breakpoint];
     const cols = breakpoint === "mobile" && stored.version! < 5 ? 1 : GRID_COLUMNS[breakpoint];
@@ -303,19 +436,27 @@ export function readInsightsLayout(value: unknown): InsightsLayout {
       return fallback;
   }
   return {
-    version: 6,
-    hiddenWidgets: WIDGET_IDS.filter(
-      (id) =>
+    version: 7,
+    hiddenWidgets: WIDGET_IDS.filter((id) => {
+      const olderSummaries = ["value", "cash", "invested", "bookCost"] as const;
+      const olderSummariesHidden = olderSummaries.every((summary) =>
+        stored.hiddenWidgets!.includes(summary),
+      );
+      const summaryHidden = (summary: (typeof SUMMARY_BEFORE_DAILY)[number]) =>
+        stored.hiddenWidgets!.includes(summary) ||
+        (stored.version === 3 && summary === "pnl" && olderSummariesHidden) ||
+        (stored.version! < 3 && stored.hiddenWidgets!.includes("value"));
+      return (
         stored.hiddenWidgets!.includes(id) ||
         (stored.version! < 3 &&
           stored.hiddenWidgets!.includes("value") &&
           SUMMARY_WIDGET_IDS.includes(id)) ||
-        (stored.version === 3 &&
-          id === "pnl" &&
-          SUMMARY_WIDGET_IDS.filter((id) => id !== "pnl").every((id) =>
-            stored.hiddenWidgets!.includes(id),
-          )),
-    ),
+        (stored.version === 3 && id === "pnl" && olderSummariesHidden) ||
+        (stored.version! < 7 &&
+          id === "daily" &&
+          SUMMARY_BEFORE_DAILY.every((summary) => summaryHidden(summary)))
+      );
+    }),
     layouts: Object.fromEntries(
       (Object.keys(GRID_COLUMNS) as LayoutBreakpoint[]).map((key) => {
         const items = stored.layouts![key].map((item) =>
@@ -327,14 +468,17 @@ export function readInsightsLayout(value: unknown): InsightsLayout {
             : stored.version === 3
               ? addPnl(items, key)
               : splitSummary(items, key);
-        const layout = normalizeLayout(
+        let layout = normalizeLayout(
           key === "mobile" && stored.version! < 5 ? repackMobile(migrated) : migrated,
           key,
         );
-        return [
-          key,
-          stored.version! < 6 ? normalizeLayout(appendInsightWidgets(layout, key), key) : layout,
-        ];
+        if (stored.version! < 6) {
+          layout = normalizeLayout(appendInsightWidgets(layout, key), key);
+        }
+        if (stored.version! < 7) {
+          layout = normalizeLayout(addDaily(layout, key), key);
+        }
+        return [key, layout];
       }),
     ) as InsightsLayout["layouts"],
   };

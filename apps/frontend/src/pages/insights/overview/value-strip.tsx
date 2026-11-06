@@ -1,13 +1,15 @@
 import { useBalancePrivacy } from "@/hooks/use-balance-privacy";
 import { cn } from "@/lib/utils";
-import { AmountDisplay, Card, Skeleton, useNumberFormatting } from "@wealthfolio/ui";
+import type { PortfolioDayChange } from "@/lib/portfolio-day-change";
+import { AmountDisplay, Card, GainPercent, Skeleton, useNumberFormatting } from "@wealthfolio/ui";
 import { useTranslation } from "react-i18next";
 import { paletteColor, type ValueStripData } from "./allocation-derivations";
 
 interface ValueWidgetProps {
-  metric: "value" | "cash" | "invested" | "bookCost" | "pnl";
+  metric: "value" | "cash" | "invested" | "bookCost" | "pnl" | "daily";
   data: ValueStripData;
   currency: string;
+  dayChange?: PortfolioDayChange;
   isLoading?: boolean;
 }
 
@@ -66,7 +68,7 @@ function CurrencyValuePill({
   );
 }
 
-export function ValueWidget({ metric, data, currency, isLoading }: ValueWidgetProps) {
+export function ValueWidget({ metric, data, currency, dayChange, isLoading }: ValueWidgetProps) {
   const formatting = useNumberFormatting();
   const { t } = useTranslation();
   const { isBalanceHidden } = useBalancePrivacy();
@@ -101,9 +103,13 @@ export function ValueWidget({ metric, data, currency, isLoading }: ValueWidgetPr
           data-value-content
           className={cn(gap, pad, "from-muted/60 bg-gradient-to-b to-transparent to-[60%]")}
         >
-          <Eyebrow>{t("insights:insights.value_strip.portfolio_value")}</Eyebrow>
+          <Eyebrow>{t("holdings:investments")}</Eyebrow>
           <div className={cn("text-foreground font-bold tabular-nums tracking-tight", totalSize)}>
-            <AmountDisplay value={data.total} currency={currency} isHidden={isBalanceHidden} />
+            <AmountDisplay
+              value={data.total - data.cash}
+              currency={currency}
+              isHidden={isBalanceHidden}
+            />
           </div>
           <div className={cn("flex flex-wrap items-center gap-x-2 gap-y-1", subSize)}>
             <span className="text-muted-foreground tabular-nums">{holdingsAccountsLabel}</span>
@@ -145,7 +151,7 @@ export function ValueWidget({ metric, data, currency, isLoading }: ValueWidgetPr
             </div>
           ) : (
             <div className={cn("text-muted-foreground", subSize)}>
-              {t("insights:insights.value_strip.available_cash")}
+              {t("holdings:cash_ledger_explanation")}
             </div>
           )}
         </div>
@@ -180,6 +186,31 @@ export function ValueWidget({ metric, data, currency, isLoading }: ValueWidgetPr
           </div>
           <div className={cn("text-muted-foreground", subSize)}>
             {t("insights:insights.value_strip.pnl_current_holdings")}
+          </div>
+        </div>
+      )}
+      {metric === "daily" && (
+        <div data-value-content className={cn(gap, pad)}>
+          <Eyebrow>{t("insights:insights.value_strip.daily_change")}</Eyebrow>
+          <div className={cn("font-bold tabular-nums tracking-tight", secSize)}>
+            {dayChange?.amount == null ? (
+              <span className="text-muted-foreground">{isBalanceHidden ? "••••" : "—"}</span>
+            ) : (
+              <AmountDisplay
+                value={dayChange.amount}
+                currency={currency}
+                isHidden={isBalanceHidden}
+                colorFormat={!isBalanceHidden && dayChange.amount !== 0}
+              />
+            )}
+          </div>
+          <div className={cn("flex flex-wrap items-center gap-x-1.5", subSize)}>
+            {dayChange?.percent != null && !isBalanceHidden ? (
+              <GainPercent value={dayChange.percent} className="text-2xs" />
+            ) : null}
+            <span className="text-muted-foreground">
+              {t("insights:insights.value_strip.daily_change_hint")}
+            </span>
           </div>
         </div>
       )}

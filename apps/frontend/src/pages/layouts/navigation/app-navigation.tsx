@@ -56,6 +56,13 @@ function buildStaticNavigation(t: TFunction): NavigationProps {
         label: t("common:nav.label_activities"),
       },
       {
+        icon: <Icons.CalendarDots className="size-6" />,
+        title: t("common:sip.title"),
+        href: "/investment-plans",
+        keywords: ["SIP", "recurring", "installment"],
+        label: t("common:sip.title"),
+      },
+      {
         icon: <Icons.Goals className="size-6" />,
         title: t("common:goals"),
         href: "/goals",
@@ -71,6 +78,12 @@ function buildStaticNavigation(t: TFunction): NavigationProps {
       },
     ],
     secondary: [
+      {
+        icon: <Icons.ShieldCheck className="size-6" />,
+        title: t("health:page.heading"),
+        href: "/health",
+        keywords: ["health", "data", "quality", "missing", "prices"],
+      },
       {
         icon: <Icons.Settings className="size-6" />,
         title: t("common:settings"),

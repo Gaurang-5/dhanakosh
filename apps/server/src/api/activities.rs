@@ -9,10 +9,11 @@ use axum::{
 };
 use wealthfolio_core::activities::{
     import_type, Activity, ActivityBulkMutationRequest, ActivityBulkMutationResult, ActivityImport,
-    ActivitySearchResponse, ActivityUpdate, ImportActivitiesResult, ImportAssetCandidate,
-    ImportAssetPreviewItem, ImportMappingData, ImportTemplateData, InternalTransferPairRequest,
-    InternalTransferPairResponse, NewActivity, ParseConfig, ParsedCsvResult,
-    TransferMatchCandidate, TransferMatchCandidateRequest,
+    ActivitySearchResponse, ActivityServiceTrait, ActivityUpdate, ImportActivitiesResult,
+    ImportAssetCandidate, ImportAssetPreviewItem, ImportMappingData, ImportTemplateData,
+    InternalTransferPairRequest, InternalTransferPairResponse, NewActivity, ParseConfig,
+    ParsedCsvResult, TransferMatchCandidate, TransferMatchCandidateRequest,
+    UndoActivityImportResult,
 };
 use wealthfolio_core::utils::time_utils::{
     local_date_range_utc_bounds, parse_user_timezone_or_default,
@@ -35,7 +36,7 @@ enum StringOrVec {
 }
 
 #[derive(serde::Deserialize)]
-struct ActivitySearchBody {
+pub(crate) struct ActivitySearchBody {
     page: i64,
     #[serde(rename = "pageSize")]
     page_size: i64,
@@ -62,7 +63,7 @@ struct ActivitySearchBody {
     include_cash_balances: Option<bool>,
 }
 
-async fn search_activities(
+pub(crate) async fn search_activities(
     axum::Extension(state): axum::Extension<Arc<AppState>>,
     Json(body): Json<ActivitySearchBody>,
 ) -> ApiResult<Json<ActivitySearchResponse>> {
@@ -250,8 +251,11 @@ async fn check_activities_import(
 }
 
 #[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct ImportBody {
     activities: Vec<ActivityImport>,
+    #[serde(default)]
+    file_name: Option<String>,
 }
 
 async fn import_activities(
@@ -260,10 +264,28 @@ async fn import_activities(
 ) -> ApiResult<Json<ImportActivitiesResult>> {
     let result = state
         .activity_service
-        .import_activities(body.activities)
+        .import_activities_with_file_name(body.activities, body.file_name)
         .await?;
     state.health_service.clear_cache().await;
     // Domain events handle asset enrichment and portfolio recalculation
+    Ok(Json(result))
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct UndoActivityImportBody {
+    import_run_id: String,
+}
+
+async fn undo_activity_import(
+    axum::Extension(state): axum::Extension<Arc<AppState>>,
+    Json(body): Json<UndoActivityImportBody>,
+) -> ApiResult<Json<UndoActivityImportResult>> {
+    let result = state
+        .activity_service
+        .undo_activity_import(body.import_run_id)
+        .await?;
+    state.health_service.clear_cache().await;
     Ok(Json(result))
 }
 
@@ -457,6 +479,23 @@ const IMPORT_BODY_LIMIT: usize = 64 * 1024 * 1024;
 
 pub fn router<S: Clone + Send + Sync + 'static>() -> Router<S> {
     Router::new()
+        .route("/fund-exposure/query", post(fund_exposure_query))
+        .route("/fund-exposure/preview", post(fund_exposure_preview))
+        .route(
+            "/fund-exposure/composition",
+            post(fund_exposure_save).delete(fund_exposure_remove),
+        )
+        .route("/fund-exposure/refresh", post(fund_exposure_refresh))
+        .route(
+            "/investment-plans",
+            get(list_investment_plans).put(save_investment_plans),
+        )
+        .route("/activities/import/broker", post(preview_broker_endpoint))
+        .route("/broker-connections", post(broker_connection_endpoint))
+        .route(
+            "/activities/import/cas",
+            post(parse_cas_endpoint).layer(DefaultBodyLimit::max(15 * 1024 * 1024)),
+        )
         .route("/activities/search", post(search_activities))
         .route("/activities", post(create_activity).put(update_activity))
         .route("/activities/bulk", post(save_activities))
@@ -487,6 +526,7 @@ pub fn router<S: Clone + Send + Sync + 'static>() -> Router<S> {
             "/activities/import",
             post(import_activities).layer(DefaultBodyLimit::max(IMPORT_BODY_LIMIT)),
         )
+        .route("/activities/import/undo", post(undo_activity_import))
         .route(
             "/activities/import/parse",
             post(parse_csv_endpoint).layer(DefaultBodyLimit::max(IMPORT_BODY_LIMIT)),
@@ -513,4 +553,168 @@ pub fn router<S: Clone + Send + Sync + 'static>() -> Router<S> {
             "/activities/import/check-duplicates",
             post(check_existing_duplicates),
         )
+}
+
+async fn preview_broker_endpoint(
+    axum::Extension(_state): axum::Extension<Arc<AppState>>,
+    Json(request): Json<wealthfolio_core::activities::broker_import::BrokerRequest>,
+) -> ApiResult<Json<wealthfolio_core::activities::broker_import::BrokerPreview>> {
+    wealthfolio_core::activities::broker_import::preview_broker(request)
+        .await
+        .map(Json)
+        .map_err(crate::error::ApiError::BadRequest)
+}
+
+async fn parse_cas_endpoint(
+    axum::Extension(_state): axum::Extension<Arc<AppState>>,
+    Json(request): Json<wealthfolio_core::activities::cas_import::CasImportRequest>,
+) -> ApiResult<Json<wealthfolio_core::activities::cas_import::CasImportPreview>> {
+    wealthfolio_core::activities::cas_import::parse_cas(request)
+        .await
+        .map(Json)
+        .map_err(crate::error::ApiError::BadRequest)
+}
+
+async fn list_investment_plans(
+    axum::Extension(state): axum::Extension<Arc<AppState>>,
+) -> ApiResult<Json<Vec<wealthfolio_core::investment_plans::InvestmentPlan>>> {
+    Ok(Json(wealthfolio_core::investment_plans::list(
+        state.settings_service.as_ref(),
+    )?))
+}
+async fn save_investment_plans(
+    axum::Extension(state): axum::Extension<Arc<AppState>>,
+    Json(plans): Json<Vec<wealthfolio_core::investment_plans::InvestmentPlan>>,
+) -> ApiResult<Json<Vec<wealthfolio_core::investment_plans::InvestmentPlan>>> {
+    wealthfolio_core::investment_plans::save(
+        state.settings_service.as_ref(),
+        state.account_service.as_ref(),
+        state.asset_service.as_ref(),
+        &plans,
+    )
+    .await?;
+    Ok(Json(plans))
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct FundExposureQuery {
+    currency: String,
+    filter: wealthfolio_core::portfolios::AccountScope,
+}
+async fn fund_exposure_query(
+    axum::Extension(state): axum::Extension<Arc<AppState>>,
+    Json(request): Json<FundExposureQuery>,
+) -> ApiResult<Json<wealthfolio_core::fund_exposure::ExposureView>> {
+    Ok(Json(
+        wealthfolio_core::fund_exposure::read(
+            state.settings_service.as_ref(),
+            state.account_service.as_ref(),
+            state.asset_service.as_ref(),
+            state.holdings_service.as_ref(),
+            &request.currency,
+            Some(
+                &state
+                    .portfolio_service
+                    .resolve_account_scope(&request.filter, &request.currency)?
+                    .account_ids,
+            ),
+        )
+        .await?,
+    ))
+}
+async fn fund_exposure_save(
+    axum::Extension(state): axum::Extension<Arc<AppState>>,
+    Json(mut snapshot): Json<wealthfolio_core::fund_exposure::FundComposition>,
+) -> ApiResult<Json<wealthfolio_core::fund_exposure::FundComposition>> {
+    snapshot.imported = true;
+    let saved = wealthfolio_core::fund_exposure::save(
+        state.settings_service.as_ref(),
+        state.asset_service.as_ref(),
+        snapshot,
+    )
+    .await?;
+    wealthfolio_core::fund_exposure::sync_sector_classification(
+        state.taxonomy_service.clone(),
+        &saved,
+    )
+    .await;
+    Ok(Json(saved))
+}
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct FundExposureAsset {
+    asset_id: String,
+}
+async fn fund_exposure_refresh(
+    axum::Extension(state): axum::Extension<Arc<AppState>>,
+    Json(request): Json<FundExposureAsset>,
+) -> ApiResult<Json<wealthfolio_core::fund_exposure::FundComposition>> {
+    let saved = wealthfolio_core::fund_exposure::refresh(
+        state.settings_service.as_ref(),
+        state.asset_service.as_ref(),
+        state.quote_service.as_ref(),
+        state.secret_store.as_ref(),
+        &request.asset_id,
+    )
+    .await?;
+    wealthfolio_core::fund_exposure::sync_sector_classification(
+        state.taxonomy_service.clone(),
+        &saved,
+    )
+    .await;
+    Ok(Json(saved))
+}
+async fn fund_exposure_remove(
+    axum::Extension(state): axum::Extension<Arc<AppState>>,
+    Json(request): Json<FundExposureAsset>,
+) -> ApiResult<Json<serde_json::Value>> {
+    let had_imported_sectors =
+        wealthfolio_core::fund_exposure::list(state.settings_service.as_ref())?
+            .iter()
+            .find(|snapshot| snapshot.asset_id == request.asset_id)
+            .is_some_and(|snapshot| snapshot.constituents.iter().any(|row| row.sector.is_some()));
+    wealthfolio_core::fund_exposure::remove(state.settings_service.as_ref(), &request.asset_id)
+        .await?;
+    if had_imported_sectors {
+        wealthfolio_core::fund_exposure::clear_sector_classification(
+            state.taxonomy_service.clone(),
+            &request.asset_id,
+        )
+        .await;
+    }
+    Ok(Json(serde_json::json!({"ok":true})))
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct FundExposureCsv {
+    asset_id: String,
+    source: String,
+    as_of: chrono::NaiveDate,
+    csv_text: String,
+}
+async fn fund_exposure_preview(
+    Json(request): Json<FundExposureCsv>,
+) -> ApiResult<Json<wealthfolio_core::fund_exposure::FundComposition>> {
+    Ok(Json(wealthfolio_core::fund_exposure::preview_csv(
+        request.asset_id,
+        request.source,
+        request.as_of,
+        &request.csv_text,
+    )?))
+}
+
+async fn broker_connection_endpoint(
+    axum::Extension(state): axum::Extension<Arc<AppState>>,
+    Json(request): Json<wealthfolio_core::broker_connections::Request>,
+) -> ApiResult<Json<wealthfolio_core::broker_connections::Response>> {
+    wealthfolio_core::broker_connections::execute(
+        state.account_service.as_ref(),
+        state.secret_store.as_ref(),
+        request,
+    )
+    .await
+    .map(Json)
+    .map_err(crate::error::ApiError::BadRequest)
 }

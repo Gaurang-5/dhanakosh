@@ -1,3 +1,7 @@
+import { useAccountScopeStore } from "@/lib/account-scope-store";
+import { useHouseholdReport } from "@/features/household/household-report-context";
+import { useHouseholdScope } from "@/features/household/household-scope";
+import { getCombinedNetWorthHistory } from "@/features/household/household-native-history";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@wealthfolio/ui/components/ui/use-toast";
 import { logger } from "@/adapters";
@@ -229,11 +233,25 @@ interface UseNetWorthOptions {
  * @returns Query result with net worth data
  */
 export function useNetWorth(options?: UseNetWorthOptions) {
+  const selection = useAccountScopeStore((s) => s.scope);
+  const ids =
+    selection.type === "accounts"
+      ? selection.accountIds
+      : selection.type === "account"
+        ? [selection.accountId]
+        : undefined;
+  const family = useHouseholdReport();
+  const scope = useHouseholdScope();
   const { date, enabled = true } = options ?? {};
 
   return useQuery<NetWorthResponse, Error>({
-    queryKey: QueryKeys.netWorth(date),
-    queryFn: () => getNetWorth(date),
+    queryKey: [...QueryKeys.netWorth(date), ids, family ? scope?.memberIds : "member"],
+    queryFn: () => {
+      if (!family) return getNetWorth(date, ids);
+      if (!family.netWorth)
+        throw new Error("Combined net worth requires the same reporting currency for every member");
+      return Promise.resolve(family.netWorth);
+    },
     enabled,
   });
 }
@@ -249,11 +267,25 @@ interface UseAlternativeHoldingsOptions {
  * Liability, Other) formatted for display in the Holdings page.
  */
 export function useAlternativeHoldings(options?: UseAlternativeHoldingsOptions) {
+  const selection = useAccountScopeStore((s) => s.scope);
   const { enabled = true } = options ?? {};
-
   return useQuery<AlternativeAssetHolding[], Error>({
-    queryKey: [QueryKeys.ALTERNATIVE_HOLDINGS],
-    queryFn: getAlternativeHoldings,
+    queryKey: [QueryKeys.ALTERNATIVE_HOLDINGS, selection],
+    queryFn: async () => {
+      const holdings = await getAlternativeHoldings();
+      if (selection.type === "all") return holdings;
+      const ids =
+        selection.type === "accounts"
+          ? selection.accountIds
+          : selection.type === "account"
+            ? [selection.accountId]
+            : [];
+      return holdings.filter(
+        (holding) =>
+          typeof holding.metadata?.accountId === "string" &&
+          ids.includes(holding.metadata.accountId),
+      );
+    },
     enabled,
   });
 }
@@ -272,11 +304,33 @@ interface UseNetWorthHistoryOptions {
  * Returns time series data for charting total assets, liabilities, and net worth.
  */
 export function useNetWorthHistory(options: UseNetWorthHistoryOptions) {
+  const selection = useAccountScopeStore((s) => s.scope);
+  const ids =
+    selection.type === "accounts"
+      ? selection.accountIds
+      : selection.type === "account"
+        ? [selection.accountId]
+        : undefined;
+  const family = useHouseholdReport();
+  const scope = useHouseholdScope();
   const { startDate, endDate, enabled = true } = options;
 
   return useQuery<NetWorthHistoryPoint[], Error>({
-    queryKey: QueryKeys.netWorthHistory(startDate, endDate),
-    queryFn: () => getNetWorthHistory(startDate, endDate),
+    queryKey: [
+      ...QueryKeys.netWorthHistory(startDate, endDate),
+      ids,
+      family ? scope?.memberIds : "member",
+    ],
+    queryFn: () =>
+      family
+        ? getCombinedNetWorthHistory(
+            scope?.memberIds ?? [],
+            family.currentValuation.summary.baseCurrency,
+            family.netWorth?.assets.breakdown.map((b) => b.category) ?? [],
+            startDate,
+            endDate,
+          )
+        : getNetWorthHistory(startDate, endDate, ids),
     enabled,
   });
 }

@@ -5,7 +5,7 @@ import IncomePage from "./income-page";
 
 const mocks = vi.hoisted(() => ({ useQuery: vi.fn() }));
 
-vi.mock("@/adapters", () => ({ getIncomeSummary: vi.fn() }));
+vi.mock("@/adapters", () => ({ isWeb: false, getIncomeSummary: vi.fn() }));
 vi.mock("@tanstack/react-query", () => ({ useQuery: mocks.useQuery }));
 vi.mock("./income-history-chart", () => ({ IncomeHistoryChart: () => null }));
 vi.mock("@/components/account-filter-selector", () => ({ AccountScopeSelector: () => null }));

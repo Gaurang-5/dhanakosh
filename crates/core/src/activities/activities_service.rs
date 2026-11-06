@@ -63,7 +63,8 @@ use crate::activities::{
     TransferPairResolution,
 };
 use crate::activities::{
-    ImportRun, ImportRunMode, ImportRunRepositoryTrait, ImportRunSummary, ImportRunType, ReviewMode,
+    ImportRun, ImportRunMode, ImportRunRepositoryTrait, ImportRunStatus, ImportRunSummary,
+    ImportRunType, ReviewMode,
 };
 use crate::assets::loan::LOAN_PAYMENT_TAG_KEY;
 use crate::assets::{
@@ -1082,6 +1083,21 @@ impl ActivityService {
             }
             _ => None,
         }
+    }
+
+    pub(crate) fn import_preview_requires_exchange(
+        instrument_type: Option<&InstrumentType>,
+        exchange_mic: Option<&str>,
+        quote_mode: Option<&str>,
+        provider_id: Option<&str>,
+        provider_symbol: Option<&str>,
+    ) -> bool {
+        let is_equity = instrument_type == Some(&InstrumentType::Equity);
+        let is_manual = quote_mode.is_some_and(|mode| mode.eq_ignore_ascii_case("MANUAL"));
+        let is_amfi_scheme = provider_id
+            .is_some_and(|provider| provider.eq_ignore_ascii_case("AMFI"))
+            && provider_symbol.is_some_and(|symbol| symbol.starts_with("AMFI-"));
+        is_equity && exchange_mic.is_none() && !is_manual && !is_amfi_scheme
     }
 
     fn normalize_quote_ccy(value: Option<&str>) -> Option<String> {
@@ -6163,13 +6179,13 @@ impl ActivityServiceTrait for ActivityService {
                     };
                 }
 
-                let is_equity = resolved.instrument_type.as_ref() == Some(&InstrumentType::Equity);
-                let is_manual = candidate
-                    .quote_mode
-                    .as_deref()
-                    .map(|m| m.eq_ignore_ascii_case("MANUAL"))
-                    .unwrap_or(false);
-                if is_equity && resolved.exchange_mic.is_none() && !is_manual {
+                if Self::import_preview_requires_exchange(
+                    resolved.instrument_type.as_ref(),
+                    resolved.exchange_mic.as_deref(),
+                    candidate.quote_mode.as_deref(),
+                    resolved.provider_id.as_deref(),
+                    resolved.provider_symbol.as_deref(),
+                ) {
                     let mut errors = HashMap::new();
                     errors.insert(
                         "symbol".to_string(),
@@ -6206,10 +6222,145 @@ impl ActivityServiceTrait for ActivityService {
         Ok(previews)
     }
 
+    async fn undo_activity_import(
+        &self,
+        import_run_id: String,
+    ) -> Result<crate::activities::UndoActivityImportResult> {
+        let import_run_id = import_run_id.trim().to_string();
+        if import_run_id.is_empty() {
+            return Err(Self::invalid_activity_data("Import run is required"));
+        }
+        let Some(repo) = self.import_run_repository.as_ref() else {
+            return Err(Self::invalid_activity_data("Import history is unavailable"));
+        };
+        let Some(mut run) = repo.get_by_id(&import_run_id)? else {
+            return Err(Self::invalid_activity_data("Import was not found"));
+        };
+        if run.source_system != "csv" || run.run_type != ImportRunType::Import {
+            return Err(Self::invalid_activity_data(
+                "Only CSV activity imports can be undone",
+            ));
+        }
+        if run.status != ImportRunStatus::Applied {
+            return Err(Self::invalid_activity_data("This import cannot be undone"));
+        }
+
+        let imported = self
+            .activity_repository
+            .get_activities_by_import_run_id(&import_run_id)?;
+        let imported_ids: HashSet<String> = imported
+            .iter()
+            .map(|activity| activity.id.clone())
+            .collect();
+
+        // A transfer paired with a transaction from another source keeps that
+        // other leg. Unlink first so the delete does not expand the pair.
+        let mut unlinked_survivors: Vec<Activity> = Vec::new();
+        let mut seen_groups: HashSet<String> = HashSet::new();
+        for activity in &imported {
+            let Some(group_id) = activity
+                .source_group_id
+                .as_deref()
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+            else {
+                continue;
+            };
+            if !seen_groups.insert(group_id.to_string()) {
+                continue;
+            }
+            let Some(pair) = self.load_internal_transfer_pair_for_activity(&activity.id)? else {
+                continue;
+            };
+            let other = if pair.transfer_in.id == activity.id {
+                pair.transfer_out
+            } else {
+                pair.transfer_in
+            };
+            if imported_ids.contains(&other.id) {
+                continue;
+            }
+            let (transfer_in, transfer_out) = self
+                .activity_repository
+                .unlink_transfer_activities(activity.id.clone(), other.id.clone())
+                .await?;
+            for leg in [transfer_in, transfer_out] {
+                if !imported_ids.contains(&leg.id) {
+                    unlinked_survivors.push(leg);
+                }
+            }
+        }
+
+        let delete_ids: Vec<String> = imported
+            .iter()
+            .map(|activity| activity.id.clone())
+            .collect();
+        let deleted = if delete_ids.is_empty() {
+            Vec::new()
+        } else {
+            self.activity_repository
+                .bulk_mutate_activities(Vec::new(), Vec::new(), delete_ids)
+                .await?
+                .deleted
+        };
+
+        if !deleted.is_empty() || !unlinked_survivors.is_empty() {
+            let mut account_ids = HashSet::new();
+            let mut asset_ids = HashSet::new();
+            let mut currencies = HashSet::new();
+            for activity in deleted.iter().chain(unlinked_survivors.iter()) {
+                Self::add_activity_to_event_sets(
+                    activity,
+                    &mut account_ids,
+                    &mut asset_ids,
+                    &mut currencies,
+                );
+            }
+            self.emit_activities_changed(
+                account_ids.into_iter().collect(),
+                asset_ids.into_iter().collect(),
+                currencies.into_iter().collect(),
+                Self::earliest_activity_at_utc(deleted.iter().chain(unlinked_survivors.iter())),
+            );
+            self.emit_asset_split_activities_changed(deleted.iter());
+        }
+
+        let removed = u32::try_from(deleted.len()).unwrap_or(u32::MAX);
+        run.status = ImportRunStatus::Reverted;
+        run.updated_at = Utc::now();
+        match run.summary.as_mut() {
+            Some(summary) => summary.removed = removed,
+            None => {
+                run.summary = Some(ImportRunSummary {
+                    removed,
+                    ..ImportRunSummary::default()
+                });
+            }
+        }
+        let import_run = repo.update(run).await?;
+
+        Ok(crate::activities::UndoActivityImportResult {
+            import_run,
+            removed,
+        })
+    }
+
     async fn import_activities(
         &self,
         activities: Vec<ActivityImport>,
     ) -> Result<ImportActivitiesResult> {
+        self.import_activities_with_file_name(activities, None)
+            .await
+    }
+
+    async fn import_activities_with_file_name(
+        &self,
+        activities: Vec<ActivityImport>,
+        file_name: Option<String>,
+    ) -> Result<ImportActivitiesResult> {
+        let file_name = file_name
+            .map(|name| name.trim().to_string())
+            .filter(|name| !name.is_empty());
         let total = activities.len();
 
         // ── 1. Separate valid from missing-account ───────────────────────────
@@ -6695,6 +6846,7 @@ impl ActivityServiceTrait for ActivityService {
                 errors: policy_failed_positions.len() as u32,
                 removed: 0,
                 assets_created: assets_created_count,
+                file_name,
             });
             if let Err(e) = repo.update(completed_run).await {
                 warn!("Failed to update import run with success status: {}", e);

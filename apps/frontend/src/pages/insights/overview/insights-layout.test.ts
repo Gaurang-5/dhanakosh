@@ -23,8 +23,25 @@ describe("insights layout preferences", () => {
   ) => items.filter((item) => item.i !== "movers" && item.i !== "concentration");
   function previousDefaults() {
     const defaults = defaultInsightsLayout();
-    for (const key of Object.keys(GRID_COLUMNS) as LayoutBreakpoint[])
-      defaults.layouts[key] = withoutNewWidgets(defaults.layouts[key]);
+    const order = ["value", "cash", "invested", "bookCost", "pnl"];
+    for (const key of Object.keys(GRID_COLUMNS) as LayoutBreakpoint[]) {
+      const daily = defaults.layouts[key].find((item) => item.i === "daily");
+      let items = defaults.layouts[key].filter(
+        (item) => item.i !== "movers" && item.i !== "concentration" && item.i !== "daily",
+      );
+      if (key === "desktop") {
+        items = items.map((item) => {
+          const index = order.indexOf(item.i);
+          return index < 0
+            ? item
+            : { ...item, x: [0, 4, 6, 8, 10][index], w: [4, 2, 2, 2, 2][index] };
+        });
+      }
+      if (key === "mobile" && daily) {
+        items = items.map((item) => (item.y >= daily.y ? { ...item, y: item.y - daily.h } : item));
+      }
+      defaults.layouts[key] = items;
+    }
     return defaults;
   }
 
@@ -64,13 +81,14 @@ describe("insights layout preferences", () => {
       const legacy = legacyLayout(version);
       const snapshot = structuredClone(legacy);
       const migrated = readInsightsLayout(legacy);
-      expect(migrated.version).toBe(6);
+      expect(migrated.version).toBe(7);
       expect(migrated.hiddenWidgets).toEqual([
         "value",
         "cash",
         "invested",
         "bookCost",
         "pnl",
+        "daily",
         "regions",
       ]);
       for (const key of Object.keys(GRID_COLUMNS) as LayoutBreakpoint[]) {
@@ -82,6 +100,7 @@ describe("insights layout preferences", () => {
           "invested",
           "bookCost",
           "pnl",
+          "daily",
           "classes",
           "regions",
           "sectors",
@@ -92,7 +111,7 @@ describe("insights layout preferences", () => {
           "concentration",
         ]);
         expect(layout.find((item) => item.i === "value")?.y).toBe(322);
-        const extraRows = key === "mobile" || key === "tablet" ? 2 : 0;
+        const extraRows = key === "mobile" ? 3 : key === "tablet" ? 2 : 0;
         expect(layout.find((item) => item.i === "classes")?.y).toBe(644 + extraRows * 322);
         expect(layout.find((item) => item.i === "classes")?.w).toBe(GRID_COLUMNS[key]);
         for (const [index, item] of layout.entries()) {
@@ -122,32 +141,35 @@ describe("insights layout preferences", () => {
 
   it("gives summaries independent widths at every breakpoint", () => {
     const defaults = defaultInsightsLayout();
-    expect(defaults.layouts.desktop.slice(0, 5).map(({ x, w }) => [x, w])).toEqual([
-      [0, 4],
+    expect(defaults.layouts.desktop.slice(0, 6).map(({ x, w }) => [x, w])).toEqual([
+      [0, 2],
+      [2, 2],
       [4, 2],
       [6, 2],
       [8, 2],
       [10, 2],
     ]);
-    expect(defaults.layouts.tablet.slice(0, 5).map(({ x, y, w }) => [x, y, w])).toEqual([
+    expect(defaults.layouts.tablet.slice(0, 6).map(({ x, y, w }) => [x, y, w])).toEqual([
       [0, 0, 3],
       [3, 0, 3],
       [0, 100, 3],
       [3, 100, 3],
       [0, 200, 3],
+      [3, 200, 3],
     ]);
-    expect(defaults.layouts.mobile.slice(0, 5).map(({ x, y, w }) => [x, y, w])).toEqual([
+    expect(defaults.layouts.mobile.slice(0, 6).map(({ x, y, w }) => [x, y, w])).toEqual([
       [0, 0, 2],
       [0, 100, 1],
       [1, 100, 1],
       [0, 200, 1],
       [1, 200, 1],
+      [0, 300, 1],
     ]);
     expect(
       normalizeLayout(defaults.layouts.desktop, "desktop")
-        .slice(0, 5)
+        .slice(0, 6)
         .map((item) => item.minW),
-    ).toEqual([3, 2, 2, 2, 2]);
+    ).toEqual([2, 2, 2, 2, 2, 2]);
   });
 
   it("migrates the v3 default summary strip to five adjacent cards", () => {
@@ -165,14 +187,15 @@ describe("insights layout preferences", () => {
     }
     previous.hiddenWidgets = ["cash", "regions"];
     const migrated = readInsightsLayout({ ...previous, version: 3 });
-    expect(migrated.version).toBe(6);
+    expect(migrated.version).toBe(7);
     expect(migrated.hiddenWidgets).toEqual(["cash", "regions"]);
-    expect(migrated.layouts.desktop.slice(0, 5).map(({ i, x, w }) => [i, x, w])).toEqual([
-      ["value", 0, 4],
-      ["cash", 4, 2],
-      ["invested", 6, 2],
-      ["bookCost", 8, 2],
-      ["pnl", 10, 2],
+    expect(migrated.layouts.desktop.slice(0, 6).map(({ i, x, w }) => [i, x, w])).toEqual([
+      ["value", 0, 2],
+      ["cash", 2, 2],
+      ["invested", 4, 2],
+      ["bookCost", 6, 2],
+      ["pnl", 8, 2],
+      ["daily", 10, 2],
     ]);
     expect(migrated.layouts.desktop.find((item) => item.i === "accounts")?.y).toBe(100);
   });
@@ -191,12 +214,19 @@ describe("insights layout preferences", () => {
     }
     previous.hiddenWidgets = ["value", "cash", "invested", "bookCost"];
     const migrated = readInsightsLayout({ ...previous, version: 3 });
-    expect(migrated.hiddenWidgets).toEqual(["value", "cash", "invested", "bookCost", "pnl"]);
+    expect(migrated.hiddenWidgets).toEqual([
+      "value",
+      "cash",
+      "invested",
+      "bookCost",
+      "pnl",
+      "daily",
+    ]);
     for (const key of Object.keys(GRID_COLUMNS) as LayoutBreakpoint[]) {
       if (key === "mobile") {
         expect(
           withoutNewWidgets(migrated.layouts.mobile)
-            .filter((item) => item.i !== "pnl")
+            .filter((item) => item.i !== "pnl" && item.i !== "daily")
             .map((item) => item.i),
         ).toEqual(previous.layouts.mobile.map((item) => item.i));
         continue;
@@ -224,19 +254,37 @@ describe("insights layout preferences", () => {
     previous.layouts.desktop.find((item) => item.i === "breakdown")!.y = 4000;
     const snapshot = structuredClone(previous);
     const migrated = readInsightsLayout({ ...previous, version: 5 });
-    expect(migrated.version).toBe(6);
+    expect(migrated.version).toBe(7);
     expect(migrated.hiddenWidgets).toEqual(["cash", "regions"]);
     for (const key of Object.keys(GRID_COLUMNS) as LayoutBreakpoint[]) {
-      expect(withoutNewWidgets(migrated.layouts[key])).toEqual(
-        normalizeLayout(previous.layouts[key], key),
-      );
+      const valueCard = previous.layouts[key].find((item) => item.i === "value")!;
+      const shift =
+        key === "mobile" ? previous.layouts[key].find((item) => item.i === "pnl")!.h : 0;
+      const dailyY = valueCard.y + 3 * valueCard.h;
+      for (const id of [
+        "accounts",
+        "classes",
+        "regions",
+        "sectors",
+        "composition",
+        "targets",
+        "breakdown",
+      ]) {
+        const before = previous.layouts[key].find((item) => item.i === id)!;
+        expect(migrated.layouts[key].find((item) => item.i === id)).toMatchObject({
+          x: before.x,
+          y: before.y + (key === "mobile" && before.y >= dailyY ? shift : 0),
+          w: before.w,
+          h: before.h,
+        });
+      }
       const bottom = Math.max(...previous.layouts[key].map((item) => item.y + item.h));
       const movers = migrated.layouts[key].find((item) => item.i === "movers")!;
       const concentration = migrated.layouts[key].find((item) => item.i === "concentration")!;
-      expect(movers).toMatchObject({ x: 0, y: bottom, w: key === "mobile" ? 2 : 6 });
+      expect(movers).toMatchObject({ x: 0, y: bottom + shift, w: key === "mobile" ? 2 : 6 });
       expect(concentration).toMatchObject({
         x: key === "desktop" ? 6 : 0,
-        y: key === "desktop" ? bottom : bottom + movers.h,
+        y: (key === "desktop" ? bottom : bottom + movers.h) + (key === "mobile" ? shift : 0),
         w: key === "mobile" ? 2 : 6,
       });
       expect(movers.minW).toBe(key === "mobile" ? 2 : 6);
@@ -282,7 +330,7 @@ describe("insights layout preferences", () => {
     expect(result.hiddenWidgets).toEqual(["regions"]);
     expect(result.layouts.desktop[0].y).toBe(20);
     expect(result.layouts.desktop[0]).not.toHaveProperty("isDraggable");
-    expect(result.layouts.desktop[0].minW).toBe(3);
+    expect(result.layouts.desktop[0].minW).toBe(2);
   });
 
   it("clamps undersized saved charts to readable dimensions and keeps them in bounds", () => {
@@ -325,12 +373,12 @@ describe("insights layout preferences", () => {
     const items = normalizeLayout(defaultInsightsLayout().layouts.mobile, "mobile");
     expect(
       items
-        .filter((item) => ["cash", "invested", "bookCost", "pnl"].includes(item.i))
+        .filter((item) => ["cash", "invested", "bookCost", "pnl", "daily"].includes(item.i))
         .every((item) => item.w === 1 && item.minW === 1 && item.maxW === 1),
     ).toBe(true);
     expect(
       items
-        .filter((item) => !["cash", "invested", "bookCost", "pnl"].includes(item.i))
+        .filter((item) => !["cash", "invested", "bookCost", "pnl", "daily"].includes(item.i))
         .every((item) => item.w === 2 && item.minW === 2 && item.maxW === 2),
     ).toBe(true);
     expect(items.find((item) => item.i === "composition")?.minH).toBe(1);
@@ -360,14 +408,31 @@ describe("insights layout preferences", () => {
     }));
     old.hiddenWidgets = ["cash", "sectors"];
     const next = readInsightsLayout({ ...old, version: 4 });
-    expect(withoutNewWidgets(next.layouts.mobile).map((item) => item.i)).toEqual(ids);
+    expect(
+      withoutNewWidgets(next.layouts.mobile)
+        .filter((item) => item.i !== "daily")
+        .map((item) => item.i),
+    ).toEqual(ids);
     expect(next.hiddenWidgets).toEqual(["cash", "sectors"]);
-    expect(withoutNewWidgets(next.layouts.desktop)).toEqual(
-      normalizeLayout(old.layouts.desktop, "desktop"),
-    );
-    expect(withoutNewWidgets(next.layouts.tablet)).toEqual(
-      normalizeLayout(old.layouts.tablet, "tablet"),
-    );
+    for (const key of ["desktop", "tablet"] as const) {
+      for (const id of [
+        "accounts",
+        "classes",
+        "regions",
+        "sectors",
+        "composition",
+        "targets",
+        "breakdown",
+      ]) {
+        const before = normalizeLayout(old.layouts[key], key).find((item) => item.i === id)!;
+        expect(next.layouts[key].find((item) => item.i === id)).toMatchObject({
+          x: before.x,
+          y: before.y,
+          w: before.w,
+          h: before.h,
+        });
+      }
+    }
     const cash = next.layouts.mobile.find((item) => item.i === "cash")!;
     const cost = next.layouts.mobile.find((item) => item.i === "bookCost")!;
     expect([cash.x, cost.x, cash.y === cost.y]).toEqual([0, 1, true]);

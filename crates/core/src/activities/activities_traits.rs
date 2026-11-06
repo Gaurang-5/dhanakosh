@@ -1,6 +1,7 @@
 use super::activities_constants::{ACTIVITY_TYPE_TRANSFER_IN, ACTIVITY_TYPE_TRANSFER_OUT};
 use super::activities_model::*;
 use super::cash_balances::CashLedgerActivity;
+use super::UndoActivityImportResult;
 use crate::limits::ContributionActivity;
 use crate::Result;
 use async_trait::async_trait;
@@ -30,6 +31,15 @@ pub trait ActivityRepositoryTrait: Send + Sync {
 
         let mut activities = self.get_activities()?;
         activities.retain(|activity| activity.source_group_id.as_deref() == Some(group_id));
+        Ok(activities)
+    }
+    fn get_activities_by_import_run_id(&self, import_run_id: &str) -> Result<Vec<Activity>> {
+        let run_id = import_run_id.trim();
+        if run_id.is_empty() {
+            return Ok(Vec::new());
+        }
+        let mut activities = self.get_activities()?;
+        activities.retain(|activity| activity.import_run_id.as_deref() == Some(run_id));
         Ok(activities)
     }
     fn get_activities_by_account_id(&self, account_id: &str) -> Result<Vec<Activity>>;
@@ -488,6 +498,23 @@ pub trait ActivityServiceTrait: Send + Sync {
         &self,
         activities: Vec<ActivityImport>,
     ) -> Result<ImportActivitiesResult>;
+    /// Same apply path as [`Self::import_activities`], recording `file_name` on the run.
+    async fn import_activities_with_file_name(
+        &self,
+        activities: Vec<ActivityImport>,
+        _file_name: Option<String>,
+    ) -> Result<ImportActivitiesResult> {
+        self.import_activities(activities).await
+    }
+    /// Delete the activities created by one applied CSV import and mark the run reverted.
+    async fn undo_activity_import(
+        &self,
+        _import_run_id: String,
+    ) -> Result<UndoActivityImportResult> {
+        Err(crate::Error::Unexpected(
+            "undo_activity_import is not available".to_string(),
+        ))
+    }
     async fn link_account_template(
         &self,
         account_id: String,

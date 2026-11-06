@@ -1681,6 +1681,9 @@ fn priced_events(
                     amount,
                     source,
                     outflow: match security_outflow {
+                        _ if event.contribution == Contribution::ExternalSettlement => {
+                            !negative_cash
+                        }
                         Some(outflow) => outflow,
                         None => {
                             negative_cash
@@ -1691,7 +1694,11 @@ fn priced_events(
                     },
                     // A security transfer's direction decides the leg; its
                     // cash leg is only the fee, so the sign must not.
-                    leg_outflow: security_outflow.unwrap_or(negative_cash),
+                    leg_outflow: if event.contribution == Contribution::ExternalSettlement {
+                        !negative_cash
+                    } else {
+                        security_outflow.unwrap_or(negative_cash)
+                    },
                     units,
                 })
             }

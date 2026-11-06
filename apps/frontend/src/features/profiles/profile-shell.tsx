@@ -25,6 +25,7 @@ import { ProfileAvatarPicker } from "./profile-avatar-picker";
 import { ProfileStartupRecovery } from "./profile-startup-recovery";
 import "./profile-shell.css";
 import { ProfileContext } from "./profile-context";
+import { HOUSEHOLD_MODE, HOUSEHOLD_NAME } from "../household/household-config";
 import {
   installProfileSession,
   profileScope,
@@ -88,6 +89,7 @@ export function ProfileShell({ children }: { children: ReactNode }) {
     (profile) => profile.id === state.session?.profileId,
   )?.lockEnabled;
   const [authPending, setAuthPending] = useState(isNativeAuthPending);
+  const attemptedHouseholdOpen = useRef(false);
   const lock = useCallback(
     async (preserveAuth = false, nextIntent: "lock" | "switch" = "lock") => {
       if (working.current) return;
@@ -392,6 +394,22 @@ export function ProfileShell({ children }: { children: ReactNode }) {
       void run(() => unlock(profile.id, ""));
     }
   }
+  useEffect(() => {
+    if (
+      !HOUSEHOLD_MODE ||
+      phase !== "locked" ||
+      mode !== "choose" ||
+      authPending ||
+      busy ||
+      error ||
+      attemptedHouseholdOpen.current
+    )
+      return;
+    const available = state?.profiles.find((profile) => !profile.lockEnabled);
+    if (!available) return;
+    attemptedHouseholdOpen.current = true;
+    select(available);
+  }, [phase, mode, authPending, busy, error, state?.profiles]);
   async function unlock(id: string, unlockProof = password, createdProfile?: ProfileSummary) {
     const target =
       createdProfile ?? (selected?.id === id ? selected : state?.profiles.find((p) => p.id === id));
@@ -428,7 +446,7 @@ export function ProfileShell({ children }: { children: ReactNode }) {
     if (target) rememberOpeningProfile(target);
     setPhase("opening");
     // A fresh JS world is required even when reopening the same profile.
-    reloadApplication({ dashboard: intent.current === "switch" });
+    reloadApplication({ dashboard: intent.current === "switch" && !HOUSEHOLD_MODE });
   }
   async function deleteProfile(
     confirmation: string,
@@ -520,12 +538,13 @@ export function ProfileShell({ children }: { children: ReactNode }) {
   async function submit(event: FormEvent) {
     event.preventDefault();
     const settingPassword =
-      mode === "recover" ||
-      (mode === "create" && passwordManagement) ||
-      (mode === "manage" &&
-        passwordManagement &&
-        !removePassword &&
-        (Boolean(password) || Boolean(confirmPassword) || !selected?.lockEnabled));
+      !HOUSEHOLD_MODE &&
+      (mode === "recover" ||
+        (mode === "create" && passwordManagement) ||
+        (mode === "manage" &&
+          passwordManagement &&
+          !removePassword &&
+          (Boolean(password) || Boolean(confirmPassword) || !selected?.lockEnabled)));
     if (settingPassword) {
       const length = Array.from(password).length;
       if (length < MIN_PASSWORD_LENGTH || length > MAX_PASSWORD_LENGTH) {
@@ -548,7 +567,7 @@ export function ProfileShell({ children }: { children: ReactNode }) {
         >("create_profile", {
           name,
           avatarId: avatar,
-          password: passwordManagement ? password : null,
+          password: !HOUSEHOLD_MODE && passwordManagement ? password : null,
         });
         intent.current = "switch";
         setSelected(created);
@@ -618,7 +637,7 @@ export function ProfileShell({ children }: { children: ReactNode }) {
           closeFailed
             ? t("profiles.lockFailed", { defaultValue: "Couldn’t finish locking" })
             : phase === "closing"
-              ? t("profiles.locking", { defaultValue: "Locking Wealthfolio…" })
+              ? t("profiles.locking", { defaultValue: "Locking Dhanakosh…" })
               : errorCode === "PROFILE_CONNECTION_FAILED" || errorCode === "PROFILE_AUTH_REQUIRED"
                 ? t("profiles.connectionFailed")
                 : undefined
@@ -883,18 +902,25 @@ export function ProfileShell({ children }: { children: ReactNode }) {
             isProfilePicker && !hasNoProfiles ? "sr-only" : "text-2xl font-semibold outline-none"
           }
         >
-          {recovery
-            ? t("profiles.saveRecovery")
-            : mode === "choose" || mode === "unlock"
-              ? hasNoProfiles
-                ? t("profiles.firstProfile")
-                : t("profiles.chooseProfile")
-              : mode === "create"
-                ? t("profiles.createTitle")
-                : mode === "manage"
-                  ? t("profiles.yourProfile")
-                  : t("profiles.resetTitle")}
+          {HOUSEHOLD_MODE && (mode === "choose" || mode === "unlock") && !hasNoProfiles
+            ? HOUSEHOLD_NAME
+            : recovery
+              ? t("profiles.saveRecovery")
+              : mode === "choose" || mode === "unlock"
+                ? hasNoProfiles
+                  ? t("profiles.firstProfile")
+                  : t("profiles.chooseProfile")
+                : mode === "create"
+                  ? t("profiles.createTitle")
+                  : mode === "manage"
+                    ? t("profiles.yourProfile")
+                    : t("profiles.resetTitle")}
         </h1>
+        {HOUSEHOLD_MODE && (mode === "choose" || mode === "unlock") && !hasNoProfiles && (
+          <p className="text-muted-foreground mx-auto max-w-sm text-sm leading-relaxed">
+            {t("profiles.householdPickerHelp")}
+          </p>
+        )}
         {mode === "recover" && !recovery && (
           <p id="profile-recovery-help" className="text-muted-foreground text-sm leading-relaxed">
             {t("profiles.recoveryHelp")}
@@ -1137,7 +1163,7 @@ export function ProfileShell({ children }: { children: ReactNode }) {
                       required
                       autoFocus
                     />
-                    {(!passwordManagement || removePassword) && (
+                    {!HOUSEHOLD_MODE && (!passwordManagement || removePassword) && (
                       <Button
                         type="button"
                         variant="link"
@@ -1151,7 +1177,7 @@ export function ProfileShell({ children }: { children: ReactNode }) {
                         {t("profiles.enablePassword")}
                       </Button>
                     )}
-                    {passwordManagement && (
+                    {!HOUSEHOLD_MODE && passwordManagement && (
                       <div className="space-y-4 pt-2">
                         {passwordFields}
                         {!removePassword && (

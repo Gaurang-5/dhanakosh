@@ -342,7 +342,7 @@ async fn unlink_liability(
 }
 
 /// GET /alternative-holdings - Gets all alternative holdings (assets with their latest valuations)
-async fn get_alternative_holdings(
+pub(crate) async fn get_alternative_holdings(
     axum::Extension(state): axum::Extension<Arc<AppState>>,
 ) -> ApiResult<Json<Vec<AlternativeHoldingResponse>>> {
     let holdings = state.alternative_asset_service.get_alternative_holdings()?;

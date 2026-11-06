@@ -37,6 +37,34 @@ describe("ActivityReviewReasons", () => {
 
     expect(screen.queryByText("Previously required review")).not.toBeInTheDocument();
   });
+
+  it("shows what to check when a flagged activity has no provider reason", () => {
+    render(<ActivityReviewReasons activity={{ needsReview: true, metadata: {} }} />);
+
+    expect(
+      screen.getByText("Confirm each transaction's asset, type, and final amount."),
+    ).toBeInTheDocument();
+  });
+
+  it("explains a flagged trade total using its recorded and calculated amounts", () => {
+    render(
+      <ActivityReviewReasons
+        activity={{
+          needsReview: true,
+          metadata: {},
+          activityType: "BUY",
+          quantity: "3.334",
+          unitPrice: "2249.694",
+          amount: "7499.63",
+          fee: null,
+          tax: null,
+          currency: "INR",
+        }}
+      />,
+    );
+
+    expect(screen.getByText(/Recorded amount.*differs from.*calculated/)).toBeInTheDocument();
+  });
 });
 
 describe("ActivityDetailSheet", () => {

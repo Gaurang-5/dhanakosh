@@ -47,6 +47,7 @@ impl AccountRepositoryTrait for AccountRepository {
                     .execute(tx.conn())
                     .map_err(StorageError::from)?;
 
+                assign_portfolio(tx, &mut account_db)?;
                 let payload_db = account_db.clone();
                 let account: Account = account_db.into();
                 tx.insert(&payload_db)?;
@@ -100,6 +101,7 @@ impl AccountRepositoryTrait for AccountRepository {
                     .execute(tx.conn())
                     .map_err(StorageError::from)?;
 
+                assign_portfolio(tx, &mut account_db)?;
                 let payload_db = account_db.clone();
                 let account: Account = account_db.into();
                 tx.update(&payload_db)?;
@@ -173,6 +175,78 @@ impl AccountRepositoryTrait for AccountRepository {
             })
             .await
     }
+}
+
+// Ownership is stored only in portfolio_accounts. The metadata field is an
+// input instruction, consumed in the same transaction as the account write.
+fn assign_portfolio(
+    tx: &mut crate::db::write_actor::DbWriteTx<'_>,
+    account: &mut AccountDB,
+) -> Result<()> {
+    use crate::portfolios::PortfolioAccountDB;
+    use crate::schema::{portfolio_accounts, portfolios};
+    let Some(raw) = account.meta.as_deref() else {
+        return Ok(());
+    };
+    let mut metadata: serde_json::Value = serde_json::from_str(raw).map_err(|_| {
+        wealthfolio_core::Error::InvalidConfigValue("Invalid account metadata".into())
+    })?;
+    if let Some(country) = metadata.get("country") {
+        let valid = country
+            .as_str()
+            .is_some_and(|v| v.len() == 2 && v.bytes().all(|c| c.is_ascii_uppercase()));
+        if !valid {
+            return Err(wealthfolio_core::Error::InvalidConfigValue(
+                "Country must be a two-letter uppercase code".into(),
+            ));
+        }
+    }
+    let Some(value) = metadata
+        .as_object_mut()
+        .and_then(|m| m.remove("portfolioId"))
+    else {
+        return Ok(());
+    };
+    let target = value
+        .as_str()
+        .filter(|v| !v.is_empty())
+        .ok_or_else(|| wealthfolio_core::Error::InvalidConfigValue("Select a portfolio".into()))?;
+    portfolios::table
+        .find(target)
+        .select(portfolios::id)
+        .first::<String>(tx.conn())
+        .map_err(StorageError::from)?;
+    let previous = portfolio_accounts::table
+        .filter(portfolio_accounts::account_id.eq(&account.id))
+        .select(PortfolioAccountDB::as_select())
+        .load::<PortfolioAccountDB>(tx.conn())
+        .map_err(StorageError::from)?;
+    diesel::delete(
+        portfolio_accounts::table.filter(portfolio_accounts::account_id.eq(&account.id)),
+    )
+    .execute(tx.conn())
+    .map_err(StorageError::from)?;
+    for row in previous {
+        tx.delete_model(&row);
+    }
+    let row = PortfolioAccountDB {
+        id: format!("pfm_{}_{}", target, account.id),
+        portfolio_id: target.into(),
+        account_id: account.id.clone(),
+        sort_order: 0,
+        created_at: chrono::Utc::now().to_rfc3339(),
+    };
+    diesel::insert_into(portfolio_accounts::table)
+        .values(&row)
+        .execute(tx.conn())
+        .map_err(StorageError::from)?;
+    tx.insert(&row)?;
+    account.meta = Some(metadata.to_string());
+    diesel::update(accounts.find(&account.id))
+        .set(meta.eq(&account.meta))
+        .execute(tx.conn())
+        .map_err(StorageError::from)?;
+    Ok(())
 }
 
 #[cfg(test)]

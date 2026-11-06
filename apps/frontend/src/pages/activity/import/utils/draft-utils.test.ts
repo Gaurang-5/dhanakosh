@@ -371,7 +371,7 @@ describe("createDraftActivities explicit activity mapping", () => {
     expect(draftToActivityImport(draft).providerSymbol).toBe("SHOP.TO");
   });
 
-  it("falls back to the selected account when a CSV account value is not valid", () => {
+  it("leaves an unrecognised CSV account unresolved instead of using the selected account", () => {
     const [draft] = createDraftActivities(
       [["2024-03-15", "DEPOSIT", "1000.00", "USD", "stale-account"]],
       [...headers, ImportFormat.ACCOUNT],
@@ -387,8 +387,34 @@ describe("createDraftActivities explicit activity mapping", () => {
       new Set(["account-1"]),
     );
 
-    expect(draft.accountId).toBe("account-1");
+    expect(draft.accountId).toBe("");
   });
+
+  it.each<[string, Record<string, string>, string]>([
+    ["", {}, "account-1"],
+    ["Zerodha", { Zerodha: "account-2" }, "account-2"],
+    ["Zerodha", { Zerodha: "deleted-account" }, ""],
+  ])(
+    "resolves CSV account %s without crossing owners implicitly",
+    (source, accountMappings, expected) => {
+      const [draft] = createDraftActivities(
+        [["2024-03-15", "DEPOSIT", "1000.00", "USD", source]],
+        [...headers, ImportFormat.ACCOUNT],
+        {
+          ...baseMapping,
+          fieldMappings: {
+            ...baseMapping.fieldMappings,
+            [ImportFormat.ACCOUNT]: ImportFormat.ACCOUNT,
+          },
+          accountMappings,
+        },
+        parseConfig,
+        "account-1",
+        new Set(["account-1", "account-2"]),
+      );
+      expect(draft.accountId).toBe(expected);
+    },
+  );
 
   it("keeps a CSV account value when it is a valid account id", () => {
     const [draft] = createDraftActivities(

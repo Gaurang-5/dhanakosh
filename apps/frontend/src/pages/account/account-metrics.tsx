@@ -146,9 +146,13 @@ const AccountMetrics: React.FC<AccountMetricsProps> = ({
     Boolean(valuation.accountCurrency.trim()) &&
     cashBalances !== undefined &&
     cashBalances.length === cashCurrencySplit?.length;
-  const performanceCurrency = performance?.scope.currency || displayCurrency;
+  const performanceCurrency =
+    performance?.scope.currency || valuation.baseCurrency || displayCurrency;
   const performancePnl = performancePeriodPnl(performance);
   const performanceReturn = performanceSummaryReturn(performance);
+  const isForeignCurrencyAccount =
+    valuation.accountCurrency.trim().toUpperCase() !== valuation.baseCurrency.trim().toUpperCase();
+  const fxEffect = performance ? Number(performance.attribution.fxEffect) : null;
   const allTimeReturnAmount = valuation.totalValue - valuation.netContribution;
   const allTimeReturnValue = (
     <GainAmount value={allTimeReturnAmount} currency={displayCurrency} className="text-sm" />
@@ -231,6 +235,49 @@ const AccountMetrics: React.FC<AccountMetricsProps> = ({
           label: t("account:unrealized_pnl"),
           value: unrealizedPnlValue,
         },
+        ...(isForeignCurrencyAccount
+          ? [
+              {
+                label: `${t("account:cash_balance")} · ${valuation.baseCurrency}`,
+                value: (
+                  <PrivacyAmount
+                    value={valuation.cashBalanceBase || 0}
+                    currency={valuation.baseCurrency}
+                  />
+                ),
+              },
+              {
+                label: `${t("account:period_pnl")} · ${performanceCurrency}`,
+                value:
+                  performancePnl == null ? (
+                    <span className="text-muted-foreground text-xs">
+                      {t("account:not_available")}
+                    </span>
+                  ) : (
+                    <GainAmount
+                      value={performancePnl}
+                      currency={performanceCurrency}
+                      className="text-sm"
+                    />
+                  ),
+              },
+              {
+                label: `${t("performance:attribution.fx_effect")} · ${valuation.accountCurrency}/${valuation.baseCurrency}`,
+                value:
+                  fxEffect == null ? (
+                    <span className="text-muted-foreground text-xs">
+                      {t("account:not_available")}
+                    </span>
+                  ) : (
+                    <GainAmount
+                      value={fxEffect}
+                      currency={performanceCurrency}
+                      className="text-sm"
+                    />
+                  ),
+              },
+            ]
+          : []),
       ];
 
   const formattedStartDate = performance

@@ -8,6 +8,7 @@ import {
   type Dispatch,
 } from "react";
 import { useTranslation } from "react-i18next";
+import { applyImportSkipUpdates } from "../utils/import-skip-updates";
 import { checkActivitiesImport, previewImportAssets, logger } from "@/adapters";
 import type {
   ActivityImport,
@@ -377,7 +378,7 @@ function importReducer(state: ImportState, action: ImportAction): ImportState {
       return {
         ...state,
         draftActivities: state.draftActivities.map((draft) =>
-          indexSet.has(draft.rowIndex) ? { ...draft, ...updates } : draft,
+          indexSet.has(draft.rowIndex) ? applyImportSkipUpdates(draft, updates) : draft,
         ),
         // draftRevision intentionally NOT incremented — skip/unskip doesn't invalidate validation
       };

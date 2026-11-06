@@ -1,5 +1,6 @@
 {
   "needs_review_alert": {
+    "amountMismatch": "Recorded amount {{recorded}} differs from {{calculated}} calculated from quantity, price and charges. Confirm the final amount.",
     "title_one": "{{count}} movimento da rivedere",
     "title_many": "{{count}} movimenti da rivedere",
     "title_other": "{{count}} movimenti da rivedere",
@@ -211,7 +212,7 @@
   "import_step_4_title": "Risultati dell'importazione",
   "import_select_account": "Seleziona conto",
   "import_select_account_help": "Assicurati di selezionare il conto per cui vuoi importare i movimenti",
-  "import_upload_csv": "Carica file CSV",
+  "import_upload_csv": "Carica file CSV / Excel",
   "import_upload_csv_help": "Carica un file CSV contenente i tuoi movimenti di investimento. Il file deve includere le intestazioni nella prima riga.",
   "import_no_account_selected": "Nessun conto selezionato",
   "import_file_contains_errors": "Il file contiene errori",
@@ -835,6 +836,37 @@
       "goToAccount": "Vai al conto",
       "somethingWentWrong": "Qualcosa è andato storto."
     },
+    "history": {
+    "title": "Importazioni precedenti",
+    "description": "Importazioni di attività CSV che puoi rivedere e annullare.",
+    "empty": "Nessuna importazione CSV per ora.",
+    "loadError": "Impossibile caricare le importazioni precedenti.",
+    "show": "Importazioni precedenti",
+    "options": "Opzioni di importazione",
+    "undo": "Annulla",
+    "undoing": "Annullamento…",
+    "statusApplied": "Importata",
+    "statusReverted": "Annullata",
+    "statusFailed": "Non riuscita",
+    "statusRunning": "In corso",
+    "statusCancelled": "Interrotta",
+    "statusNeedsReview": "Da rivedere",
+    "inserted_one": "{{count}} transazione",
+    "inserted_many": "{{count}} transazioni",
+    "inserted_other": "{{count}} transazioni",
+    "skipped": "{{count}} ignorate",
+    "unknownAccount": "Conto sconosciuto",
+    "confirmTitle": "Annullare questa importazione?",
+    "confirmDescription_one": "Rimuove {{count}} transazione da {{label}}, comprese quelle modificate dopo l’importazione. Gli asset creati restano.",
+    "confirmDescription_many": "Rimuove {{count}} transazioni da {{label}}, comprese quelle modificate dopo l’importazione. Gli asset creati restano.",
+    "confirmDescription_other": "Rimuove {{count}} transazioni da {{label}}, comprese quelle modificate dopo l’importazione. Gli asset creati restano.",
+    "confirmAction": "Annulla importazione",
+    "keep": "Mantieni importazione",
+    "undoSuccess_one": "{{count}} transazione rimossa.",
+    "undoSuccess_many": "{{count}} transazioni rimosse.",
+    "undoSuccess_other": "{{count}} transazioni rimosse.",
+    "undoError": "Impossibile annullare questa importazione."
+  },
     "toolbar": {
       "cancel": "Annulla",
       "configureMapping": "Configura associazione",
@@ -854,7 +886,14 @@
       "selectAccount": "Seleziona conto",
       "selectAccountHelp": "Scegli il conto predefinito per i movimenti importati. Se il tuo CSV include una colonna Conto con id di conto validi, questi avranno la priorità per ogni riga.",
       "noAccountSelected": "Nessun conto selezionato",
-      "uploadCsv": "Carica file CSV",
+      "excelSheet": "Excel worksheet",
+      "excelChooseSheet": "Select a worksheet",
+      "excelHelp": "Import one sheet into the selected account. Review the header row, skip report totals, and map transaction columns before continuing.",
+      "excelTooLarge": "This workbook is too large. Use a smaller export (up to 10 MB and 1 million cells per sheet).",
+      "excelInvalid": "Unable to read this Excel workbook. Use an unencrypted .xls or .xlsx file, or export it as CSV.",
+      "ibkrPdfInvalid": "Unable to read this IBKR trade confirmation. Use the original Trade Confirmation Report PDF.",
+      "excelEmpty": "This workbook has no populated worksheets.",
+      "uploadCsv": "Carica file di investimento",
       "uploadCsvHelp": "Dopo il caricamento, controlla di nuovo le Impostazioni di analisi qui sotto: assicurati che il delimitatore, il formato data e le righe da saltare corrispondano al tuo file.",
       "selectFormat": "Seleziona formato",
       "optional": "facoltativo",
@@ -868,7 +907,7 @@
       "processingFile": "Elaborazione del file...",
       "clickToUpload": "Clicca per caricare",
       "orDrop": "oppure trascina",
-      "csvOnly": "Solo CSV",
+      "csvOnly": "CSV, Excel (.xls, .xlsx)",
       "removeFile": "Rimuovi file",
       "failedToParse": "Impossibile analizzare il file CSV",
       "failedToReparse": "Impossibile analizzare nuovamente il CSV"
@@ -1392,6 +1431,25 @@
       "issuesTitle_one": "È presente un problema con {{count}} voce di movimento.",
       "issuesTitle_many": "Sono presenti problemi con {{count}} voci di movimento.",
       "issuesTitle_other": "Sono presenti problemi con {{count}} voci di movimento."
+    },
+    "cas": {
+      "title": "Import CAMS / KFintech PDF",
+      "help": "Use an original detailed statement since inception for one member. Parsing stays on this installation. Reconciled rows open in the CSV wizard for review; conversion does not import transactions.",
+      "file": "CAS PDF (up to 10 MB)",
+      "password": "PDF password (not saved)",
+      "working": "Converting…",
+      "convert": "Convert and review",
+      "failed": "Could not convert the statement."
+    },
+    "broker": {
+      "title": "Broker connection · today’s trades",
+      "help": "Read-only preview of today’s NSE/BSE delivery trades. Use tradebook CSV for history. Review fees and security matches before importing. API credentials are used only for this request and are not saved. Broker access is subject to its own terms.",
+      "key": "Kite API key",
+      "token": "Current access token",
+      "working": "Fetching preview…",
+      "preview": "Preview today’s trades",
+      "failed": "Could not fetch broker trades.",
+      "provider": "Broker"
     }
   }
 }

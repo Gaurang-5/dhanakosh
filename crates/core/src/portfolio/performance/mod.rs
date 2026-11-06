@@ -6,3 +6,5 @@ pub mod performance_service;
 
 pub use performance_model::*;
 pub use performance_service::*;
+
+pub mod combined;

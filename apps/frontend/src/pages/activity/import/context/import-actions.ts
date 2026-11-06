@@ -148,10 +148,7 @@ export function skipDraft(rowIndex: number, reason?: string): ImportAction {
  * Note: Actual status should be re-validated after unskipping.
  */
 export function unskipDraft(rowIndex: number): ImportAction {
-  return updateDraft(rowIndex, {
-    status: "valid",
-    skipReason: undefined,
-  });
+  return bulkUnskipDrafts([rowIndex]);
 }
 
 /**

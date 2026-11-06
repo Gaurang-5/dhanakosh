@@ -1,6 +1,24 @@
 import type { AccountScope } from "@/lib/types";
 import { create } from "zustand";
 
+function sameAccountScope(left: AccountScope, right: AccountScope): boolean {
+  if (left.type !== right.type) return false;
+  switch (left.type) {
+    case "all":
+      return true;
+    case "account":
+      return right.type === "account" && left.accountId === right.accountId;
+    case "portfolio":
+      return right.type === "portfolio" && left.portfolioId === right.portfolioId;
+    case "accounts":
+      return (
+        right.type === "accounts" &&
+        left.accountIds.length === right.accountIds.length &&
+        left.accountIds.every((id, index) => id === right.accountIds[index])
+      );
+  }
+}
+
 interface AccountScopeState {
   scope: AccountScope;
   setScope: (scope: AccountScope) => void;
@@ -18,7 +36,9 @@ interface AccountScopeState {
  */
 export const useAccountScopeStore = create<AccountScopeState>()((set) => ({
   scope: { type: "all" },
-  setScope: (scope) => set({ scope }),
+  // Same selection must not notify. The portfolio menu republishes its scope
+  // while account data is still loading, and a fresh object each time loops.
+  setScope: (scope) => set((state) => (sameAccountScope(state.scope, scope) ? state : { scope })),
   // Seeded with the default scope's key so a fresh session never rewrites the
   // performance tracked list before the user picks a scope.
   bridgedScopeKey: "all",

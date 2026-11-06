@@ -1,0 +1,7 @@
+date,symbol,isin,quantity,activityType,unitPrice,currency,fee,tax,amount,comment
+2025-01-10,RELIANCE,INE002A01018,2,BUY,1250,INR,0,0,,Synthetic NSE purchase
+2025-01-10,NIFTYBEES,INF204KB14I2,10,BUY,250,INR,0,0,,Synthetic Indian ETF purchase
+2025-01-10,VOO,US9229083632,1,BUY,500,USD,0,0,,Synthetic US ETF purchase
+2025-01-10,VWRP,IE00BK5BQT80,1,BUY,110,GBP,0,0,,Synthetic London UCITS purchase in pounds
+2025-01-15,LOCAL-MF-DEMO,,10,BUY,100,INR,0,0,,Synthetic completed SIP installment; resolve as manual mutual fund
+2025-02-15,LOCAL-MF-DEMO,,10,BUY,105,INR,0,0,,Synthetic completed SIP installment; same fund

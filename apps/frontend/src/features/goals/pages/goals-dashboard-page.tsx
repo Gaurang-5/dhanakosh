@@ -1,3 +1,4 @@
+import { useHouseholdReport } from "@/features/household/household-report-context";
 import { useBalancePrivacy } from "@/hooks/use-balance-privacy";
 import { useSettingsContext } from "@/lib/settings-provider";
 import type { Goal } from "@/lib/types";
@@ -28,14 +29,14 @@ function StatBlock({ label, value }: { label: string; value: React.ReactNode }) 
   );
 }
 
-function SummaryStats({ goals }: { goals: Goal[] }) {
+function SummaryStats({ goals, reportCurrency }: { goals: Goal[]; reportCurrency?: string }) {
   const amountFormatting = useAmountFormatting();
   const numberFormatting = useNumberFormatting();
 
   const { t } = useTranslation();
   const { isBalanceHidden } = useBalancePrivacy();
   const { settings } = useSettingsContext();
-  const currency = settings?.baseCurrency ?? goals[0]?.currency ?? "USD";
+  const currency = reportCurrency ?? settings?.baseCurrency ?? goals[0]?.currency ?? "USD";
 
   const saved = goals.reduce((s, g) => s + (g.summaryCurrentValue ?? 0), 0);
   const target = goals.reduce((s, g) => s + (g.summaryTargetAmount ?? g.targetAmount ?? 0), 0);
@@ -78,6 +79,7 @@ function GoalGrid({ goals }: { goals: Goal[] }) {
 }
 
 export default function GoalsDashboardPage() {
+  const family = useHouseholdReport();
   const { t } = useTranslation();
   const { active, atRisk, achieved, archived, isLoading } = useGoals();
   const [archivedOpen, setArchivedOpen] = useState(false);
@@ -143,7 +145,17 @@ export default function GoalsDashboardPage() {
           <div className="space-y-8">
             {allActive.length > 0 && (
               <div>
-                <SummaryStats goals={allActive} />
+                {family ? (
+                  [...new Set(allActive.map((g) => g.currency))].map((currency) => (
+                    <SummaryStats
+                      key={currency}
+                      reportCurrency={currency}
+                      goals={allActive.filter((g) => g.currency === currency)}
+                    />
+                  ))
+                ) : (
+                  <SummaryStats goals={allActive} />
+                )}
                 <GoalGrid goals={allActive} />
               </div>
             )}

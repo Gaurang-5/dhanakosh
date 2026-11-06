@@ -124,7 +124,8 @@
     "applied": "反映済み",
     "needsReview": "要確認",
     "failed": "失敗",
-    "cancelled": "キャンセル"
+    "cancelled": "キャンセル",
+    "reverted": "取り消し済み"
   },
   "syncRuns": {
     "title": "最近の同期実行",

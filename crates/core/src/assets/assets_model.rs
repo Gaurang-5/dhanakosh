@@ -631,6 +631,7 @@ pub struct Country {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct ProviderProfile {
+    pub fund_holdings: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bond: Option<BondSpec>,
     pub id: Option<String>,

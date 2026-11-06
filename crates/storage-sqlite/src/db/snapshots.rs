@@ -15,6 +15,7 @@ use wealthfolio_core::errors::{DatabaseError, Error};
 #[serde(rename_all = "kebab-case")]
 pub enum SnapshotReason {
     Manual,
+    Scheduled,
     BeforeRestore,
     BeforeMaintenance,
     BeforeMigration,
@@ -25,6 +26,7 @@ impl SnapshotReason {
     fn label(self) -> &'static str {
         match self {
             Self::Manual => "manual",
+            Self::Scheduled => "scheduled",
             Self::BeforeRestore => "before-restore",
             Self::BeforeMaintenance => "before-maintenance",
             Self::BeforeMigration => "before-migration",
@@ -56,7 +58,7 @@ pub(super) fn is_current_filename(name: &str) -> bool {
         && parts[1].len() == 6
         && matches!(
             parts[2],
-            "manual" | "before-restore" | "before-maintenance" | "before-migration"
+            "manual" | "scheduled" | "before-restore" | "before-maintenance" | "before-migration"
         )
         && parts[3].len() == 32
         && parts[3].bytes().all(|b| b.is_ascii_hexdigit())
@@ -215,6 +217,8 @@ pub fn list(root: &str, key: Option<Arc<DbEncryptionKey>>) -> anyhow::Result<Vec
             SnapshotReason::BeforeMaintenance
         } else if filename.contains("_before-migration_") {
             SnapshotReason::BeforeMigration
+        } else if filename.contains("_scheduled_") {
+            SnapshotReason::Scheduled
         } else if filename.contains("_manual_") {
             SnapshotReason::Manual
         } else {

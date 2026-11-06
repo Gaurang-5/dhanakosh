@@ -15,6 +15,19 @@ const PageContext = React.createContext<PageContextValue>({
   isScrolled: false,
 });
 
+const PageHeaderAddonContext = React.createContext<React.ComponentType | null>(null);
+
+/** Renders `addon` at the end of every `PageHeader`, beside that page's own actions. */
+export function PageHeaderAddonProvider({
+  addon,
+  children,
+}: {
+  addon: React.ComponentType;
+  children: React.ReactNode;
+}) {
+  return <PageHeaderAddonContext.Provider value={addon}>{children}</PageHeaderAddonContext.Provider>;
+}
+
 export const usePage = () => React.useContext(PageContext);
 
 interface PageScrollContainerProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -125,6 +138,7 @@ export function PageHeader({
   const { t } = useTranslation();
   const { isScrolled } = usePage();
   const headerRef = React.useRef<HTMLElement>(null);
+  const HeaderAddon = React.useContext(PageHeaderAddonContext);
 
   // Content that pins below this header, like a sticky table header, offsets
   // itself by `--page-header-height`. The height varies with the safe-area
@@ -190,7 +204,12 @@ export function PageHeader({
               )}
               {titleContent ?? children}
             </div>
-            {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+            {(HeaderAddon || actions) && (
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                {HeaderAddon ? <HeaderAddon /> : null}
+                {actions}
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -22,6 +22,9 @@ pub struct RawFacts {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RawAccount {
+    /// Trade settlements are external flows, not entries in the tracked cash ledger.
+    #[serde(default)]
+    pub separate_cash_ledger: bool,
     pub id: String,
     pub currency: String,
     /// `SECURITIES` | `CASH` | `CREDIT_CARD` | `CRYPTOCURRENCY` | other

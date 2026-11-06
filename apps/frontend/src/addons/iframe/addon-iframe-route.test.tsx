@@ -2,6 +2,15 @@ import { act, render, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AddonIframeRoute } from "./addon-iframe-route";
 
+// The real host reads accounts through React Query. A marker is enough to
+// prove the menu overlays the title line and does not push the frame down.
+vi.mock("@/features/workspace/workspace-filter", async () => {
+  const { createElement } = await import("react");
+  return {
+    WorkspaceFilterHost: () => createElement("div", { "data-testid": "workspace-filter-host" }),
+  };
+});
+
 // Stable identities, like the real react-router: useParams/useLocation return
 // memoized objects between location changes (fresh objects per call would
 // re-fire the location effect on every render — a loop the real app doesn't
@@ -73,6 +82,41 @@ describe("AddonIframeRoute self-healing", () => {
     const viewport = container.querySelector('[data-addon-route-viewport="true"]');
     const frameContainer = container.querySelector('[data-addon-route-id="test"]');
     expect(viewport?.contains(frameContainer)).toBe(true);
+  });
+
+  it("overlays the portfolio menu on the addon title line", () => {
+    const { container } = render(<AddonIframeRoute addonId="test-addon" routeId="test" />);
+
+    const viewport = container.querySelector('[data-addon-route-viewport="true"]');
+    const header = container.querySelector('[data-addon-route-header="true"]');
+    const frameContainer = container.querySelector('[data-addon-route-id="test"]');
+
+    expect(header).not.toBeNull();
+    expect(header?.className).toContain("absolute");
+    expect(header?.className).toContain("pointer-events-none");
+    expect(header?.className).toContain("top-0");
+    expect(header?.querySelector(".pointer-events-auto")).not.toBeNull();
+    expect(header?.querySelector('[data-testid="workspace-filter-host"]')).not.toBeNull();
+    expect(viewport?.firstElementChild).toBe(frameContainer);
+    expect(header?.parentElement).toBe(viewport);
+    expect(header?.querySelector(".pointer-events-auto")?.parentElement?.className).not.toContain(
+      "pe-[19.25rem]",
+    );
+  });
+
+  it("clears the fees tracker period toggle on the same title line", () => {
+    const { container } = render(
+      <AddonIframeRoute
+        addonId="investment-fees-tracker-addon"
+        routeId="investment-fees-tracker"
+      />,
+    );
+
+    const header = container.querySelector('[data-addon-route-header="true"]');
+    expect(header?.className).toContain("absolute");
+    expect(header?.querySelector(".pointer-events-auto")?.parentElement?.className).toContain(
+      "pe-[19.25rem]",
+    );
   });
 
   it("activates once and renders the route on mount", async () => {

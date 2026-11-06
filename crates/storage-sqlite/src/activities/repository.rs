@@ -1523,6 +1523,23 @@ impl ActivityRepositoryTrait for ActivityRepository {
         Ok(results)
     }
 
+    fn get_activities_by_import_run_id(&self, import_run_id: &str) -> Result<Vec<Activity>> {
+        let run_id = import_run_id.trim();
+        if run_id.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let mut conn = get_connection(&self.pool)?;
+        let activities_db = activities::table
+            .filter(activities::import_run_id.eq(run_id))
+            .select(ActivityDB::as_select())
+            .order(activities::activity_date.asc())
+            .load::<ActivityDB>(&mut conn)
+            .map_err(StorageError::from)?;
+
+        Ok(activities_db.into_iter().map(Activity::from).collect())
+    }
+
     fn get_activities_by_source_group_id(&self, source_group_id: &str) -> Result<Vec<Activity>> {
         let group_id = source_group_id.trim();
         if group_id.is_empty() {

@@ -134,6 +134,7 @@ impl<P: SyncProgressReporter> SyncOrchestrator<P> {
                     errors: 0,
                     removed: diff.removed_positions as u32,
                     assets_created: assets_created as u32,
+                    file_name: None,
                 };
 
                 if let Some(ref run_id) = holdings_import_run_id {

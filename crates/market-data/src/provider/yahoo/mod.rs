@@ -765,8 +765,6 @@ impl YahooProvider {
             .and_then(|p| p.quote_type.as_ref())
             .map(|s| s.as_str())
             .unwrap_or("");
-        let quote_type_upper = quote_type.to_uppercase();
-
         // Format name
         let name = format_name(
             price.and_then(|p| p.long_name.as_deref()),
@@ -774,6 +772,22 @@ impl YahooProvider {
             price.and_then(|p| p.short_name.as_deref()),
             symbol,
         );
+        // Yahoo search/price sometimes labels listed funds (notably Indian ETFs)
+        // as EQUITY even while returning the fund-only topHoldings module. Preserve
+        // that stronger structural signal so callers can perform look-through.
+        let has_fund_data = top_holdings.is_some_and(|holdings| {
+            !holdings.holdings.is_empty()
+                || !holdings.sector_weightings.is_empty()
+                || holdings.stock_position.is_some()
+                || holdings.bond_position.is_some()
+        });
+        let name_says_etf = name
+            .split(|character: char| !character.is_ascii_alphanumeric())
+            .any(|word| word.eq_ignore_ascii_case("ETF"));
+        let quote_type_upper = match quote_type.to_uppercase().as_str() {
+            "EQUITY" if has_fund_data || name_says_etf => "ETF".to_string(),
+            value => value.to_string(),
+        };
 
         // Build sector/sectors and asset allocation based on asset type
         let (sector, sectors, asset_allocation) = match quote_type_upper.as_str() {
@@ -818,12 +832,28 @@ impl YahooProvider {
             }
         };
 
+        let fund_holdings = if matches!(quote_type_upper.as_str(), "ETF" | "MUTUALFUND") {
+            top_holdings.and_then(|top| {
+                let rows = top.holdings.iter().filter_map(|row| {
+                    let symbol = row.get("symbol")?.as_str()?;
+                    let weight = row.get("holdingPercent")?.get("raw")?.as_f64()?;
+                    if !weight.is_finite() || weight <= 0.0 || weight > 1.0 { return None; }
+                    let identifier = if let Some(base) = symbol.strip_suffix(".NS") { format!("NSE:{base}") }
+                        else if let Some(base) = symbol.strip_suffix(".BO") { format!("BSE:{base}") }
+                        else if !symbol.contains('.') { format!("US:{symbol}") }
+                        else { format!("YAHOO:{symbol}") };
+                    Some(serde_json::json!({"identifier": identifier, "name": row.get("holdingName").and_then(|n| n.as_str()).unwrap_or(symbol), "weightPercent": (weight * 100.0).to_string()}))
+                }).collect::<Vec<_>>();
+                if rows.is_empty() { None } else { Some(serde_json::Value::Array(rows)) }
+            })
+        } else {
+            None
+        };
         let profile = AssetProfile {
+            fund_holdings,
             source: Some("YAHOO".to_string()),
             name: Some(name),
-            quote_type: price
-                .and_then(|p| p.quote_type.clone())
-                .map(|t| t.to_uppercase()),
+            quote_type: (!quote_type_upper.is_empty()).then_some(quote_type_upper),
             // Which listing Yahoo actually matched. Carried so the caller can
             // check it against the instrument that was requested.
             currency: price.and_then(|p| p.currency.clone()),
@@ -1258,6 +1288,112 @@ fn asset_allocation_json(top_holdings: &YahooTopHoldings) -> Option<String> {
     }
 }
 
+/// Latest total market caps, keyed by the symbol without an exchange suffix.
+/// A missing symbol is omitted so the caller can reject an incomplete index.
+pub async fn fetch_market_caps(
+    symbols: &[String],
+) -> Result<std::collections::HashMap<String, Decimal>, MarketDataError> {
+    let mut caps = std::collections::HashMap::new();
+    if symbols.is_empty() {
+        return Ok(caps);
+    }
+    let provider = YahooProvider::new().await?;
+    let crumb = provider.ensure_crumb().await?;
+    let client = wealthfolio_http::client();
+    for (index, chunk) in symbols.chunks(40).enumerate() {
+        if index > 0 {
+            tokio::time::sleep(Duration::from_millis(200)).await;
+        }
+        let joined = chunk.join(",");
+        let url = format!(
+            "https://query1.finance.yahoo.com/v7/finance/quote?symbols={}&crumb={}",
+            urlencoding::encode(&joined),
+            urlencoding::encode(&crumb.crumb)
+        );
+        let response = client
+            .get(&url)
+            .header(header::COOKIE, &crumb.cookie)
+            .header(
+                header::USER_AGENT,
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            )
+            .send()
+            .await
+            .map_err(|error| MarketDataError::ProviderError {
+                provider: "YAHOO".to_string(),
+                message: format!("Failed to load market caps: {error}"),
+            })?;
+        if !response.status().is_success() {
+            provider.clear_crumb();
+            return Err(MarketDataError::ProviderError {
+                provider: "YAHOO".to_string(),
+                message: format!("Market cap request failed ({})", response.status()),
+            });
+        }
+        let body = response
+            .text()
+            .await
+            .map_err(|error| MarketDataError::ProviderError {
+                provider: "YAHOO".to_string(),
+                message: format!("Failed to read market caps: {error}"),
+            })?;
+        caps.extend(parse_yahoo_market_caps(&body)?);
+    }
+    Ok(caps)
+}
+
+pub(crate) fn parse_yahoo_market_caps(
+    body: &str,
+) -> Result<std::collections::HashMap<String, Decimal>, MarketDataError> {
+    #[derive(Deserialize)]
+    struct Payload {
+        #[serde(rename = "quoteResponse")]
+        quote_response: Option<QuoteBody>,
+    }
+    #[derive(Deserialize)]
+    struct QuoteBody {
+        result: Option<Vec<QuoteRow>>,
+    }
+    #[derive(Deserialize)]
+    struct QuoteRow {
+        symbol: String,
+        #[serde(rename = "marketCap")]
+        market_cap: Option<serde_json::Value>,
+    }
+
+    let payload: Payload =
+        serde_json::from_str(body).map_err(|_| MarketDataError::ProviderError {
+            provider: "YAHOO".to_string(),
+            message: "Market cap response was not understood".to_string(),
+        })?;
+    let mut caps = std::collections::HashMap::new();
+    for row in payload
+        .quote_response
+        .and_then(|body| body.result)
+        .unwrap_or_default()
+    {
+        let Some(raw) = row.market_cap else {
+            continue;
+        };
+        let Some(cap) = raw
+            .as_u64()
+            .map(Decimal::from)
+            .or_else(|| raw.as_f64().and_then(Decimal::from_f64_retain))
+            .filter(|cap| *cap > Decimal::ZERO)
+        else {
+            continue;
+        };
+        let symbol = row
+            .symbol
+            .strip_suffix(".NS")
+            .or_else(|| row.symbol.strip_suffix(".BO"))
+            .unwrap_or(&row.symbol)
+            .to_string();
+        caps.insert(symbol, cap);
+    }
+    Ok(caps)
+}
+
 fn allocation_position(name: &str, detail: Option<&YahooPriceDetail>) -> Option<serde_json::Value> {
     let weight = detail?.raw?;
     if !weight.is_finite() || weight <= 0.0 {
@@ -1279,6 +1415,27 @@ mod tests {
     use super::*;
     use std::borrow::Cow;
     use std::sync::Arc;
+
+    #[test]
+    fn market_caps_keep_the_base_symbol_and_drop_missing_values() {
+        let caps = parse_yahoo_market_caps(
+            r#"{"quoteResponse":{"result":[
+                {"symbol":"RELIANCE.NS","marketCap":18000000000000},
+                {"symbol":"TCS.NS","marketCap":null},
+                {"symbol":"M&M.NS","marketCap":2500000000000}
+            ]}}"#,
+        )
+        .unwrap();
+        assert_eq!(
+            caps.get("RELIANCE").map(|cap| cap.to_string()).as_deref(),
+            Some("18000000000000")
+        );
+        assert_eq!(
+            caps.get("M&M").map(|cap| cap.to_string()).as_deref(),
+            Some("2500000000000")
+        );
+        assert!(!caps.contains_key("TCS"));
+    }
 
     /// `summaryProfile.country` is a display name, and `AssetProfile::country`
     /// documents an ISO 3166-1 alpha-2 code. The mapping is what makes that true.
@@ -1352,6 +1509,7 @@ mod tests {
     #[test]
     fn test_asset_allocation_json() {
         let holdings = YahooTopHoldings {
+            holdings: vec![],
             sector_weightings: Vec::new(),
             stock_position: Some(YahooPriceDetail { raw: Some(0.60) }),
             bond_position: Some(YahooPriceDetail { raw: Some(0.30) }),
@@ -1395,6 +1553,47 @@ mod tests {
                 {"name": "bond", "weight": 1.157},
                 {"name": "other", "weight": 0.32919997}
             ])
+        );
+    }
+
+    #[tokio::test]
+    async fn indian_etf_mislabeled_as_equity_uses_fund_composition() {
+        let provider = YahooProvider::new().await.unwrap();
+        let result: YahooQuoteSummaryResult = serde_json::from_str(
+            r#"{
+              "price": {
+                "currency": "INR",
+                "exchange": "NSI",
+                "shortName": "MOTILALAMC - MONIFTY500",
+                "longName": "Motilal Oswal Nifty 500 ETF",
+                "quoteType": "EQUITY"
+              },
+              "topHoldings": {
+                "holdings": [
+                  {"symbol":"RELIANCE.NS","holdingName":"Reliance Industries","holdingPercent":{"raw":0.08}}
+                ],
+                "sectorWeightings": [
+                  {"technology":{"raw":0.18}},
+                  {"financial_services":{"raw":0.30}}
+                ],
+                "stockPosition": {"raw":0.98}
+              }
+            }"#,
+        )
+        .unwrap();
+
+        let profile = provider
+            .map_quote_summary_to_profile("MONIFTY500.NS", &result)
+            .unwrap();
+
+        assert_eq!(profile.quote_type.as_deref(), Some("ETF"));
+        assert!(profile
+            .sectors
+            .as_deref()
+            .is_some_and(|value| value.contains("Technology")));
+        assert_eq!(
+            profile.fund_holdings.unwrap()[0]["identifier"],
+            "NSE:RELIANCE"
         );
     }
 

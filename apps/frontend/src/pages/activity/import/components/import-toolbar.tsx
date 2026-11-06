@@ -1,3 +1,5 @@
+import { accountLabel } from "@/lib/account-label";
+import { usePortfolios } from "@/hooks/use-portfolios";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -49,6 +51,7 @@ export function ImportToolbar({
 }: ImportToolbarProps) {
   const { t } = useTranslation();
   const { accounts } = useAccounts({ filterActive: true, includeArchived: false });
+  const { data: portfolios = [] } = usePortfolios();
   const [currencySearch, setCurrencySearch] = useState("");
 
   // Prevent mousedown from bubbling to document, which would clear DataGrid selection
@@ -249,7 +252,7 @@ export function ImportToolbar({
               accounts.map((account) => (
                 <DropdownMenuItem key={account.id} onClick={() => onSetAccount(account.id)}>
                   <Icons.Briefcase className="me-2 h-3.5 w-3.5" />
-                  <span className="truncate">{account.name}</span>
+                  <span className="truncate">{accountLabel(account, portfolios)}</span>
                   <span className="text-muted-foreground ms-auto text-xs">{account.currency}</span>
                 </DropdownMenuItem>
               ))
@@ -303,6 +306,7 @@ export function ImportContextMenu({
 }: ImportContextMenuProps) {
   const { t } = useTranslation();
   const { accounts } = useAccounts({ filterActive: true, includeArchived: false });
+  const { data: portfolios = [] } = usePortfolios();
 
   if (!open || selectedCount === 0) return null;
 
@@ -376,7 +380,7 @@ export function ImportContextMenu({
             ) : (
               accounts.map((account) => (
                 <DropdownMenuItem key={account.id} onClick={() => onSetAccount(account.id)}>
-                  <span className="truncate">{account.name}</span>
+                  <span className="truncate">{accountLabel(account, portfolios)}</span>
                   <span className="text-muted-foreground ms-auto text-xs">{account.currency}</span>
                 </DropdownMenuItem>
               ))

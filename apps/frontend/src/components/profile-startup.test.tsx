@@ -131,7 +131,7 @@ it("keeps one opening surface through delayed profile, database, settings, and l
   mocks.settings.mockReturnValue(fetched.promise);
   mocks.language.mockReturnValue(language.promise);
   mount();
-  expect(screen.queryByText("Who's using Wealthfolio?")).not.toBeInTheDocument();
+  expect(screen.queryByText("My wealth")).not.toBeInTheDocument();
   expect(mocks.database).not.toHaveBeenCalled();
   await act(async () => profile.resolve(readyProfile));
   await waitFor(() => expect(mocks.database).toHaveBeenCalled());

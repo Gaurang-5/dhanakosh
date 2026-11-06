@@ -124,7 +124,8 @@
     "applied": "已套用",
     "needsReview": "需要檢查",
     "failed": "失敗",
-    "cancelled": "已取消"
+    "cancelled": "已取消",
+    "reverted": "已復原"
   },
   "syncRuns": {
     "title": "近期同步任務",

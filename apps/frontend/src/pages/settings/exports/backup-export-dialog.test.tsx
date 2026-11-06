@@ -4,7 +4,7 @@ import settings from "@/i18n/locales/en/settings.json";
 import { BackupExportDialog } from "./backup-export-dialog";
 
 const exportBackup = vi.hoisted(() => vi.fn());
-vi.mock("@/adapters", () => ({ exportDatabaseBackup: exportBackup }));
+vi.mock("@/adapters", () => ({ isWeb: false, exportDatabaseBackup: exportBackup }));
 beforeEach(() => {
   vi.stubGlobal(
     "ResizeObserver",

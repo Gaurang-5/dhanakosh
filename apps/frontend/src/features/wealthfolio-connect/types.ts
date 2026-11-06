@@ -199,7 +199,13 @@ export interface BrokerSyncState {
 
 export type ImportRunType = "SYNC" | "IMPORT";
 export type ImportRunMode = "INITIAL" | "INCREMENTAL" | "BACKFILL" | "REPAIR";
-export type ImportRunStatus = "RUNNING" | "APPLIED" | "NEEDS_REVIEW" | "FAILED" | "CANCELLED";
+export type ImportRunStatus =
+  | "RUNNING"
+  | "APPLIED"
+  | "NEEDS_REVIEW"
+  | "FAILED"
+  | "CANCELLED"
+  | "REVERTED";
 export type ReviewMode = "NEVER" | "ALWAYS" | "IF_WARNINGS";
 
 export interface ImportRunSummary {
@@ -211,6 +217,7 @@ export interface ImportRunSummary {
   errors: number;
   removed: number;
   assetsCreated?: number;
+  fileName?: string;
 }
 
 export interface ImportRun {

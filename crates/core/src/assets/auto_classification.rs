@@ -313,9 +313,9 @@ fn map_kind_to_asset_class(kind: &AssetKind) -> Option<&'static str> {
 /// Yahoo uses simplified names, GICS uses formal names
 fn map_sector_to_gics(sector: &str) -> Option<&'static str> {
     // Normalize sector name for matching
-    let sector_lower = sector.to_lowercase();
+    let sector_lower = sector.trim().to_lowercase();
 
-    match sector_lower.as_str() {
+    let exact = match sector_lower.as_str() {
         "energy" => Some("10"),
         "materials" | "basic materials" => Some("15"),
         "industrials" => Some("20"),
@@ -328,6 +328,73 @@ fn map_sector_to_gics(sector: &str) -> Option<&'static str> {
         "utilities" => Some("55"),
         "real estate" | "realestate" => Some("60"),
         _ => None,
+    };
+    if exact.is_some() {
+        return exact;
+    }
+
+    // Indian AMC portfolio disclosures normally use detailed AMFI/NSE-style
+    // industries rather than the eleven GICS sector labels.
+    let contains_any =
+        |needles: &[&str]| needles.iter().any(|needle| sector_lower.contains(needle));
+    if contains_any(&["oil", "gas", "petroleum", "coal", "energy"]) {
+        Some("10")
+    } else if contains_any(&[
+        "metal",
+        "mining",
+        "chemical",
+        "cement",
+        "construction material",
+        "fertilizer",
+        "paper",
+        "forest",
+    ]) {
+        Some("15")
+    } else if contains_any(&[
+        "capital goods",
+        "industrial",
+        "engineering",
+        "transport",
+        "aerospace",
+        "defence",
+        "defense",
+        "construction",
+    ]) {
+        Some("20")
+    } else if contains_any(&[
+        "automobile",
+        "auto component",
+        "consumer durable",
+        "textile",
+        "leisure",
+        "hotel",
+        "restaurant",
+        "retail",
+    ]) {
+        Some("25")
+    } else if contains_any(&[
+        "fmcg",
+        "food",
+        "beverage",
+        "tobacco",
+        "household product",
+        "personal product",
+    ]) {
+        Some("30")
+    } else if contains_any(&["pharma", "health", "hospital", "biotech"]) {
+        Some("35")
+    } else if contains_any(&["bank", "finance", "financial", "insurance"]) {
+        Some("40")
+    } else if contains_any(&["software", "information technology", "technology service"]) {
+        Some("45")
+    } else if contains_any(&["telecom", "communication", "media", "entertainment"]) {
+        Some("50")
+    } else if contains_any(&["utilities", "power", "electricity", "water supply"]) {
+        Some("55")
+    } else if contains_any(&["real estate", "realty"]) {
+        Some("60")
+    } else {
+        None
     }
 }
 
@@ -482,6 +549,7 @@ pub struct ProviderProfileClassification<'a> {
     pub sectors_json: Option<&'a str>,
     pub classes_json: Option<&'a str>,
     pub country: Option<&'a str>,
+    pub isin: Option<&'a str>,
     pub countries_json: Option<&'a str>,
     pub exchange_mic: Option<&'a str>,
 }
@@ -549,6 +617,22 @@ impl ClassificationInput {
             }
         }
 
+        // An INF ISIN identifies an India-domiciled mutual fund. This is a
+        // domicile fallback only; look-through exposure uses fund composition.
+        if input.country.is_none()
+            && profile.quote_type.is_some_and(|kind| {
+                matches!(
+                    kind.to_ascii_uppercase().as_str(),
+                    "MUTUALFUND" | "MUTUAL_FUND" | "MUTUAL FUND"
+                )
+            })
+            && profile
+                .isin
+                .is_some_and(|isin| isin.to_ascii_uppercase().starts_with("INF"))
+        {
+            input.country = Some("IN".to_string());
+        }
+
         input
     }
 }
@@ -561,6 +645,28 @@ pub struct AutoClassificationService {
 impl AutoClassificationService {
     pub fn new(taxonomy_service: Arc<dyn TaxonomyServiceTrait>) -> Self {
         Self { taxonomy_service }
+    }
+
+    /// Replaces only provider-managed sector assignments. Manual user assignments
+    /// remain authoritative and prevent AUTO rows from being written.
+    pub async fn replace_sector_classification(
+        &self,
+        asset_id: &str,
+        sectors: Vec<(String, f64)>,
+    ) -> Result<usize, String> {
+        let input = ClassificationInput {
+            sectors: sectors
+                .into_iter()
+                .map(|(name, weight)| SectorWeight { name, weight })
+                .collect(),
+            ..Default::default()
+        };
+        self.replace_auto_taxonomy_assignments(
+            asset_id,
+            "industries_gics",
+            sector_assignments_from_input(&input),
+        )
+        .await
     }
 
     /// Auto-classify an asset based on provider profile data.
@@ -1260,6 +1366,18 @@ mod tests {
     }
 
     #[test]
+    fn test_map_indian_amc_industries_to_gics() {
+        assert_eq!(map_sector_to_gics("Banks"), Some("40"));
+        assert_eq!(map_sector_to_gics("IT - Software"), Some("45"));
+        assert_eq!(map_sector_to_gics("Petroleum Products"), Some("10"));
+        assert_eq!(
+            map_sector_to_gics("Pharmaceuticals & Biotechnology"),
+            Some("35")
+        );
+        assert_eq!(map_sector_to_gics("Automobiles"), Some("25"));
+    }
+
+    #[test]
     fn test_map_country() {
         // Specific country entries
         assert_eq!(map_country_to_region("United States"), Some("country_US"));
@@ -1340,6 +1458,23 @@ mod tests {
             ..Default::default()
         });
         assert_eq!(input.country, None);
+    }
+
+    #[test]
+    fn indian_mutual_fund_isin_supplies_domicile_only_when_provider_has_no_country() {
+        let input = ClassificationInput::from_provider_profile(ProviderProfileClassification {
+            quote_type: Some("MUTUALFUND"),
+            isin: Some("INF179K01UT0"),
+            ..Default::default()
+        });
+        assert_eq!(input.country.as_deref(), Some("IN"));
+
+        let overseas = ClassificationInput::from_provider_profile(ProviderProfileClassification {
+            quote_type: Some("MUTUALFUND"),
+            isin: Some("US1234567890"),
+            ..Default::default()
+        });
+        assert_eq!(overseas.country, None);
     }
 
     #[tokio::test]

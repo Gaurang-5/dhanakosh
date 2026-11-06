@@ -1,15 +1,21 @@
 import AppLauncher from "@/components/app-launcher";
 import { MobileLoadingIndicator } from "@/components/mobile-loading-indicator";
-import { UpdateDialog } from "@/components/update-dialog";
 import { PortfolioSyncProvider } from "@/context/portfolio-sync-context";
 import { useActiveAppSyncTrigger } from "@/features/devices-sync/hooks/use-active-app-sync-trigger";
 import { usePostLoginConnectSync } from "@/features/wealthfolio-connect/hooks";
+import { WorkspaceFilter, WorkspaceFilterHost } from "@/features/workspace/workspace-filter";
+import { useWorkspaceFilterHosted } from "@/features/workspace/workspace-filter-host";
 import { useIsMobileViewport, usePlatform } from "@/hooks/use-platform";
 import { useSettingsContext } from "@/lib/settings-provider";
 import { cn } from "@/lib/utils";
 import { MobileNavigationContainer } from "@/pages/layouts/mobile-navigation-container";
 import useGlobalEventListener from "@/use-global-event-listener";
-import { ApplicationShell, ErrorBoundary, PageScrollContainer } from "@wealthfolio/ui";
+import {
+  ApplicationShell,
+  ErrorBoundary,
+  PageHeaderAddonProvider,
+  PageScrollContainer,
+} from "@wealthfolio/ui";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useNavigation } from "./navigation/app-navigation";
 import { AppSidebar } from "./navigation/app-sidebar";
@@ -48,10 +54,14 @@ const AppLayoutContent = () => {
   const launchBarHeight =
     !shouldUseMobileNavigation && isLaunchBar && !isFocusMode ? "3.5rem" : undefined;
   const isAppShellReady = !!settings?.onboardingCompleted;
-  const pageScrollKey =
-    location.pathname.startsWith("/addon/") || location.pathname.startsWith("/addons/")
-      ? "/addons"
-      : location.pathname;
+  const filterHosted = useWorkspaceFilterHosted();
+  // Settings is its own shell and does not use a scope menu. Addon routes
+  // overlay the menu on the title line inside the frame, so this strip would
+  // be a second menu.
+  const isAddonRoute =
+    location.pathname.startsWith("/addon/") || location.pathname.startsWith("/addons/");
+  const hideWorkspaceFilter = location.pathname.startsWith("/settings") || isAddonRoute;
+  const pageScrollKey = isAddonRoute ? "/addons" : location.pathname;
 
   const areGlobalEventsReady = useGlobalEventListener();
   useActiveAppSyncTrigger({ enabled: isTauri, requireWindowFocusForInterval: !isMobile });
@@ -64,69 +74,81 @@ const AppLayoutContent = () => {
   return (
     // Catches errors outside a page. Going home reloads at the root, away from a route that keeps failing.
     <ErrorBoundary onGoHome={() => window.location.assign("/")}>
-      <ApplicationShell
-        className="app-shell h-screen overflow-x-hidden"
-        data-mobile-navigation={shouldUseMobileNavigation ? "true" : undefined}
-        style={{
-          ...(launchBarHeight ? { ["--mobile-nav-ui-height" as string]: launchBarHeight } : {}),
-          ...(titleBarNudge ? { ["--titlebar-nudge" as string]: titleBarNudge } : {}),
-        }}
-      >
-        {/* Mobile sync loading indicator */}
-        {shouldUseMobileNavigation && <MobileLoadingIndicator />}
-
-        <div className="scan-hide-target">
-          {hasSidebar && <AppSidebar navigation={navigation} />}
-        </div>
-
-        <div
-          className={cn(
-            "relative flex min-h-0 w-full max-w-full flex-1 overflow-x-hidden",
-            shouldUseMobileNavigation ? "overscroll-contain" : undefined,
-          )}
+      <PageHeaderAddonProvider addon={WorkspaceFilterHost}>
+        <ApplicationShell
+          className="app-shell h-screen overflow-x-hidden"
+          data-mobile-navigation={shouldUseMobileNavigation ? "true" : undefined}
+          style={{
+            ...(launchBarHeight ? { ["--mobile-nav-ui-height" as string]: launchBarHeight } : {}),
+            ...(titleBarNudge ? { ["--titlebar-nudge" as string]: titleBarNudge } : {}),
+          }}
         >
-          <main className="relative flex min-h-0 w-full max-w-full flex-1 flex-col overflow-x-hidden">
-            {hasWindowDragRegion && (
-              <div
-                data-tauri-drag-region="true"
-                className="draggable pointer-events-auto absolute inset-x-0 top-0 z-50 h-6 cursor-grab opacity-0"
-              ></div>
-            )}
-            {shouldUseMobileNavigation ? (
-              <MobileNavigationContainer key={pageScrollKey} />
-            ) : (
-              <PageScrollContainer
-                key={pageScrollKey}
-                withMobileNavOffset={shouldUseBottomNavigation}
-              >
-                <PageErrorBoundary>
-                  <Outlet />
-                </PageErrorBoundary>
-              </PageScrollContainer>
-            )}
-          </main>
-        </div>
+          {/* Mobile sync loading indicator */}
+          {shouldUseMobileNavigation && <MobileLoadingIndicator />}
 
-        {shouldUseMobileNavigation && <MobileNavBar navigation={navigation} />}
-        {!shouldUseMobileNavigation && isLaunchBar && !isDesktopFocusMode && (
-          <FloatingNavigationBar navigation={navigation} />
-        )}
+          <div className="scan-hide-target">
+            {hasSidebar && <AppSidebar navigation={navigation} />}
+          </div>
 
-        <AppLauncher />
-        <UpdateDialog />
-      </ApplicationShell>
+          <div
+            className={cn(
+              "relative flex min-h-0 w-full max-w-full flex-1 overflow-x-hidden",
+              shouldUseMobileNavigation ? "overscroll-contain" : undefined,
+            )}
+          >
+            <main className="relative flex min-h-0 w-full max-w-full flex-1 flex-col overflow-x-hidden">
+              {!filterHosted && !hideWorkspaceFilter && (
+                <div
+                  data-workspace-filter-overlay="true"
+                  className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-end px-4 pt-2 md:px-6"
+                >
+                  <div className="pointer-events-auto">
+                    <WorkspaceFilter />
+                  </div>
+                </div>
+              )}
+              {hasWindowDragRegion && (
+                <div
+                  data-tauri-drag-region="true"
+                  className="draggable pointer-events-auto absolute inset-x-0 top-0 z-50 h-6 cursor-grab opacity-0"
+                ></div>
+              )}
+              {shouldUseMobileNavigation ? (
+                <MobileNavigationContainer key={pageScrollKey} />
+              ) : (
+                <PageScrollContainer
+                  key={pageScrollKey}
+                  withMobileNavOffset={shouldUseBottomNavigation}
+                >
+                  <PageErrorBoundary>
+                    <Outlet />
+                  </PageErrorBoundary>
+                </PageScrollContainer>
+              )}
+            </main>
+          </div>
+
+          {shouldUseMobileNavigation && <MobileNavBar navigation={navigation} />}
+          {!shouldUseMobileNavigation && isLaunchBar && !isDesktopFocusMode && (
+            <FloatingNavigationBar navigation={navigation} />
+          )}
+
+          <AppLauncher />
+        </ApplicationShell>
+      </PageHeaderAddonProvider>
     </ErrorBoundary>
   );
 };
 
 const AppLayout = () => {
-  return (
+  const content = (
     <PortfolioSyncProvider>
       <NavigationModeProvider>
         <AppLayoutContent />
       </NavigationModeProvider>
     </PortfolioSyncProvider>
   );
+  return content;
 };
 
 export { AppLayout };

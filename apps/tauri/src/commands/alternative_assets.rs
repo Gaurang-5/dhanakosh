@@ -453,6 +453,7 @@ pub async fn get_alternative_holdings(
 #[tauri::command]
 pub async fn get_net_worth(
     date: Option<String>,
+    account_ids: Option<Vec<String>>,
     state: ProfileAccess,
 ) -> Result<NetWorthResponse, String> {
     let context = state.context()?;
@@ -465,7 +466,7 @@ pub async fn get_net_worth(
 
     let core_response = context
         .net_worth_service()
-        .get_net_worth(as_of_date)
+        .get_scoped_net_worth(as_of_date, account_ids)
         .await
         .map_err(|e| format!("Failed to calculate net worth: {}", e))?;
 
@@ -508,6 +509,7 @@ pub async fn get_net_worth(
 /// Gets net worth history over a date range.
 #[tauri::command]
 pub async fn get_net_worth_history(
+    account_ids: Option<Vec<String>>,
     start_date: String,
     end_date: String,
     state: ProfileAccess,
@@ -520,7 +522,7 @@ pub async fn get_net_worth_history(
 
     let history = context
         .net_worth_service()
-        .get_net_worth_history(start, end)
+        .get_scoped_net_worth_history(start, end, account_ids)
         .await
         .map_err(|e| format!("Failed to get net worth history: {}", e))?;
 

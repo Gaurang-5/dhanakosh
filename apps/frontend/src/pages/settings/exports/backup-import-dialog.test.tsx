@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   choose: vi.fn(),
 }));
 vi.mock("@/adapters", () => ({
+  isWeb: false,
   inspectDatabaseBackup: mocks.inspect,
   inspectSavedDatabaseBackup: mocks.saved,
   discardDatabaseBackupImport: mocks.discard,

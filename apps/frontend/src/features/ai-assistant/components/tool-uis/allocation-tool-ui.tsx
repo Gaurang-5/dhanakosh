@@ -1,3 +1,4 @@
+import { getInstrumentPrimaryLabel, getInstrumentSecondaryLabel } from "@/lib/instrument-display";
 import { useBalancePrivacy } from "@/hooks/use-balance-privacy";
 import { useSettingsContext } from "@/lib/settings-provider";
 import type { ToolCallMessagePartProps } from "@assistant-ui/react";
@@ -324,8 +325,10 @@ function AllocationContentImpl({ args, result, status }: AllocationContentProps)
               <tbody>
                 {sortedHoldings.map((holding, index) => (
                   <tr key={`${holding.symbol}-${index}`} className="border-border/50 border-b">
-                    <td className="py-2 font-medium">{holding.symbol}</td>
-                    <td className="text-muted-foreground truncate py-2">{holding.name ?? "-"}</td>
+                    <td className="py-2 font-medium">{getInstrumentPrimaryLabel(holding)}</td>
+                    <td className="text-muted-foreground truncate py-2">
+                      {getInstrumentSecondaryLabel(holding) ?? "-"}
+                    </td>
                     <td className="py-2 text-end tabular-nums">{formatValue(holding.value)}</td>
                     <td className="text-muted-foreground py-2 text-end tabular-nums">
                       {formatting.formatPercent(holding.weight / 100)}

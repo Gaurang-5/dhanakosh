@@ -22,7 +22,7 @@ const { summary } = vi.hoisted(() => ({
   } satisfies IncomeSummary,
 }));
 
-vi.mock("@/adapters", () => ({ getIncomeSummary: vi.fn() }));
+vi.mock("@/adapters", () => ({ isWeb: false, getIncomeSummary: vi.fn() }));
 vi.mock("@tanstack/react-query", () => ({
   useQuery: () => ({ data: [summary], isLoading: false, error: null }),
 }));

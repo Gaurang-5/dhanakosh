@@ -70,6 +70,23 @@ describe("TickerLogoAssetBridge", () => {
     ]);
   });
 
+  it("resolves Indian exchange codes without confusing similarly named US companies", () => {
+    for (const symbol of [
+      "RELIANCE.NS",
+      "NSE:RELIANCE",
+      "RELIANCE-XNSE",
+      "500325.BO",
+      "BSE:500325",
+    ]) {
+      expect(resolveTickerLogoFilenames(symbol)).toContain("RELIANCE-XNSE");
+    }
+    expect(resolveTickerLogoFilenames("532540", "XBOM")).toContain("TCS-XNSE");
+    expect(resolveTickerLogoFilenames("HDFCBANK", "XNSE")[0]).toBe("HDFCBANK-XNSE");
+    expect(resolveTickerLogoFilenames("TCS", "XNYS")).not.toContain("TCS-XNSE");
+    expect(resolveTickerLogoFilenames("TCS")).not.toContain("TCS-XNSE");
+    expect(resolveTickerLogoFilenames("M&M.NS")).toContain("M&M-XNSE");
+  });
+
   it("deduplicates concurrent requests and bounds the Blob LRU", async () => {
     const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(pngResponse()));
     const bridge = new TickerLogoAssetBridge(fetchMock as unknown as typeof fetch, 2);

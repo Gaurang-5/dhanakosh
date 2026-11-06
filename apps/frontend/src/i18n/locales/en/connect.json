@@ -124,7 +124,8 @@
     "applied": "Applied",
     "needsReview": "Needs Review",
     "failed": "Failed",
-    "cancelled": "Cancelled"
+    "cancelled": "Cancelled",
+    "reverted": "Undone"
   },
   "syncRuns": {
     "title": "Recent Sync Runs",

@@ -1,3 +1,4 @@
+import { useHouseholdReport } from "@/features/household/household-report-context";
 import { ActionPalette, type ActionPaletteGroup } from "@/components/action-palette";
 import { syncService } from "@/features/devices-sync";
 import { useSyncStatus } from "@/features/devices-sync/hooks";
@@ -22,6 +23,7 @@ interface DashboardActionsProps {
 }
 
 export function DashboardActions({ onAddAsset, onAddLiability }: DashboardActionsProps) {
+  const family = useHouseholdReport();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -93,6 +95,7 @@ export function DashboardActions({ onAddAsset, onAddLiability }: DashboardAction
           {
             icon: Icons.Refresh,
             label: t("dashboard:actions.update_prices"),
+            disabled: !!family,
             onClick: () => updatePortfolioMutation.mutate(),
           },
           ...(!(onAddAsset && onAddLiability)
@@ -100,6 +103,7 @@ export function DashboardActions({ onAddAsset, onAddLiability }: DashboardAction
                 {
                   icon: Icons.History,
                   label: t("dashboard:actions.rebuild_full_history"),
+                  disabled: !!family,
                   onClick: () => recalculatePortfolioMutation.mutate(),
                 },
               ]
@@ -107,13 +111,14 @@ export function DashboardActions({ onAddAsset, onAddLiability }: DashboardAction
           {
             icon: Icons.ShieldCheck,
             label: t("dashboard:actions.verify_data"),
-            onClick: () => runHealthChecksMutation.mutate(),
+            onClick: () => (family ? navigate("/health") : runHealthChecksMutation.mutate()),
           },
         ],
       },
     ];
   }, [
     t,
+    family,
     navigate,
     onAddAsset,
     onAddLiability,

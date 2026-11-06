@@ -124,7 +124,8 @@
     "applied": "Angewendet",
     "needsReview": "Prüfung erforderlich",
     "failed": "Fehlgeschlagen",
-    "cancelled": "Abgebrochen"
+    "cancelled": "Abgebrochen",
+    "reverted": "Rückgängig gemacht"
   },
   "syncRuns": {
     "title": "Letzte Synchronisierungsläufe",

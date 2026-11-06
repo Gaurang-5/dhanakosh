@@ -521,6 +521,7 @@ impl AssetService {
 
     fn import_provider_search_symbols(
         source_symbol: &str,
+        isin: Option<&str>,
         canonical_symbol: &str,
         exchange_mic: Option<&str>,
         quote_ccy: Option<&str>,
@@ -532,6 +533,9 @@ impl AssetService {
         }
 
         let mut candidates = Vec::new();
+        if let Some(isin) = isin.map(str::trim).filter(|isin| looks_like_isin(isin)) {
+            candidates.push(isin.to_uppercase());
+        }
         let is_unsuffixed_equity = exchange_mic.is_none()
             && !source_symbol.contains('.')
             && instrument_type
@@ -649,6 +653,24 @@ impl AssetService {
 
     fn provider_result_provider_symbol(result: &SymbolSearchResult) -> &str {
         result.provider_symbol.as_deref().unwrap_or(&result.symbol)
+    }
+
+    fn import_provider_quote_type(result: &SymbolSearchResult, source_symbol: &str) -> String {
+        let is_named_etf = [
+            source_symbol,
+            result.long_name.as_str(),
+            result.short_name.as_str(),
+        ]
+        .into_iter()
+        .any(|name| {
+            name.split(|character: char| !character.is_ascii_alphanumeric())
+                .any(|word| word.eq_ignore_ascii_case("ETF"))
+        });
+        if result.quote_type.eq_ignore_ascii_case("EQUITY") && is_named_etf {
+            "ETF".to_string()
+        } else {
+            result.quote_type.trim().to_uppercase()
+        }
     }
 
     fn provider_result_provider_symbol_matches_source(
@@ -1470,6 +1492,7 @@ impl AssetService {
 
         // Auto-classify asset based on provider profile data
         if let Some(taxonomy_service) = &self.taxonomy_service {
+            let asset_isin = asset_metadata_isin(&updated_asset);
             let classification_input =
                 ClassificationInput::from_provider_profile(ProviderProfileClassification {
                     quote_type: provider_profile.asset_type.as_deref(),
@@ -1477,6 +1500,7 @@ impl AssetService {
                     sectors_json: provider_profile.sectors.as_deref(),
                     classes_json: provider_profile.classes.as_deref(),
                     countries_json: provider_profile.countries.as_deref(),
+                    isin: asset_isin.as_deref(),
                     exchange_mic: existing_asset.instrument_exchange_mic.as_deref(),
                     ..Default::default()
                 });
@@ -1744,6 +1768,7 @@ impl AssetServiceTrait for AssetService {
             let mut provider_result = None;
             for search_symbol in Self::import_provider_search_symbols(
                 &resolution_symbol,
+                input.isin.as_deref(),
                 &local_canonical_symbol,
                 exchange_mic.as_deref(),
                 local_quote_ccy,
@@ -1919,6 +1944,33 @@ impl AssetServiceTrait for AssetService {
                 })
                 .or_else(|| Some(canonical_symbol.clone()));
 
+            let draft_metadata = if existing_asset_id.is_none() {
+                let mut metadata = serde_json::Map::new();
+                if let Some(isin) = input
+                    .isin
+                    .as_deref()
+                    .map(str::trim)
+                    .filter(|isin| looks_like_isin(isin))
+                {
+                    metadata.insert(
+                        "identifiers".to_string(),
+                        serde_json::json!({ "isin": isin.to_uppercase() }),
+                    );
+                }
+                if let Some(quote_type) = provider_result
+                    .as_ref()
+                    .map(|result| Self::import_provider_quote_type(result, &input.source_symbol))
+                    .filter(|quote_type| !quote_type.is_empty())
+                {
+                    metadata.insert(
+                        "profile".to_string(),
+                        serde_json::json!({ "quoteType": quote_type }),
+                    );
+                }
+                (!metadata.is_empty()).then_some(serde_json::Value::Object(metadata))
+            } else {
+                None
+            };
             let draft = if existing_asset_id.is_none() {
                 Some(NewAsset {
                     id: None,
@@ -1935,7 +1987,7 @@ impl AssetServiceTrait for AssetService {
                     provider_id: provider_id.clone(),
                     provider_symbol: provider_symbol.clone(),
                     notes: None,
-                    metadata: None,
+                    metadata: draft_metadata,
                 })
             } else {
                 None
@@ -5234,6 +5286,85 @@ mod tests {
         assert_eq!(output.quote_ccy.as_deref(), Some("USD"));
         assert_eq!(output.provider_symbol.as_deref(), Some("AAPL"));
         assert!(output.draft.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_resolve_import_asset_inputs_prefers_isin_for_named_indian_fund() {
+        let isin = "INF179K01UT0";
+        let mut amfi = yahoo_search_result(
+            "AMFI-120503",
+            "AMFI-120503",
+            "",
+            "HDFC Flexi Cap Fund - Direct Plan - Growth Option",
+            "INR",
+            "AMFI-120503",
+        );
+        amfi.provider_id = Some("AMFI".to_string());
+        amfi.data_source = Some("AMFI".to_string());
+        amfi.exchange = "AMFI".to_string();
+        amfi.exchange_mic = None;
+        amfi.canonical_exchange_mic = None;
+        amfi.quote_type = "MUTUALFUND".to_string();
+        let quote_service = TestQuoteService::default()
+            .with_result(isin, vec![amfi])
+            .with_result("HDFC FLEXI CAP DIR-G", Vec::new());
+        let calls = Arc::clone(&quote_service.search_calls);
+        let service = test_asset_service(Vec::new(), quote_service);
+        let mut input = import_input("HDFC Flexi Cap Dir-G", "INR");
+        input.isin = Some(isin.to_string());
+
+        let output = service
+            .resolve_import_asset_inputs(vec![input])
+            .await
+            .unwrap()
+            .pop()
+            .unwrap();
+
+        assert_eq!(
+            calls.lock().unwrap().first().map(String::as_str),
+            Some(isin)
+        );
+        assert_eq!(output.canonical_symbol.as_deref(), Some("AMFI-120503"));
+        assert_eq!(output.provider_id.as_deref(), Some("AMFI"));
+        assert_eq!(output.provider_symbol.as_deref(), Some("AMFI-120503"));
+        let metadata = output.draft.unwrap().metadata.unwrap();
+        assert_eq!(metadata["identifiers"]["isin"], isin);
+        assert_eq!(metadata["profile"]["quoteType"], "MUTUALFUND");
+    }
+
+    #[tokio::test]
+    async fn test_resolve_import_asset_inputs_preserves_etf_type_for_composition() {
+        let isin = "INF204KB17I5";
+        let mut etf = yahoo_search_result(
+            "NIFTYBEES.NS",
+            "NIFTYBEES",
+            "XNSE",
+            "Nippon India ETF Nifty 50 BeES",
+            "INR",
+            "NIFTYBEES.NS",
+        );
+        // Yahoo currently labels this Indian ETF as EQUITY in symbol search.
+        etf.quote_type = "EQUITY".to_string();
+        let service = test_asset_service(
+            Vec::new(),
+            TestQuoteService::default().with_result(isin, vec![etf]),
+        );
+        let mut input = import_input("Nippon India ETF Nifty 50 BeES", "INR");
+        input.isin = Some(isin.to_string());
+
+        let output = service
+            .resolve_import_asset_inputs(vec![input])
+            .await
+            .unwrap()
+            .pop()
+            .unwrap();
+
+        assert_eq!(output.canonical_symbol.as_deref(), Some("NIFTYBEES"));
+        assert_eq!(output.exchange_mic.as_deref(), Some("XNSE"));
+        assert_eq!(
+            output.draft.unwrap().metadata.unwrap()["profile"]["quoteType"],
+            "ETF"
+        );
     }
 
     #[tokio::test]

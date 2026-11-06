@@ -22,7 +22,11 @@ export function ConnectEmptyState() {
       <div className="w-full max-w-3xl space-y-8 sm:space-y-12">
         {/* Header with Logo */}
         <header className="text-center">
-          <img alt="Wealthfolio" className="mx-auto mb-4 h-16 w-16" src="/logo-vantage.png" />
+          <img
+            alt={t("common:app_name", { defaultValue: "Dhanakosh" })}
+            className="mx-auto mb-4 h-16 w-16"
+            src="/logo-vantage.png"
+          />
           <div className="bg-secondary text-secondary-foreground mb-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium">
             <Icons.Sparkles className="h-3 w-3" />
             {t("connect:emptyState.optional")}

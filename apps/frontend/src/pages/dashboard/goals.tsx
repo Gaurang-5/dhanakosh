@@ -1,3 +1,6 @@
+import { useHouseholdReport } from "@/features/household/household-report-context";
+import { useHouseholdScope } from "@/features/household/household-scope";
+import { getSelectedHouseholdGoals } from "@/features/household/household-api";
 import { formatZonedDateKey } from "@/features/spending/lib/timezone";
 import { useSettingsContext } from "@/lib/settings-provider";
 import { parseLocalDate } from "@/lib/utils";
@@ -81,6 +84,8 @@ function ViewAllLink() {
 }
 
 export function SavingGoals() {
+  const family = useHouseholdReport();
+  const scope = useHouseholdScope();
   const { settings } = useSettingsContext();
   const amountFormatting = useAmountFormatting();
   const numberFormatting = useNumberFormatting();
@@ -88,8 +93,8 @@ export function SavingGoals() {
   const { isBalanceHidden } = useBalancePrivacy();
 
   const { data: goals, isLoading } = useQuery<Goal[], Error>({
-    queryKey: [QueryKeys.GOALS],
-    queryFn: getGoals,
+    queryKey: [QueryKeys.GOALS, family ? scope?.memberIds : "member"],
+    queryFn: () => (family ? getSelectedHouseholdGoals(scope?.memberIds ?? []) : getGoals()),
   });
 
   if (isLoading) {

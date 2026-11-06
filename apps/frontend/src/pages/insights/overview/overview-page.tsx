@@ -1,3 +1,9 @@
+import { useAssets } from "@/pages/asset/hooks/use-assets";
+import { useHouseholdReport } from "@/features/household/household-report-context";
+import { getFundExposure, refreshFundComposition } from "@/adapters";
+import { refreshMissingFundCompositions } from "@/features/fund-exposure/automatic-composition-refresh";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { MemberPortfolioRequired } from "@/features/household/member-portfolio-required";
 import { TopMoversCard, ConcentrationCard } from "./holdings-highlight-cards";
 import { useAccounts } from "@/hooks/use-accounts";
 import { useCurrentValuation } from "@/hooks/use-current-account-valuations";
@@ -5,6 +11,7 @@ import { useHoldings } from "@/hooks/use-holdings";
 import { usePortfolioAllocations } from "@/hooks/use-portfolio-allocations";
 import { usePortfolios } from "@/hooks/use-portfolios";
 import { HoldingType, isAlternativeAssetKind } from "@/lib/constants";
+import { portfolioDayChange } from "@/lib/portfolio-day-change";
 import { useSettingsContext } from "@/lib/settings-provider";
 import type { AccountScope, AllocationTarget, TaxonomyAllocation } from "@/lib/types";
 import { OverviewTab } from "@/pages/allocation-targets/components/overview-tab";
@@ -25,6 +32,7 @@ import { useAllocationTargets } from "@/pages/allocation-targets/hooks/use-alloc
 import { AllocationDetailSheet } from "@/pages/holdings/components/allocation-detail-sheet";
 import {
   Button,
+  AnimatedToggleGroup,
   Icons,
   Skeleton,
   Empty,
@@ -44,12 +52,23 @@ import { PortfolioExplorer } from "./portfolio-explorer";
 import { TargetRailsCard } from "./target-rails-card";
 import { ValueWidget } from "./value-strip";
 import { InsightsDashboard } from "./insights-dashboard";
+import { buildStockOnlyOverview } from "./stock-only-overview";
+import {
+  accountCurrencyScale,
+  accountValuesInDisplayCurrency,
+  allocationsInDisplayCurrency,
+  holdingsInDisplayCurrency,
+  singleNativeCurrency,
+  valueStripInDisplayCurrency,
+} from "./overview-display-currency";
 
 interface OverviewPageProps {
   filter?: AccountScope;
+  stockOnly?: boolean;
   onFilterChange?: (filter: AccountScope) => void;
   onToolbarActionsChange?: (actions: ReactNode | null) => void;
   onCustomizeActionChange?: (action: ReactNode | null) => void;
+  onCurrencyActionChange?: (action: ReactNode | null) => void;
 }
 
 type WorkspaceView = "current" | "details" | "targets" | "rebalance";
@@ -57,12 +76,17 @@ type TargetEditorMode = "create" | "edit";
 
 export function OverviewPage({
   filter: filterProp,
+  stockOnly = false,
   onFilterChange,
   onToolbarActionsChange,
   onCustomizeActionChange,
+  onCurrencyActionChange,
 }: OverviewPageProps) {
+  const family = useHouseholdReport();
   const { t } = useTranslation();
   const { settings } = useSettingsContext();
+  const { assets } = useAssets();
+  const queryClient = useQueryClient();
   const baseCurrency = settings?.baseCurrency ?? "USD";
 
   const accountFilter: AccountScope = useMemo(() => filterProp ?? { type: "all" }, [filterProp]);
@@ -80,7 +104,10 @@ export function OverviewPage({
   const { allocations, isLoading: allocationsLoading } = usePortfolioAllocations(accountFilter);
   const { accounts } = useAccounts();
   const { data: portfolios = [] } = usePortfolios();
-  const { targets, isLoading: targetsLoading } = useAllocationTargets();
+  const { targets: memberTargets, isLoading: targetsLoading } = useAllocationTargets({
+    enabled: !family,
+  });
+  const targets = useMemo(() => (family ? [] : memberTargets), [family, memberTargets]);
 
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
   const [workspaceView, setWorkspaceView] = useState<WorkspaceView>("current");
@@ -88,6 +115,24 @@ export function OverviewPage({
   const [targetEditorDirty, setTargetEditorDirty] = useState(false);
   const [pendingWorkspaceView, setPendingWorkspaceView] = useState<WorkspaceView | null>(null);
   const [pendingTargetId, setPendingTargetId] = useState<string | null>(null);
+  const [displayCurrency, setDisplayCurrency] = useState(baseCurrency);
+  const exposureQuery = useQuery({
+    queryKey: ["fund-exposure", baseCurrency, accountFilter],
+    queryFn: () => getFundExposure(baseCurrency, accountFilter),
+    enabled: stockOnly && !family,
+  });
+  useEffect(() => {
+    if (!stockOnly || !exposureQuery.data) return;
+    const candidates = new Set(exposureQuery.data.report.uncoveredFunds);
+    for (const snapshot of exposureQuery.data.snapshots) {
+      if (!snapshot.imported && snapshot.source.toUpperCase() === "YAHOO") {
+        candidates.add(snapshot.assetId);
+      }
+    }
+    void refreshMissingFundCompositions([...candidates], refreshFundComposition).then((count) => {
+      if (count > 0) void queryClient.invalidateQueries({ queryKey: ["fund-exposure"] });
+    });
+  }, [exposureQuery.data, queryClient, stockOnly]);
 
   useEffect(() => {
     setSelectedTargetId(null);
@@ -135,6 +180,45 @@ export function OverviewPage({
     return undefined; // "all" → every account
   }, [accountFilter, portfolios]);
 
+  const nativeCurrency = useMemo(
+    () => singleNativeCurrency(accounts, filteredAccountIds),
+    [accounts, filteredAccountIds],
+  );
+  const canShowUsd = nativeCurrency === "USD" && baseCurrency !== "USD";
+  const nativeScale = useMemo(
+    () => accountCurrencyScale(currentValuation?.accounts, "USD"),
+    [currentValuation?.accounts],
+  );
+  const showingUsd = canShowUsd && displayCurrency === "USD" && nativeScale != null;
+  const valueScale = showingUsd ? nativeScale : 1;
+  const effectiveCurrency = showingUsd ? "USD" : baseCurrency;
+
+  useEffect(() => {
+    if (!canShowUsd || nativeScale == null) setDisplayCurrency(baseCurrency);
+  }, [baseCurrency, canShowUsd, nativeScale]);
+
+  const currencyAction = useMemo(
+    () =>
+      canShowUsd && nativeScale != null ? (
+        <AnimatedToggleGroup
+          aria-label={`${baseCurrency} / USD`}
+          items={[
+            { value: baseCurrency, label: baseCurrency },
+            { value: "USD", label: "USD" },
+          ]}
+          value={effectiveCurrency}
+          onValueChange={setDisplayCurrency}
+          size="sm"
+        />
+      ) : null,
+    [baseCurrency, canShowUsd, effectiveCurrency, nativeScale],
+  );
+
+  useEffect(() => {
+    onCurrencyActionChange?.(currencyAction);
+    return () => onCurrencyActionChange?.(null);
+  }, [currencyAction, onCurrencyActionChange]);
+
   const portfolioHoldings = useMemo(
     () =>
       holdings?.filter((h) => {
@@ -143,10 +227,28 @@ export function OverviewPage({
       }) ?? [],
     [holdings],
   );
+  const displayHoldings = useMemo(
+    () => holdingsInDisplayCurrency(portfolioHoldings, effectiveCurrency, valueScale),
+    [effectiveCurrency, portfolioHoldings, valueScale],
+  );
+  const stockOverview = useMemo(
+    () =>
+      exposureQuery.data
+        ? buildStockOnlyOverview(
+            exposureQuery.data,
+            displayHoldings,
+            effectiveCurrency,
+            valueScale,
+            assets,
+          )
+        : null,
+    [assets, displayHoldings, effectiveCurrency, exposureQuery.data, valueScale],
+  );
+  const analysisHoldings = stockOnly ? (stockOverview?.holdings ?? []) : displayHoldings;
 
   const nonCashHoldings = useMemo(
-    () => portfolioHoldings.filter((h) => h.holdingType?.toLowerCase() !== "cash"),
-    [portfolioHoldings],
+    () => displayHoldings.filter((h) => h.holdingType?.toLowerCase() !== "cash"),
+    [displayHoldings],
   );
   const totalCash = useMemo(
     () =>
@@ -165,6 +267,24 @@ export function OverviewPage({
         : computeValueStrip(portfolioHoldings, accounts),
     [currentValuation?.summary, portfolioHoldings, accounts],
   );
+  const displayValueStrip = useMemo(
+    () => valueStripInDisplayCurrency(valueStrip, valueScale),
+    [valueScale, valueStrip],
+  );
+  const dayChange = useMemo(() => portfolioDayChange(displayHoldings), [displayHoldings]);
+  const displayAllocations = useMemo(
+    () => allocationsInDisplayCurrency(allocations, valueScale),
+    [allocations, valueScale],
+  );
+  const analysisAllocations = stockOnly ? stockOverview?.allocations : displayAllocations;
+  const analysisLoading = isLoading || (stockOnly && exposureQuery.isPending);
+  const displayAccountValuations = useMemo(
+    () => accountValuesInDisplayCurrency(currentValuation?.accounts, effectiveCurrency, valueScale),
+    [currentValuation?.accounts, effectiveCurrency, valueScale],
+  );
+  const analysisAccountValuations = stockOnly
+    ? stockOverview?.accountValuations
+    : displayAccountValuations;
 
   // Detail sheet
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -284,6 +404,13 @@ export function OverviewPage({
     onToolbarActionsChange?.(toolbarActions);
     return () => onToolbarActionsChange?.(null);
   }, [onToolbarActionsChange, toolbarActions]);
+
+  if (family && workspaceView !== "current")
+    return (
+      <MemberPortfolioRequired>
+        <span />
+      </MemberPortfolioRequired>
+    );
 
   if (workspaceView === "targets") {
     return (
@@ -427,46 +554,65 @@ export function OverviewPage({
 
   return (
     <>
+      <div className="flex flex-wrap items-center gap-3">
+        {stockOnly && exposureQuery.isError && (
+          <span className="text-destructive text-sm">{t("insights:exposure.load_error")}</span>
+        )}
+        {stockOnly && stockOverview && stockOverview.unexpandedValue > 0 && (
+          <span className="text-muted-foreground text-sm">
+            {t("insights:exposure.coverage_short")}
+          </span>
+        )}
+      </div>
       <InsightsDashboard
         onCustomizeActionChange={onCustomizeActionChange}
         widgets={{
           value: (
             <ValueWidget
               metric="value"
-              data={valueStrip}
-              currency={baseCurrency}
+              data={displayValueStrip}
+              currency={effectiveCurrency}
               isLoading={isLoading}
             />
           ),
           cash: (
             <ValueWidget
               metric="cash"
-              data={valueStrip}
-              currency={baseCurrency}
+              data={displayValueStrip}
+              currency={effectiveCurrency}
               isLoading={isLoading}
             />
           ),
           invested: (
             <ValueWidget
               metric="invested"
-              data={valueStrip}
-              currency={baseCurrency}
+              data={displayValueStrip}
+              currency={effectiveCurrency}
               isLoading={isLoading}
             />
           ),
           bookCost: (
             <ValueWidget
               metric="bookCost"
-              data={valueStrip}
-              currency={baseCurrency}
+              data={displayValueStrip}
+              currency={effectiveCurrency}
               isLoading={isLoading}
             />
           ),
           pnl: (
             <ValueWidget
               metric="pnl"
-              data={valueStrip}
-              currency={baseCurrency}
+              data={displayValueStrip}
+              currency={effectiveCurrency}
+              isLoading={isLoading}
+            />
+          ),
+          daily: (
+            <ValueWidget
+              metric="daily"
+              data={displayValueStrip}
+              dayChange={dayChange}
+              currency={effectiveCurrency}
               isLoading={isLoading}
             />
           ),
@@ -474,46 +620,57 @@ export function OverviewPage({
             <DrillableAccountChart
               isLoading={isLoading}
               accountIds={filteredAccountIds}
-              accountValuations={currentValuation?.accounts}
+              accountValuations={analysisAccountValuations}
+              displayCurrency={effectiveCurrency}
             />
           ),
           classes: (
             <DrillableDonutChart
               title={t("insights:insights.chart_classes")}
-              allocation={allocations?.assetClasses}
-              baseCurrency={baseCurrency}
-              isLoading={isLoading}
+              allocation={analysisAllocations?.assetClasses}
+              baseCurrency={effectiveCurrency}
+              isLoading={analysisLoading}
               onCategoryClick={(categoryId) =>
-                openAllocationSheet(allocations?.assetClasses, categoryId)
+                !stockOnly && openAllocationSheet(displayAllocations?.assetClasses, categoryId)
               }
-              onCardClick={() => openAllocationSheet(allocations?.assetClasses)}
+              onCardClick={() =>
+                !stockOnly && openAllocationSheet(displayAllocations?.assetClasses)
+              }
             />
           ),
           regions: (
             <DrillableDonutChart
               title={t("insights:insights.chart_regions")}
-              allocation={allocations?.regions}
-              baseCurrency={baseCurrency}
-              isLoading={isLoading}
+              allocation={analysisAllocations?.regions}
+              baseCurrency={effectiveCurrency}
+              isLoading={analysisLoading}
               onCategoryClick={(categoryId) =>
-                openAllocationSheet(allocations?.regions, categoryId)
+                !stockOnly && openAllocationSheet(displayAllocations?.regions, categoryId)
               }
-              onCardClick={() => openAllocationSheet(allocations?.regions)}
+              onCardClick={() => !stockOnly && openAllocationSheet(displayAllocations?.regions)}
             />
           ),
           sectors: (
             <DrillableDonutChart
               title={t("insights:insights.chart_sectors")}
-              allocation={allocations?.sectors}
-              baseCurrency={baseCurrency}
-              isLoading={isLoading}
+              allocation={analysisAllocations?.sectors}
+              baseCurrency={effectiveCurrency}
+              isLoading={analysisLoading}
               onCategoryClick={(categoryId) =>
-                openAllocationSheet(allocations?.sectors, categoryId)
+                !stockOnly && openAllocationSheet(displayAllocations?.sectors, categoryId)
               }
-              onCardClick={() => openAllocationSheet(allocations?.sectors)}
+              onCardClick={() => !stockOnly && openAllocationSheet(displayAllocations?.sectors)}
             />
           ),
-          composition: <PortfolioComposition holdings={nonCashHoldings} isLoading={isLoading} />,
+          composition: (
+            <PortfolioComposition
+              holdings={stockOnly ? analysisHoldings : nonCashHoldings}
+              currency={effectiveCurrency}
+              isLoading={analysisLoading}
+              exposureMode={stockOnly}
+              sectorByHoldingId={stockOnly ? stockOverview?.sectorByHoldingId : undefined}
+            />
+          ),
           targets: (
             <TargetRailsCard
               targets={scopedLiveTargets}
@@ -527,28 +684,39 @@ export function OverviewPage({
           ),
           movers: (
             <TopMoversCard
-              holdings={portfolioHoldings}
-              currency={baseCurrency}
-              isLoading={isLoading}
+              holdings={
+                stockOnly
+                  ? analysisHoldings.filter((holding) => holding.dayChange != null)
+                  : displayHoldings
+              }
+              currency={effectiveCurrency}
+              isLoading={analysisLoading}
             />
           ),
           concentration: (
             <ConcentrationCard
-              holdings={portfolioHoldings}
-              currency={baseCurrency}
-              isLoading={isLoading}
+              holdings={analysisHoldings}
+              currency={effectiveCurrency}
+              isLoading={analysisLoading}
+              exposureMode={stockOnly}
             />
           ),
           breakdown: (
             <PortfolioExplorer
-              allocations={allocations}
-              holdings={holdings ?? []}
+              allocations={analysisAllocations}
+              holdings={
+                stockOnly
+                  ? analysisHoldings
+                  : holdingsInDisplayCurrency(holdings ?? [], effectiveCurrency, valueScale)
+              }
               accounts={accounts}
               accountIds={filteredAccountIds}
-              accountValuations={currentValuation?.accounts}
-              currency={baseCurrency}
-              isLoading={isLoading}
-              onOpenAllocation={openAllocationSheet}
+              accountValuations={analysisAccountValuations}
+              currency={effectiveCurrency}
+              isLoading={analysisLoading}
+              onOpenAllocation={(allocation, categoryId) => {
+                if (!stockOnly) openAllocationSheet(allocation, categoryId);
+              }}
             />
           ),
         }}
@@ -559,7 +727,8 @@ export function OverviewPage({
         onOpenChange={setIsSheetOpen}
         allocation={selectedAllocation}
         accountFilter={accountFilter}
-        baseCurrency={baseCurrency}
+        baseCurrency={effectiveCurrency}
+        valueScale={valueScale}
         initialCategoryId={initialCategoryId}
       />
     </>
