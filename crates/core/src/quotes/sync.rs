@@ -41,7 +41,10 @@ use super::sync_state::{
 };
 use super::types::{AssetId, Day, ProviderId};
 use crate::activities::{ActivityRepositoryTrait, ActivityUpsert};
-use crate::assets::{Asset, AssetKind, AssetRepositoryTrait, InstrumentType, QuoteMode};
+use crate::assets::{
+    provider_currency_replacing_minor_exchange_default, Asset, AssetKind, AssetRepositoryTrait,
+    InstrumentType, QuoteMode, UpdateAssetProfile,
+};
 use crate::errors::Error;
 use crate::errors::Result;
 use crate::utils::time_utils;
@@ -87,6 +90,23 @@ impl Drop for SyncLockGuard {
 
 fn is_continuous_market(instrument_type: Option<&InstrumentType>) -> bool {
     matches!(instrument_type, Some(InstrumentType::Crypto))
+}
+
+/// The currency shared by every priced row, when they agree.
+fn uniform_quote_currency(quotes: &[Quote]) -> Option<&str> {
+    let mut currency: Option<&str> = None;
+    for quote in quotes {
+        let code = quote.currency.trim();
+        if code.is_empty() {
+            continue;
+        }
+        match currency {
+            None => currency = Some(code),
+            Some(existing) if existing.eq_ignore_ascii_case(code) => {}
+            Some(_) => return None,
+        }
+    }
+    currency
 }
 
 fn effective_market_today(
@@ -960,6 +980,38 @@ where
     /// Uses per-asset locking (US-012) to prevent duplicate sync work when multiple
     /// sync triggers occur for the same asset. If a sync is already in progress for
     /// this asset, the call is skipped (not blocked) to keep the system responsive.
+    /// A London (or other minor-unit) listing whose provider quotes a different
+    /// major currency is stored under that currency. The asset-update trigger
+    /// then refolds holders, so a trade in the provider currency is kept.
+    async fn adopt_provider_quote_currency(&self, asset: &Asset, quotes: &[Quote]) {
+        if asset.quote_mode != QuoteMode::Market {
+            return;
+        }
+        let Some(corrected) = provider_currency_replacing_minor_exchange_default(
+            Some(asset.quote_ccy.as_str()),
+            asset.instrument_exchange_mic.as_deref(),
+            uniform_quote_currency(quotes),
+        ) else {
+            return;
+        };
+        if corrected == asset.quote_ccy {
+            return;
+        }
+        let previous = asset.quote_ccy.clone();
+        let update = UpdateAssetProfile::with_quote_ccy(asset, corrected.clone());
+        if let Err(error) = self.asset_repo.update_profile(&asset.id, update).await {
+            warn!(
+                "Failed to store provider quote currency {corrected} for {}: {error}",
+                asset.id
+            );
+        } else {
+            info!(
+                "Quote currency for {} is {corrected}; it replaced the exchange default {previous}",
+                asset.id
+            );
+        }
+    }
+
     async fn sync_asset(&self, asset: &Asset, plan: &SymbolSyncPlan) -> AssetSyncResult {
         let asset_id_str = &asset.id;
         let asset_id = AssetId::new(asset_id_str);
@@ -1013,6 +1065,7 @@ where
                 let quotes_count = quotes.len();
 
                 if quotes_count > 0 {
+                    self.adopt_provider_quote_currency(asset, &quotes).await;
                     // Preserve history on every refresh. An owned write retains the guard
                     // even if the caller is cancelled after enqueueing the SQLite operation.
                     let store = self.quote_store.clone();

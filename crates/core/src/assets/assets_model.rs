@@ -12,7 +12,7 @@ use serde_json::Value;
 use super::asset_id::{parse_crypto_pair_symbol, parse_symbol_with_known_exchange};
 use crate::errors::Result;
 use crate::errors::ValidationError;
-use crate::fx::currency::normalize_currency_code;
+use crate::fx::currency::{get_normalization_rule, normalize_currency_code};
 use crate::Error;
 use wealthfolio_market_data::{canonicalize_exchange_mic, mic_to_currency};
 
@@ -993,6 +993,47 @@ pub fn normalize_quote_ccy_code(value: Option<&str>) -> Option<String> {
     normalize_quote_ccy(value)
 }
 
+/// True when `explicit_quote_ccy` is only the exchange's minor-unit default,
+/// such as `GBp` for London. That default is filled in before a quote exists.
+pub fn explicit_quote_ccy_is_minor_exchange_default(
+    explicit_quote_ccy: Option<&str>,
+    exchange_mic: Option<&str>,
+) -> bool {
+    let Some(explicit) = normalize_quote_ccy(explicit_quote_ccy) else {
+        return false;
+    };
+    let Some(mic_currency) = normalize_quote_ccy(exchange_mic.and_then(mic_to_currency)) else {
+        return false;
+    };
+    get_normalization_rule(&mic_currency).is_some() && same_currency_major(&explicit, &mic_currency)
+}
+
+/// The provider currency for a listing whose stored currency is the exchange's
+/// minor-unit default, when the provider quotes a different major currency.
+///
+/// London's default is `GBp`, but some LSE lines (a USD-class ETF) are quoted
+/// in USD. Keeping `GBp` makes a USD trade fail FX conversion and never become
+/// a holding. `GBP` against `GBp` is the same currency and stays put.
+pub fn provider_currency_replacing_minor_exchange_default(
+    explicit_quote_ccy: Option<&str>,
+    exchange_mic: Option<&str>,
+    provider_quote_ccy: Option<&str>,
+) -> Option<String> {
+    if !explicit_quote_ccy_is_minor_exchange_default(explicit_quote_ccy, exchange_mic) {
+        return None;
+    }
+    let explicit = normalize_quote_ccy(explicit_quote_ccy)?;
+    let provider = normalize_quote_ccy(provider_quote_ccy)?;
+    if same_currency_major(&provider, &explicit) {
+        return None;
+    }
+    Some(provider)
+}
+
+fn same_currency_major(left: &str, right: &str) -> bool {
+    normalize_currency_code(left).eq_ignore_ascii_case(normalize_currency_code(right))
+}
+
 pub fn resolve_quote_ccy_precedence(
     explicit_quote_ccy: Option<&str>,
     existing_asset_quote_ccy: Option<&str>,
@@ -1202,6 +1243,21 @@ impl UpdateAssetProfile {
     /// Builds a repository update that changes only metadata while preserving asset identity.
     pub fn metadata_only(asset: &Asset, metadata: Value) -> Self {
         Self {
+            metadata: Some(metadata),
+            ..Self::preserving(asset)
+        }
+    }
+
+    /// Builds a repository update that changes only the quote currency.
+    pub fn with_quote_ccy(asset: &Asset, quote_ccy: String) -> Self {
+        Self {
+            quote_ccy: Some(quote_ccy),
+            ..Self::preserving(asset)
+        }
+    }
+
+    fn preserving(asset: &Asset) -> Self {
+        Self {
             name: asset.name.clone(),
             display_code: asset.display_code.clone(),
             notes: asset.notes.clone().unwrap_or_default(),
@@ -1212,7 +1268,7 @@ impl UpdateAssetProfile {
             instrument_symbol: asset.instrument_symbol.clone(),
             instrument_exchange_mic: asset.instrument_exchange_mic.clone(),
             provider_config: asset.provider_config.clone(),
-            metadata: Some(metadata),
+            metadata: None,
         }
     }
 
@@ -1367,6 +1423,51 @@ pub struct EnsureAssetsResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn usd_listing_on_a_pence_exchange_keeps_the_provider_currency() {
+        assert_eq!(
+            provider_currency_replacing_minor_exchange_default(
+                Some("GBp"),
+                Some("XLON"),
+                Some("USD")
+            )
+            .as_deref(),
+            Some("USD")
+        );
+        assert_eq!(
+            provider_currency_replacing_minor_exchange_default(
+                Some("GBp"),
+                Some("XLON"),
+                Some("GBp")
+            ),
+            None
+        );
+        assert_eq!(
+            provider_currency_replacing_minor_exchange_default(
+                Some("GBp"),
+                Some("XLON"),
+                Some("GBP")
+            ),
+            None
+        );
+        assert_eq!(
+            provider_currency_replacing_minor_exchange_default(
+                Some("EUR"),
+                Some("XLON"),
+                Some("USD")
+            ),
+            None
+        );
+        assert_eq!(
+            provider_currency_replacing_minor_exchange_default(
+                Some("USD"),
+                Some("XNAS"),
+                Some("CAD")
+            ),
+            None
+        );
+    }
 
     #[test]
     fn test_build_asset_metadata_tbill_isin() {

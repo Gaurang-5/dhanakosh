@@ -11,9 +11,11 @@ use crate::utils::isin::looks_like_isin;
 use futures::stream::{self, StreamExt};
 
 use super::assets_model::{
-    canonicalize_market_identity, normalize_quote_ccy_code, resolve_import_quote_ccy_precedence,
-    resolve_quote_ccy_precedence, Asset, AssetKind, AssetProfile, AssetSpec, EnsureAssetsResult,
-    InstrumentType, NewAsset, QuoteCcyResolutionSource, QuoteMode, UpdateAssetProfile,
+    canonicalize_market_identity, explicit_quote_ccy_is_minor_exchange_default,
+    normalize_quote_ccy_code, provider_currency_replacing_minor_exchange_default,
+    resolve_import_quote_ccy_precedence, resolve_quote_ccy_precedence, Asset, AssetKind,
+    AssetProfile, AssetSpec, EnsureAssetsResult, InstrumentType, NewAsset,
+    QuoteCcyResolutionSource, QuoteMode, UpdateAssetProfile,
 };
 use super::assets_traits::{AssetRepositoryTrait, AssetServiceTrait};
 use super::auto_classification::{
@@ -1023,7 +1025,15 @@ impl AssetService {
     ) -> (String, QuoteCcyResolutionSource) {
         let has_deterministic_precedence = normalize_quote_ccy_code(explicit_quote_ccy).is_some()
             || normalize_quote_ccy_code(existing_asset_quote_ccy).is_some();
-        let provider_quote_ccy = if allow_provider_lookup && !has_deterministic_precedence {
+        // An explicit GBp (or other minor unit) that only repeats the exchange
+        // default is not a chosen currency. Confirm it with the provider so a
+        // USD-quoted London line is not stored as pence.
+        let confirm_minor_exchange_default = allow_provider_lookup
+            && normalize_quote_ccy_code(existing_asset_quote_ccy).is_none()
+            && explicit_quote_ccy_is_minor_exchange_default(explicit_quote_ccy, exchange_mic);
+        let provider_quote_ccy = if allow_provider_lookup
+            && (!has_deterministic_precedence || confirm_minor_exchange_default)
+        {
             if let Some(sym) = symbol.map(str::trim).filter(|s| !s.is_empty()) {
                 self.quote_service
                     .resolve_symbol_quote(sym, exchange_mic, instrument_type, None, None, None)
@@ -1036,6 +1046,14 @@ impl AssetService {
         } else {
             None
         };
+
+        if let Some(provider) = provider_currency_replacing_minor_exchange_default(
+            explicit_quote_ccy,
+            exchange_mic,
+            provider_quote_ccy.as_deref(),
+        ) {
+            return (provider, QuoteCcyResolutionSource::ProviderQuote);
+        }
 
         resolve_quote_ccy_precedence(
             explicit_quote_ccy,
