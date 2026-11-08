@@ -35,9 +35,6 @@ jobs:
           - platform: "ubuntu-24.04"
             args: ""
             cache-key: linux-x86_64
-          - platform: "ubuntu-24.04-arm"
-            args: ""
-            cache-key: linux-aarch64
 
     runs-on: ${{ matrix.platform }}
 
