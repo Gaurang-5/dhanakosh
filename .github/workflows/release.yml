@@ -13,7 +13,9 @@ jobs:
       # Windows Authenticode signing authenticates to Azure Artifact Signing with OIDC.
       id-token: write
     # The Entra federated credential trusts only this environment's OIDC subject.
-    environment: ${{ contains(matrix.platform, 'windows') && 'windows-signing' || '' }}
+    environment:
+      ${{ contains(matrix.platform, 'windows') && vars.AZURE_CLIENT_ID != '' && 'windows-signing' ||
+      '' }}
     strategy:
       fail-fast: false
       matrix:
@@ -103,7 +105,7 @@ jobs:
           echo "args=$ARGS" >> "$GITHUB_OUTPUT"
 
       - name: Set up Windows code signing
-        if: contains(matrix.platform, 'windows')
+        if: contains(matrix.platform, 'windows') && vars.AZURE_CLIENT_ID != ''
         id: win-signing
         shell: pwsh
         env:
@@ -115,7 +117,7 @@ jobs:
         run: ./.github/scripts/windows-signing.ps1 setup
 
       - name: Materialize App Store Connect API key (macOS notarization)
-        if: contains(matrix.platform, 'macos')
+        if: contains(matrix.platform, 'macos') && secrets.APPLE_API_KEY_P8 != ''
         shell: bash
         run: printf '%s' "${{ secrets.APPLE_API_KEY_P8 }}" > "$RUNNER_TEMP/asc.p8"
 
@@ -152,16 +154,17 @@ jobs:
           AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
         with:
           tagName: ${{ github.event_name == 'push' && github.ref_name || '' }}
-          releaseName: ${{ github.event_name == 'push' && 'Wealthfolio v__VERSION__' || '' }}
-          releaseBody: "See the assets to download and install this version."
-          releaseDraft: true
+          releaseName: ${{ github.event_name == 'push' && 'Dhanakosh v__VERSION__' || '' }}
+          releaseBody:
+            "See the assets below to download and install Dhanakosh for your operating system."
+          releaseDraft: false
           prerelease: false
           args:
             ${{ matrix.args }} ${{ steps.win-bundles.outputs.args }} ${{
             steps.win-signing.outputs.args }} -- --locked
 
       - name: Verify Windows Authenticode signatures
-        if: contains(matrix.platform, 'windows')
+        if: contains(matrix.platform, 'windows') && vars.AZURE_CLIENT_ID != ''
         shell: pwsh
         run: ./.github/scripts/windows-signing.ps1 verify
 
@@ -169,7 +172,7 @@ jobs:
       # on the app bundle; macos/dmg/mod.rs just codesigns the disk image), so the
       # DMG ships without a stapled ticket unless we submit it ourselves here.
       - name: Notarize and staple macOS DMGs (disk-image ticket)
-        if: contains(matrix.platform, 'macos')
+        if: contains(matrix.platform, 'macos') && secrets.APPLE_API_KEY != ''
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -205,7 +208,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
-          name: wealthfolio-${{ matrix.cache-key }}-${{ github.sha }}
+          name: dhanakosh-${{ matrix.cache-key }}-${{ github.sha }}
           path: |
             target/**/release/bundle/**/*.dmg
             target/**/release/bundle/**/*.exe
@@ -325,7 +328,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          draft: true
+          draft: false
           files: |
             wealthfolio-server-*-linux-amd64.tar.gz
             wealthfolio-server-*-linux-amd64.tar.gz.sha256

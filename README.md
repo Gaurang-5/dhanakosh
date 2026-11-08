@@ -28,10 +28,36 @@ the exchange is known. EPF, NPS, deposits, and other passbooks are not part of
 this version. The release contract is
 [docs/securities-public-release.md](docs/securities-public-release.md).
 
-## Download and run
+## Download Dhanakosh
 
-Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) and
-[Git](https://git-scm.com/). Those are the only tools.
+Get pre-built, ready-to-run desktop apps for your computer from
+[GitHub Releases](https://github.com/Gaurang-5/dhanakosh/releases/latest):
+
+| Platform                        | Download Link                                                                                    | Quick Installation                                   |
+| :------------------------------ | :----------------------------------------------------------------------------------------------- | :--------------------------------------------------- |
+| **Windows**                     | [⬇️ **Download for Windows (.exe)**](https://github.com/Gaurang-5/dhanakosh/releases/latest)     | Run setup wizard (`.exe`), click Next → Finish       |
+| **macOS (Apple Silicon M1–M4)** | [⬇️ **Download for macOS (.dmg)**](https://github.com/Gaurang-5/dhanakosh/releases/latest)       | Open `.dmg` and drag `Dhanakosh.app` to Applications |
+| **macOS (Intel)**               | [⬇️ **Download for macOS Intel (.dmg)**](https://github.com/Gaurang-5/dhanakosh/releases/latest) | Open `.dmg` and drag `Dhanakosh.app` to Applications |
+| **Linux**                       | [⬇️ **Download .AppImage / .deb**](https://github.com/Gaurang-5/dhanakosh/releases/latest)       | Run `.AppImage` directly or install `.deb` package   |
+
+### First-Time Opening Guide (Unsigned Open-Source App)
+
+Because Dhanakosh is an independent community project without expensive
+corporate code-signing certificates:
+
+- **On Windows**: If Windows SmartScreen displays _"Windows protected your PC"_,
+  click **More info** &rarr; click **Run anyway** (only needed once).
+- **On macOS**: If macOS Gatekeeper says _"Dhanakosh cannot be opened because
+  Apple cannot check it for malicious software"_, **right-click**
+  `Dhanakosh.app` in your Applications folder &rarr; select **Open** &rarr;
+  click **Open** (or open **System Settings → Privacy & Security** and click
+  **Open Anyway**).
+
+---
+
+## Alternative: Run with Docker or Build from Source
+
+### Docker (for local servers or containers)
 
 ```bash
 git clone https://github.com/Gaurang-5/dhanakosh.git

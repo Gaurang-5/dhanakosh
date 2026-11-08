@@ -17,9 +17,9 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "copyright": "2026 Teymz Inc.",
+    "copyright": "2026 Dhanakosh Contributors",
     "category": "public.app-category.finance",
-    "createUpdaterArtifacts": "v1Compatible",
+    "createUpdaterArtifacts": false,
     "iOS": {
       "bundleVersion": "1",
       "developmentTeam": "DYDJ2RNL5H",
@@ -27,7 +27,7 @@
     },
     "macOS": {
       "bundleVersion": "20260301.1",
-      "signingIdentity": "Developer ID Application: Teymz Inc (DYDJ2RNL5H)",
+      "signingIdentity": null,
       "minimumSystemVersion": "12.0"
     },
     "linux": {
