@@ -24,12 +24,25 @@ def convert(data):
         for scheme in folio["schemes"]:
             if abs(Decimal(str(scheme["close"])) - Decimal(str(scheme["close_calculated"]))) > Decimal("0.001"):
                 raise ValueError("Closing units do not reconcile. Nothing was converted.")
-            if Decimal(str(scheme["open"])) != 0:
-                raise ValueError("Request a statement since inception with zero opening units, so cost basis is not lost.")
             code = str(scheme.get("amfi") or "")
             if not code.isdigit() or not 5 <= len(code) <= 8:
                 raise ValueError("A scheme has no verified AMFI code. Resolve its identity before importing.")
-            balance = Decimal(str(scheme["open"]))
+            opening = Decimal(str(scheme["open"]))
+            balance = opening
+            if opening != 0:
+                if not scheme["transactions"]:
+                    raise ValueError("Opening units have no dated transaction to attach. Nothing was converted.")
+                rows.append([
+                    scheme["transactions"][0]["date"],
+                    f"AMFI-{code}",
+                    scheme.get("isin") or "",
+                    "BUY",
+                    str(opening),
+                    "",
+                    "",
+                    "INR",
+                    f"CAS opening units for scheme {code}; cost unknown",
+                ])
             seen = {}
             for tx in scheme["transactions"]:
                 kind = tx["type"]

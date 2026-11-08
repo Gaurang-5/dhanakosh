@@ -232,6 +232,7 @@ export const ImportFormat = {
   ACTIVITY_TYPE: "activityType",
   SYMBOL: "symbol",
   ISIN: "isin",
+  EXCHANGE: "exchange",
   QUANTITY: "quantity",
   UNIT_PRICE: "unitPrice",
   AMOUNT: "amount",
@@ -252,6 +253,7 @@ export const importFormatSchema = z.enum([
   ImportFormat.ACTIVITY_TYPE,
   ImportFormat.SYMBOL,
   ImportFormat.ISIN,
+  ImportFormat.EXCHANGE,
   ImportFormat.QUANTITY,
   ImportFormat.UNIT_PRICE,
   ImportFormat.AMOUNT,
@@ -416,6 +418,8 @@ export const ACTIVITY_SUBTYPES = {
   // CREDIT subtypes
   // BONUS: external flow (new capital, affects TWR/net_contribution)
   BONUS: "BONUS",
+  // BONUS_ISSUE: new shares at zero cost. Not a cash credit.
+  BONUS_ISSUE: "BONUS_ISSUE",
   // REBATE: internal flow (trading rebate, negative fee, no net_contribution change)
   REBATE: "REBATE",
   // REFUND: internal flow (fee correction/reversal, no net_contribution change)
@@ -496,6 +500,7 @@ export const SUBTYPE_DISPLAY_NAMES: Record<string, string> = {
   [ACTIVITY_SUBTYPES.DIVIDEND_IN_KIND]: "Dividend in Kind",
   [ACTIVITY_SUBTYPES.STAKING_REWARD]: "Staking Reward",
   [ACTIVITY_SUBTYPES.BONUS]: "Bonus",
+  [ACTIVITY_SUBTYPES.BONUS_ISSUE]: "Bonus shares",
   [ACTIVITY_SUBTYPES.REBATE]: "Trading Rebate",
   [ACTIVITY_SUBTYPES.REFUND]: "Fee Refund",
   [ACTIVITY_SUBTYPES.REIMBURSEMENT]: "Reimbursement",
@@ -508,7 +513,11 @@ export const SUBTYPE_DISPLAY_NAMES: Record<string, string> = {
 
 // Suggested subtypes per activity type
 export const SUBTYPES_BY_ACTIVITY_TYPE: Record<string, string[]> = {
-  [ActivityType.BUY]: [ACTIVITY_SUBTYPES.POSITION_OPEN, ACTIVITY_SUBTYPES.POSITION_CLOSE],
+  [ActivityType.BUY]: [
+    ACTIVITY_SUBTYPES.POSITION_OPEN,
+    ACTIVITY_SUBTYPES.POSITION_CLOSE,
+    ACTIVITY_SUBTYPES.BONUS_ISSUE,
+  ],
   [ActivityType.SELL]: [ACTIVITY_SUBTYPES.POSITION_OPEN, ACTIVITY_SUBTYPES.POSITION_CLOSE],
   [ActivityType.DIVIDEND]: [
     ACTIVITY_SUBTYPES.DRIP,

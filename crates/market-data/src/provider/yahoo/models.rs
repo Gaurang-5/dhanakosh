@@ -27,6 +27,16 @@ pub struct YahooQuoteSummaryResult {
     pub summary_profile: Option<YahooSummaryProfile>,
     pub summary_detail: Option<YahooSummaryDetail>,
     pub top_holdings: Option<YahooTopHoldings>,
+    /// Mutual funds and ETFs report their ISIN here. Equities use `assetProfile`.
+    #[serde(default)]
+    pub fund_profile: Option<YahooFundProfile>,
+}
+
+/// Fund profile from quoteSummary. The ISIN is present for the scheme Yahoo matched.
+#[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct YahooFundProfile {
+    pub isin: Option<String>,
 }
 
 /// Price data from quoteSummary API

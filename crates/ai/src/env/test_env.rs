@@ -1832,6 +1832,7 @@ impl HealthServiceTrait for MockHealthService {
         _snapshot_service: Arc<dyn wealthfolio_core::portfolio::snapshot::SnapshotServiceTrait>,
         _activity_service: Arc<dyn ActivityServiceTrait>,
         _lot_repository: Arc<dyn wealthfolio_core::lots::LotRepositoryTrait>,
+        _settings_service: Arc<dyn SettingsServiceTrait>,
         _configured_timezone: Option<&str>,
         _client_timezone: Option<&str>,
     ) -> CoreResult<HealthStatus> {

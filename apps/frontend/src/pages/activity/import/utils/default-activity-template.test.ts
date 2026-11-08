@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createDraftActivities } from "./draft-utils";
+import { createDraftActivities, validateDraft } from "./draft-utils";
 import { ActivityType } from "@/lib/constants";
 import type { ImportTemplateData } from "@/lib/types";
 import {
@@ -14,15 +14,18 @@ import {
 } from "./default-activity-template";
 
 describe("default-activity-template", () => {
-  it("maps Zerodha equity columns without inventing fees or order-ID support", () => {
+  it("maps Zerodha equity fees and order ids when those columns exist", () => {
     const template = createInvestmentImportPresets()[0];
     expect(template.fieldMappings).toEqual({
       date: "trade_date",
       activityType: "trade_type",
       symbol: "symbol",
       isin: "isin",
+      exchange: "exchange",
       quantity: "quantity",
       unitPrice: "price",
+      fee: "brokerage",
+      comment: "order_id",
     });
     expect(template.parseConfig?.defaultCurrency).toBe("INR");
     expect(template.activityMappings.BUY).toContain("buy");
@@ -156,5 +159,96 @@ describe("default-activity-template", () => {
     expect(merged.filter((template) => template.id === DEFAULT_ACTIVITY_TEMPLATE_ID)).toHaveLength(
       1,
     );
+  });
+
+  it("imports a Zerodha equity row on NSE and a listed ETF without an AMFI code", () => {
+    const template = createInvestmentImportPresets()[0];
+    const headers = [
+      "symbol",
+      "isin",
+      "trade_date",
+      "exchange",
+      "segment",
+      "series",
+      "trade_type",
+      "auction",
+      "quantity",
+      "price",
+      "trade_id",
+      "order_id",
+      "order_execution_time",
+    ];
+    const rows = [
+      [
+        "TCS",
+        "INE467B01029",
+        "2021-11-08",
+        "BSE",
+        "EQ",
+        "A",
+        "buy",
+        "false",
+        "4.000000",
+        "3129.399902",
+        "5224059",
+        "4641914954433051976",
+        "2021-11-08T12:43:39",
+      ],
+      [
+        "MONIFTY500",
+        "INF247L01BU1",
+        "2021-11-16",
+        "NSE",
+        "EQ",
+        "EQ",
+        "buy",
+        "false",
+        "450.000000",
+        "22.150000",
+        "456771963",
+        "1108531358580900",
+        "2021-11-16T15:07:54",
+      ],
+    ];
+    const drafts = createDraftActivities(
+      rows,
+      headers,
+      template,
+      { ...createDefaultParseConfig("INR"), ...template.parseConfig },
+      "zerodha-selected",
+    );
+
+    expect(drafts[0]).toMatchObject({
+      symbol: "TCS",
+      exchangeMic: "XBOM",
+      comment: "4641914954433051976",
+      status: "valid",
+    });
+    expect(drafts[1]).toMatchObject({
+      symbol: "MONIFTY500",
+      exchangeMic: "XNSE",
+      status: "valid",
+    });
+    expect(validateDraft(drafts[0]).errors.symbol).toBeUndefined();
+    expect(validateDraft(drafts[1]).errors.symbol).toBeUndefined();
+  });
+
+  it("keeps NSE and BSE fills of one ISIN on the NSE quote", () => {
+    const template = createInvestmentImportPresets()[0];
+    const headers = ["symbol", "isin", "trade_date", "exchange", "trade_type", "quantity", "price"];
+    const drafts = createDraftActivities(
+      [
+        ["TCS", "INE467B01029", "2021-11-08", "BSE", "buy", "4", "3129.40"],
+        ["TCS", "INE467B01029", "2021-11-10", "NSE", "buy", "2", "3168.70"],
+      ],
+      headers,
+      template,
+      { ...createDefaultParseConfig("INR"), ...template.parseConfig },
+      "zerodha-selected",
+    );
+
+    expect(drafts.map((draft) => draft.exchangeMic)).toEqual(["XNSE", "XNSE"]);
+    expect(drafts[0]?.assetCandidateKey).toBe(drafts[1]?.assetCandidateKey);
+    expect(drafts.every((draft) => draft.status === "valid")).toBe(true);
   });
 });

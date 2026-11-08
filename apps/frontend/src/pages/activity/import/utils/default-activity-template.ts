@@ -55,8 +55,11 @@ export function createInvestmentImportPresets(): ImportTemplateData[] {
         [ImportFormat.ACTIVITY_TYPE]: "trade_type",
         [ImportFormat.SYMBOL]: "symbol",
         [ImportFormat.ISIN]: "isin",
+        [ImportFormat.EXCHANGE]: "exchange",
         [ImportFormat.QUANTITY]: "quantity",
         [ImportFormat.UNIT_PRICE]: "price",
+        [ImportFormat.FEE]: "brokerage",
+        [ImportFormat.COMMENT]: "order_id",
       },
       activityMappings: {
         ...baseline.activityMappings,

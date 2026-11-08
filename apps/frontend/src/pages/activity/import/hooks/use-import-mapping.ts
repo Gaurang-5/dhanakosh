@@ -80,6 +80,7 @@ const COLUMN_ALIASES: Record<string, string[]> = {
     "cusip",
   ],
   [ImportFormat.ISIN]: ["isin", "security id", "securityid"],
+  [ImportFormat.EXCHANGE]: ["exchange", "exchange mic", "mic", "venue"],
   [ImportFormat.INSTRUMENT_TYPE]: [
     "instrumenttype",
     "instrument type",
@@ -314,6 +315,10 @@ function headerMatchesAliases(header: string, aliases: readonly string[]): boole
 }
 
 function headerIsBlockedForField(header: string, field: ImportFormat): boolean {
+  if (field === ImportFormat.EXCHANGE) {
+    const normalized = normalizeHeader(header);
+    return normalized.includes("rate") || normalized.includes("fx");
+  }
   if (field !== ImportFormat.AMOUNT) {
     return false;
   }

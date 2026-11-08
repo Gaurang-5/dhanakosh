@@ -32,7 +32,8 @@ use crate::provider::{MarketDataProvider, ProviderCapabilities, RateLimit};
 use crate::resolver::{yahoo_equity_search_queries, yahoo_exchange_to_mic, ResolverChain};
 
 use models::{
-    YahooPriceDetail, YahooQuoteSummaryResponse, YahooQuoteSummaryResult, YahooTopHoldings,
+    YahooFundProfile, YahooPriceDetail, YahooQuoteSummaryResponse, YahooQuoteSummaryResult,
+    YahooTopHoldings,
 };
 
 // ============================================================================
@@ -154,6 +155,60 @@ impl YahooProvider {
             provider: "YAHOO".to_string(),
             message: error_msg,
         }
+    }
+
+    fn yahoo_symbol_is_missing(message: &str) -> bool {
+        message.contains("404") || message.contains("symbol may be delisted")
+    }
+
+    /// Yahoo drops a renamed NSE or BSE ticker. The ISIN search returns the
+    /// current listing, and the quote stays on the venue already requested.
+    fn successor_yahoo_symbol(requested: &str, hits: &[SearchResult]) -> Option<String> {
+        let (suffix, other) = if requested.ends_with(".NS") {
+            (".NS", ".BO")
+        } else if requested.ends_with(".BO") {
+            (".BO", ".NS")
+        } else {
+            return None;
+        };
+        let listed = |hit: &SearchResult| {
+            hit.asset_type.eq_ignore_ascii_case("EQUITY")
+                || hit.asset_type.eq_ignore_ascii_case("ETF")
+        };
+        if let Some(hit) = hits
+            .iter()
+            .find(|hit| listed(hit) && hit.symbol.ends_with(suffix))
+        {
+            return (hit.symbol != requested).then(|| hit.symbol.clone());
+        }
+        let hit = hits
+            .iter()
+            .find(|hit| listed(hit) && hit.symbol.ends_with(other))?;
+        let base = hit.symbol.strip_suffix(other)?;
+        let rewritten = format!("{base}{suffix}");
+        (rewritten != requested).then_some(rewritten)
+    }
+
+    async fn renamed_indian_symbol(&self, symbol: &str, context: &QuoteContext) -> Option<String> {
+        if !symbol.ends_with(".NS") && !symbol.ends_with(".BO") {
+            return None;
+        }
+        let isin = context.identifiers.isin.as_deref()?.trim();
+        let bytes = isin.as_bytes();
+        if bytes.len() != 12
+            || !bytes[..2].iter().all(u8::is_ascii_alphabetic)
+            || !bytes[2..].iter().all(u8::is_ascii_alphanumeric)
+        {
+            return None;
+        }
+        let hits = self
+            .search_raw_with_currency(&encode(isin))
+            .await
+            .ok()
+            .filter(|hits| !hits.is_empty())?;
+        let renamed = Self::successor_yahoo_symbol(symbol, &hits)?;
+        warn!("Yahoo has no {symbol}; quoting {renamed} for ISIN {isin}");
+        Some(renamed)
     }
 
     // ========================================================================
@@ -655,7 +710,7 @@ impl YahooProvider {
         let crumb = self.ensure_crumb().await?;
 
         let url = format!(
-            "https://query1.finance.yahoo.com/v10/finance/quoteSummary/{}?modules=price,summaryProfile,summaryDetail,topHoldings&crumb={}",
+            "https://query1.finance.yahoo.com/v10/finance/quoteSummary/{}?modules=price,summaryProfile,summaryDetail,topHoldings,fundProfile&crumb={}",
             encode(symbol),
             encode(&crumb.crumb)
         );
@@ -747,6 +802,18 @@ impl YahooProvider {
             exchange: Some(item.exchange.clone()),
             ..Default::default()
         })
+    }
+
+    /// Yahoo reports a mutual fund's ISIN on `fundProfile`, not in symbol search.
+    fn fund_profile_isin(profile: Option<&YahooFundProfile>) -> Option<String> {
+        let isin = profile?.isin.as_deref()?.trim().to_ascii_uppercase();
+        let bytes = isin.as_bytes();
+        (bytes.len() == 12
+            && bytes[0].is_ascii_alphabetic()
+            && bytes[1].is_ascii_alphabetic()
+            && bytes[2..11].iter().all(|byte| byte.is_ascii_alphanumeric())
+            && bytes[11].is_ascii_digit())
+        .then_some(isin)
     }
 
     /// Map quoteSummary result to AssetProfile.
@@ -880,6 +947,7 @@ impl YahooProvider {
             dividend_yield: detail.and_then(|d| d.dividend_yield.as_ref().and_then(|v| v.raw)),
             week_52_high: detail.and_then(|d| d.fifty_two_week_high.as_ref().and_then(|v| v.raw)),
             week_52_low: detail.and_then(|d| d.fifty_two_week_low.as_ref().and_then(|v| v.raw)),
+            isin: Self::fund_profile_isin(result.fund_profile.as_ref()),
             ..Default::default()
         };
 
@@ -994,13 +1062,21 @@ impl MarketDataProvider for YahooProvider {
         context: &QuoteContext,
         instrument: ProviderInstrument,
     ) -> Result<Quote, MarketDataError> {
-        let symbol = self.extract_symbol(&instrument)?;
+        let mut symbol = self.extract_symbol(&instrument)?;
 
         debug!("Fetching latest quote for {} from Yahoo", symbol);
 
         // Try primary method first
         match self.fetch_latest_quote_primary(&symbol, context).await {
             Ok(quote) => return Ok(quote),
+            Err(error) if Self::yahoo_symbol_is_missing(&error.to_string()) => {
+                if let Some(renamed) = self.renamed_indian_symbol(&symbol, context).await {
+                    symbol = renamed;
+                    if let Ok(quote) = self.fetch_latest_quote_primary(&symbol, context).await {
+                        return Ok(quote);
+                    }
+                }
+            }
             Err(e) => {
                 debug!(
                     "Primary quote fetch failed for {}: {}, trying backup",
@@ -1020,7 +1096,7 @@ impl MarketDataProvider for YahooProvider {
         start: DateTime<Utc>,
         end: DateTime<Utc>,
     ) -> Result<Vec<Quote>, MarketDataError> {
-        let symbol = self.extract_symbol(&instrument)?;
+        let mut symbol = self.extract_symbol(&instrument)?;
 
         debug!(
             "Fetching historical quotes for {} from {} to {} from Yahoo",
@@ -1037,11 +1113,24 @@ impl MarketDataProvider for YahooProvider {
         let start_time = Self::chrono_to_offset_datetime(start);
         let end_time = Self::chrono_to_offset_datetime(end);
 
-        let response = self
+        let response = match self
             .connector
             .get_quote_history(&symbol, start_time, end_time)
             .await
-            .map_err(|e| self.convert_yahoo_error(e, &symbol))?;
+        {
+            Ok(response) => response,
+            Err(error) if Self::yahoo_symbol_is_missing(&error.to_string()) => {
+                let Some(renamed) = self.renamed_indian_symbol(&symbol, context).await else {
+                    return Err(self.convert_yahoo_error(error, &symbol));
+                };
+                symbol = renamed;
+                self.connector
+                    .get_quote_history(&symbol, start_time, end_time)
+                    .await
+                    .map_err(|retry| self.convert_yahoo_error(retry, &symbol))?
+            }
+            Err(error) => return Err(self.convert_yahoo_error(error, &symbol)),
+        };
 
         // Prefer Yahoo's own currency from response metadata over resolver chain
         let currency = response
@@ -1084,12 +1173,12 @@ impl MarketDataProvider for YahooProvider {
 
     async fn get_splits(
         &self,
-        _context: &QuoteContext,
+        context: &QuoteContext,
         instrument: ProviderInstrument,
         start: DateTime<Utc>,
         end: DateTime<Utc>,
     ) -> Result<Vec<SplitEvent>, MarketDataError> {
-        let symbol = self.extract_symbol(&instrument)?;
+        let mut symbol = self.extract_symbol(&instrument)?;
 
         if symbol.starts_with("CASH:") {
             return Ok(vec![]);
@@ -1100,11 +1189,24 @@ impl MarketDataProvider for YahooProvider {
 
         // Use 3mo interval to minimize OHLCV data in the response (~200 bars max)
         // while still returning all split events within the requested date range.
-        let response = self
+        let response = match self
             .connector
             .get_quote_history_interval(&symbol, start_time, end_time, "3mo")
             .await
-            .map_err(|e| self.convert_yahoo_error(e, &symbol))?;
+        {
+            Ok(response) => response,
+            Err(error) if Self::yahoo_symbol_is_missing(&error.to_string()) => {
+                let Some(renamed) = self.renamed_indian_symbol(&symbol, context).await else {
+                    return Err(self.convert_yahoo_error(error, &symbol));
+                };
+                symbol = renamed;
+                self.connector
+                    .get_quote_history_interval(&symbol, start_time, end_time, "3mo")
+                    .await
+                    .map_err(|retry| self.convert_yahoo_error(retry, &symbol))?
+            }
+            Err(error) => return Err(self.convert_yahoo_error(error, &symbol)),
+        };
 
         let splits = match response.splits() {
             Ok(splits) => splits,
@@ -1133,7 +1235,7 @@ impl MarketDataProvider for YahooProvider {
 
     async fn get_dividends(
         &self,
-        _context: &QuoteContext,
+        context: &QuoteContext,
         instrument: ProviderInstrument,
         start: DateTime<Utc>,
         end: DateTime<Utc>,
@@ -1148,7 +1250,16 @@ impl MarketDataProvider for YahooProvider {
             }
         };
 
-        self.fetch_dividends(&symbol, start, end).await
+        match self.fetch_dividends(&symbol, start, end).await {
+            Ok(events) => Ok(events),
+            Err(error) if Self::yahoo_symbol_is_missing(&error.to_string()) => {
+                let Some(renamed) = self.renamed_indian_symbol(&symbol, context).await else {
+                    return Err(error);
+                };
+                self.fetch_dividends(&renamed, start, end).await
+            }
+            Err(error) => Err(error),
+        }
     }
 
     async fn search(&self, query: &str) -> Result<Vec<SearchResult>, MarketDataError> {
@@ -1587,6 +1698,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(profile.quote_type.as_deref(), Some("ETF"));
+        assert_eq!(profile.isin.as_deref(), None);
         assert!(profile
             .sectors
             .as_deref()
@@ -1595,6 +1707,31 @@ mod tests {
             profile.fund_holdings.unwrap()[0]["identifier"],
             "NSE:RELIANCE"
         );
+    }
+
+    #[tokio::test]
+    async fn mutual_fund_profile_keeps_the_scheme_isin() {
+        let provider = YahooProvider::new().await.unwrap();
+        let result: YahooQuoteSummaryResult = serde_json::from_str(
+            r#"{
+              "price": {
+                "currency": "INR",
+                "exchange": "BSE",
+                "shortName": "HDFC Flexi Cap Reg Gr",
+                "longName": "HDFC Flexi Cap Reg Gr",
+                "quoteType": "MUTUALFUND"
+              },
+              "fundProfile": { "isin": "inf179k01608" }
+            }"#,
+        )
+        .unwrap();
+
+        let profile = provider
+            .map_quote_summary_to_profile("0P00005WLZ.BO", &result)
+            .unwrap();
+
+        assert_eq!(profile.quote_type.as_deref(), Some("MUTUALFUND"));
+        assert_eq!(profile.isin.as_deref(), Some("INF179K01608"));
     }
 
     fn create_test_context() -> QuoteContext {
@@ -1845,6 +1982,39 @@ mod tests {
             yahoo_equity_search_queries("BAC.PB"),
             vec!["BAC.PB".to_string()]
         );
+    }
+
+    #[test]
+    fn renamed_nse_ticker_keeps_the_nse_quote() {
+        let hits = vec![SearchResult::new(
+            "TMPV.BO",
+            "Tata Motors Passenger Vehicles Limited",
+            "BSE",
+            "EQUITY",
+        )];
+        assert_eq!(
+            YahooProvider::successor_yahoo_symbol("TATAMOTORS.NS", &hits).as_deref(),
+            Some("TMPV.NS")
+        );
+        assert_eq!(
+            YahooProvider::successor_yahoo_symbol("TATAMOTORS.BO", &hits).as_deref(),
+            Some("TMPV.BO")
+        );
+    }
+
+    #[test]
+    fn an_unchanged_listing_is_not_replaced() {
+        let hits = vec![SearchResult::new(
+            "RELIANCE.NS",
+            "Reliance",
+            "NSI",
+            "EQUITY",
+        )];
+        assert_eq!(
+            YahooProvider::successor_yahoo_symbol("RELIANCE.NS", &hits),
+            None
+        );
+        assert_eq!(YahooProvider::successor_yahoo_symbol("AAPL", &hits), None);
     }
 
     #[test]

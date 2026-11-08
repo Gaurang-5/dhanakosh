@@ -25,7 +25,7 @@ export function SipSummary({
   countLabel: string;
   count: number;
   totalLabel: string;
-  totals: { currency: string; amount: number }[];
+  totals: { currency: string; amount: number; label?: string }[];
 }) {
   return (
     <Card>
@@ -35,18 +35,20 @@ export function SipSummary({
           <p className="text-2xl font-semibold tabular-nums">{count}</p>
         </div>
         {totals.length > 0 ? (
-          <div className="space-y-1 sm:text-end">
-            <CardDescription>{totalLabel}</CardDescription>
-            <div className="flex flex-col gap-1">
-              {totals.map((total) => (
+          <div className="flex flex-col gap-2 sm:items-end">
+            {totals.map((total) => (
+              <div
+                key={`${total.label ?? "total"}-${total.currency}`}
+                className="space-y-1 sm:text-end"
+              >
+                <CardDescription>{total.label ?? totalLabel}</CardDescription>
                 <PrivacyAmount
-                  key={total.currency}
                   className="text-2xl font-semibold tabular-nums"
                   value={total.amount}
                   currency={total.currency}
                 />
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         ) : null}
       </CardHeader>
@@ -56,6 +58,7 @@ export function SipSummary({
 
 export function SipPlanCard({
   name,
+  kindLabel,
   detail,
   amount,
   currency,
@@ -65,6 +68,7 @@ export function SipPlanCard({
   children,
 }: {
   name: string;
+  kindLabel?: string;
   detail?: string;
   amount: string;
   currency: string;
@@ -79,6 +83,7 @@ export function SipPlanCard({
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <CardTitle className="truncate">{name}</CardTitle>
+            {kindLabel ? <Badge variant="outline">{kindLabel}</Badge> : null}
             <Badge variant={badgeVariant}>{badgeLabel}</Badge>
           </div>
           {detail ? <CardDescription className="truncate">{detail}</CardDescription> : null}

@@ -157,6 +157,15 @@
       "title_one": "Exchange rates for {{from}} and {{to}} disagree",
       "title_other": "Exchange rates disagree for {{count}} currency pairs",
       "message": "Rates are recorded in both directions for the same days, and they don't match. Each direction is used as recorded, so converting one way and back gives a different amount. Correct or remove the wrong rates."
+    },
+    "fund_composition_missing": {
+      "title": "{{name}} is not expanded",
+      "message": "This fund is still a single holding. Fetch its published composition or upload the issuer file.",
+      "fetched": "Composition saved for {{name}}",
+      "fetchFailed": "Could not fetch a published composition.",
+      "saved": "Composition saved for {{name}}",
+      "uploadTitle": "Upload composition",
+      "uploadDescription": "Import the issuer file for {{name}}. Review the rows before saving."
     }
   },
   "page": {
@@ -185,6 +194,8 @@
     "migrate_classifications": "Migrate Classifications",
     "migrate_legacy_classifications": "Start Migration",
     "retry_sync": "Retry Sync",
+    "refresh_fund_composition": "Fetch composition",
+    "upload_fund_composition": "Upload composition",
     "to_holdings": "View Holdings",
     "to_activities": "View Activities",
     "to_accounts": "View Accounts",

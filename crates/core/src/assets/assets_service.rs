@@ -317,39 +317,47 @@ impl AssetResolutionLocalIndex {
         self.select_identity_match(matches, exchange_mic, quote_ccy, instrument_type)
     }
 
-    fn find_by_isin(
-        &self,
-        isin: Option<&str>,
-        symbol: &str,
-        exchange_mic: Option<&str>,
-        instrument_type: Option<&InstrumentType>,
-        quote_ccy: Option<&str>,
-    ) -> Option<Asset> {
+    /// Same ISIN is the same security even when the imported name changed.
+    /// Two venues stay separate: NSE and BSE prices are not one number.
+    fn listing_mics_match(incoming: Option<&str>, stored: Option<&str>) -> bool {
+        match (
+            incoming.map(str::trim).filter(|value| !value.is_empty()),
+            stored.map(str::trim).filter(|value| !value.is_empty()),
+        ) {
+            (Some(expected), Some(actual)) => actual.eq_ignore_ascii_case(expected),
+            _ => true,
+        }
+    }
+
+    fn find_by_isin(&self, isin: Option<&str>, exchange_mic: Option<&str>) -> Option<Asset> {
         let isin = isin.and_then(normalized_lookup_key)?;
         let candidates = self.by_isin.get(&isin)?;
-        if candidates.len() == 1 {
-            return self.asset(candidates[0]);
-        }
-
-        let expected_key =
-            instrument_key_for_identity(symbol, exchange_mic, instrument_type, quote_ccy);
-        let matches = candidates
+        let compatible: Vec<usize> = candidates
             .iter()
             .copied()
             .filter(|idx| {
                 self.assets.get(*idx).is_some_and(|asset| {
-                    Self::asset_matches_identity(
-                        asset,
-                        symbol,
-                        exchange_mic,
-                        instrument_type,
-                        quote_ccy,
-                        expected_key.as_deref(),
-                    )
+                    Self::listing_mics_match(exchange_mic, asset.instrument_exchange_mic.as_deref())
                 })
             })
             .collect();
-        self.select_identity_match(matches, exchange_mic, quote_ccy, instrument_type)
+        if compatible.len() == 1 {
+            return self.asset(compatible[0]);
+        }
+        let mic = exchange_mic
+            .map(str::trim)
+            .filter(|value| !value.is_empty())?;
+        compatible
+            .into_iter()
+            .find(|idx| {
+                self.assets.get(*idx).is_some_and(|asset| {
+                    asset
+                        .instrument_exchange_mic
+                        .as_deref()
+                        .is_some_and(|actual| actual.eq_ignore_ascii_case(mic))
+                })
+            })
+            .and_then(|idx| self.asset(idx))
     }
 
     fn find_by_provider_alias(
@@ -399,15 +407,7 @@ impl AssetResolutionLocalIndex {
         quote_ccy: Option<&str>,
     ) -> Option<Asset> {
         self.find_by_id(asset_id)
-            .or_else(|| {
-                self.find_by_isin(
-                    isin,
-                    canonical_symbol,
-                    exchange_mic,
-                    instrument_type,
-                    quote_ccy,
-                )
-            })
+            .or_else(|| self.find_by_isin(isin, exchange_mic))
             .or_else(|| {
                 self.find_by_identity(canonical_symbol, exchange_mic, instrument_type, quote_ccy)
             })
@@ -431,6 +431,39 @@ struct ImportProviderSelectionConstraints<'a> {
     instrument_type: Option<&'a InstrumentType>,
     instrument_type_is_explicit: bool,
     require_exact_provider_symbol: bool,
+}
+
+/// Keep a provider ISIN when the asset does not already have one.
+/// Search results for a Yahoo mutual fund omit the ISIN; the fund profile has it.
+fn merge_missing_identifier_isin(metadata: &mut Option<serde_json::Value>, isin: Option<&str>) {
+    let Some(isin) = isin
+        .map(str::trim)
+        .filter(|value| crate::utils::isin::looks_like_isin(value))
+        .map(str::to_ascii_uppercase)
+    else {
+        return;
+    };
+    let root = metadata.get_or_insert_with(|| serde_json::json!({}));
+    let Some(root) = root.as_object_mut() else {
+        return;
+    };
+    let identifiers = root
+        .entry("identifiers")
+        .or_insert_with(|| serde_json::json!({}));
+    if identifiers.is_null() {
+        *identifiers = serde_json::json!({});
+    }
+    let Some(identifiers) = identifiers.as_object_mut() else {
+        return;
+    };
+    if identifiers
+        .get("isin")
+        .and_then(serde_json::Value::as_str)
+        .is_some_and(|stored| !stored.trim().is_empty())
+    {
+        return;
+    }
+    identifiers.insert("isin".into(), serde_json::json!(isin));
 }
 
 /// Service for managing assets
@@ -469,6 +502,14 @@ impl AssetService {
     ) -> Option<serde_json::Value> {
         if quote_mode != QuoteMode::Market {
             return None;
+        }
+
+        if instrument_symbol
+            .map(str::trim)
+            .is_some_and(|symbol| symbol.to_ascii_uppercase().starts_with("AMFI-"))
+        {
+            // Official scheme NAV. The ISIN stays the identity; AMFI is the price.
+            return Some(serde_json::json!({ "preferred_provider": "AMFI" }));
         }
 
         if matches!(instrument_type, Some(InstrumentType::Equity))
@@ -1355,6 +1396,7 @@ impl AssetService {
             .quote_service
             .get_asset_profile(&existing_asset)
             .await?;
+        let provider_isin = provider_profile.isin.clone();
         // User edits can happen during the network request. Merge missing terms into
         // the latest asset, and discard results if its identity or mode changed.
         let latest_asset = self.asset_repository.get_by_id(asset_id)?;
@@ -1449,6 +1491,7 @@ impl AssetService {
             );
             Some(serde_json::Value::Object(merged))
         };
+        merge_missing_identifier_isin(&mut updated_metadata, provider_isin.as_deref());
 
         if existing_asset.is_bond() {
             if let Some(bond) = &provider_profile.bond {
@@ -3148,7 +3191,8 @@ mod tests {
         QuoteCcyResolutionSource, UpdateAssetProfile,
     };
     use super::{
-        merge_bond_profile, AssetRepositoryTrait, AssetService, AssetServiceTrait, QuoteMode,
+        merge_bond_profile, merge_missing_identifier_isin, AssetRepositoryTrait, AssetService,
+        AssetServiceTrait, QuoteMode,
     };
     use crate::assets::AssetResolutionInput;
     use crate::errors::{DatabaseError, Error, Result};
@@ -3161,6 +3205,30 @@ mod tests {
     use rust_decimal::Decimal;
     use std::collections::{HashMap, HashSet};
     use std::sync::{Arc, Mutex};
+
+    #[test]
+    fn profile_enrichment_keeps_a_fund_isin_without_replacing_one() {
+        let mut metadata = Some(serde_json::json!({"profile": {"quoteType": "MUTUALFUND"}}));
+        merge_missing_identifier_isin(&mut metadata, Some("inf179k01608"));
+        assert_eq!(
+            metadata.as_ref().unwrap()["identifiers"]["isin"],
+            "INF179K01608"
+        );
+        assert_eq!(
+            metadata.as_ref().unwrap()["profile"]["quoteType"],
+            "MUTUALFUND"
+        );
+
+        merge_missing_identifier_isin(&mut metadata, Some("INF879O01027"));
+        assert_eq!(
+            metadata.as_ref().unwrap()["identifiers"]["isin"],
+            "INF179K01608"
+        );
+
+        let mut untouched = Some(serde_json::json!({}));
+        merge_missing_identifier_isin(&mut untouched, Some("not-an-isin"));
+        assert!(untouched.as_ref().unwrap().get("identifiers").is_none());
+    }
 
     #[tokio::test]
     async fn bond_import_reuses_legacy_metadata_without_changing_currency() {
@@ -5448,6 +5516,53 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn renamed_indian_listing_matches_the_existing_isin() {
+        let existing = Asset {
+            id: "reliance-nse".to_string(),
+            name: Some("Reliance Industries Limited".to_string()),
+            display_code: Some("RELIANCE".to_string()),
+            instrument_symbol: Some("RELIANCE".to_string()),
+            instrument_exchange_mic: Some("XNSE".to_string()),
+            instrument_type: Some(InstrumentType::Equity),
+            quote_ccy: "INR".to_string(),
+            kind: AssetKind::Investment,
+            metadata: Some(serde_json::json!({
+                "identifiers": { "isin": "INE002A01018" }
+            })),
+            ..Default::default()
+        };
+        let bse = Asset {
+            id: "reliance-bse".to_string(),
+            name: Some("Reliance Industries Limited".to_string()),
+            display_code: Some("500325".to_string()),
+            instrument_symbol: Some("500325".to_string()),
+            instrument_exchange_mic: Some("XBOM".to_string()),
+            instrument_type: Some(InstrumentType::Equity),
+            quote_ccy: "INR".to_string(),
+            kind: AssetKind::Investment,
+            metadata: Some(serde_json::json!({
+                "identifiers": { "isin": "INE002A01018" }
+            })),
+            ..Default::default()
+        };
+        let service = test_asset_service(vec![existing, bse], TestQuoteService::default());
+        let mut renamed = import_input("Reliance Industries Ltd", "INR");
+        renamed.isin = Some("INE002A01018".to_string());
+        renamed.exchange_mic = Some("XNSE".to_string());
+
+        let output = service
+            .resolve_import_asset_inputs(vec![renamed])
+            .await
+            .unwrap()
+            .pop()
+            .unwrap();
+
+        assert_eq!(output.existing_asset_id.as_deref(), Some("reliance-nse"));
+        assert_eq!(output.exchange_mic.as_deref(), Some("XNSE"));
+        assert!(output.draft.is_none());
+    }
+
+    #[tokio::test]
     async fn test_resolve_import_asset_inputs_uses_existing_asset_before_provider() {
         let existing = Asset {
             id: "shop-tsx".to_string(),
@@ -5868,6 +5983,21 @@ mod tests {
         );
 
         assert!(provider_config.is_none());
+    }
+
+    #[test]
+    fn test_amfi_symbol_prefers_the_official_nav() {
+        let provider_config = AssetService::inferred_provider_config(
+            QuoteMode::Market,
+            Some(&InstrumentType::Equity),
+            Some("AMFI-120503"),
+            None,
+        );
+
+        assert_eq!(
+            provider_config,
+            Some(serde_json::json!({ "preferred_provider": "AMFI" }))
+        );
     }
 
     #[test]

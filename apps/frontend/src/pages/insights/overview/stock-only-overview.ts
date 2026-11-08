@@ -41,6 +41,15 @@ function allocation(name: string, values: Map<string, number>): TaxonomyAllocati
   };
 }
 
+/** Direct holdings stay whole. Look-through replaces them only while stock-only is on. */
+export function compositionHoldings<T>(
+  stockOnly: boolean,
+  directHoldings: T[],
+  lookThroughHoldings: T[] | null,
+): T[] {
+  return stockOnly ? (lookThroughHoldings ?? directHoldings) : directHoldings;
+}
+
 export function buildStockOnlyOverview(
   view: ExposureView,
   directHoldings: Holding[],
@@ -98,8 +107,12 @@ export function buildStockOnlyOverview(
       marketValue: { local: row.totalValue, base: row.totalValue },
       weight: 0,
       asOfDate: original?.asOfDate ?? "",
-      ...(row.fundValue === 0 && original
-        ? { dayChange: original.dayChange, dayChangePct: original.dayChangePct }
+      // The daily percent is the stock's own move, including the part held
+      // through a fund. The rupee change stays direct-only so it is not shown
+      // against the larger look-through value.
+      ...(original?.dayChangePct != null ? { dayChangePct: original.dayChangePct } : {}),
+      ...(row.fundValue === 0 && original?.dayChange != null
+        ? { dayChange: original.dayChange }
         : {}),
     };
   });

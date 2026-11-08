@@ -232,7 +232,16 @@ pub async fn refresh(
         return save(settings, assets, snapshot).await;
     }
     if is_indian_fund_asset(&asset) {
-        let snapshot = fetch_bharatstock_composition(&asset, secret_store).await?;
+        let (snapshot, discovered_isin) =
+            fetch_bharatstock_composition(&asset, secret_store).await?;
+        if let Some(isin) = discovered_isin {
+            if let Err(error) = remember_fund_isin(assets, &asset, &isin).await {
+                warn!(
+                    "Saved the fund composition for {} without storing its ISIN: {}",
+                    asset.id, error
+                );
+            }
+        }
         return save(settings, assets, snapshot).await;
     }
 
@@ -276,6 +285,10 @@ struct BharatStockSchemePage {
 #[derive(Debug, Deserialize)]
 struct BharatStockScheme {
     scheme_name: String,
+    #[serde(default)]
+    plan: Option<String>,
+    #[serde(default)]
+    option: Option<String>,
     isin_growth: Option<String>,
     isin_div_reinvest: Option<String>,
 }
@@ -648,10 +661,178 @@ async fn bharatstock_get<T: serde::de::DeserializeOwned>(
         .map_err(|_| invalid("BharatStock returned an unsupported fund composition."))
 }
 
+fn fund_name_tokens(name: &str) -> Vec<String> {
+    name.split(|character: char| !character.is_ascii_alphanumeric())
+        .filter(|token| !token.is_empty())
+        .map(|token| token.to_ascii_lowercase())
+        .collect()
+}
+
+/// Yahoo labels a scheme "HDFC Flexi Cap Reg Gr". The scheme search wants the
+/// fund name, with the plan and option carried as separate filters.
+fn scheme_search_query(name: &str) -> String {
+    fund_name_tokens(name)
+        .into_iter()
+        .filter(|token| {
+            !matches!(
+                token.as_str(),
+                "direct"
+                    | "dir"
+                    | "regular"
+                    | "reg"
+                    | "plan"
+                    | "growth"
+                    | "gr"
+                    | "idcw"
+                    | "option"
+                    | "fund"
+                    | "mf"
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+fn scheme_plan_filter(name: &str) -> Option<&'static str> {
+    let tokens = fund_name_tokens(name);
+    if tokens
+        .iter()
+        .any(|token| token == "direct" || token == "dir")
+    {
+        Some("Direct")
+    } else if tokens
+        .iter()
+        .any(|token| token == "regular" || token == "reg")
+    {
+        Some("Regular")
+    } else {
+        None
+    }
+}
+
+fn scheme_option_filter(name: &str) -> &'static str {
+    if fund_name_tokens(name)
+        .iter()
+        .any(|token| matches!(token.as_str(), "idcw" | "div" | "dividend"))
+    {
+        "IDCW"
+    } else {
+        "Growth"
+    }
+}
+
+fn scheme_isin(scheme: &BharatStockScheme, option: &str) -> Option<String> {
+    let raw = if option.eq_ignore_ascii_case("IDCW") {
+        scheme
+            .isin_div_reinvest
+            .as_deref()
+            .or(scheme.isin_growth.as_deref())
+    } else {
+        scheme.isin_growth.as_deref()
+    }?;
+    let isin = raw.trim().to_ascii_uppercase();
+    (isin.len() == 12 && isin.starts_with("INF")).then_some(isin)
+}
+
+async fn search_schemes(
+    client: &reqwest::Client,
+    api_key: &str,
+    query: &str,
+    plan: Option<&str>,
+    option: &str,
+) -> Result<Vec<BharatStockScheme>> {
+    let mut url = url::Url::parse(&format!("{BHARATSTOCK_ROOT}/v1/mf/schemes"))
+        .expect("BharatStock base URL is valid");
+    {
+        let mut pairs = url.query_pairs_mut();
+        pairs
+            .append_pair("q", query)
+            .append_pair("option", option)
+            .append_pair("limit", "10");
+        if let Some(plan) = plan {
+            pairs.append_pair("plan", plan);
+        }
+    }
+    let page: BharatStockSchemePage = bharatstock_get(client, api_key, url).await?;
+    Ok(page.data)
+}
+
+async fn find_scheme_by_fund_name(
+    client: &reqwest::Client,
+    api_key: &str,
+    asset: &crate::assets::Asset,
+) -> Result<(BharatStockScheme, String)> {
+    let name = asset.name.as_deref().unwrap_or("").trim();
+    let query = scheme_search_query(name);
+    if query.is_empty() {
+        return Err(invalid(
+            "This Indian fund needs an ISIN before its full composition can be matched.",
+        ));
+    }
+    let option = scheme_option_filter(name);
+    let plan = scheme_plan_filter(name);
+    let mut schemes = search_schemes(client, api_key, &query, plan, option).await?;
+    if schemes.is_empty() && plan.is_some() {
+        schemes = search_schemes(client, api_key, &query, None, option).await?;
+    }
+    let scheme = schemes
+        .into_iter()
+        .find(|scheme| {
+            plan.is_none_or(|wanted| {
+                scheme.plan.as_deref().is_none_or(|value| {
+                    value
+                        .to_ascii_lowercase()
+                        .contains(&wanted.to_ascii_lowercase())
+                })
+            }) && scheme.option.as_deref().is_none_or(|value| {
+                value
+                    .to_ascii_lowercase()
+                    .contains(&option.to_ascii_lowercase())
+            })
+        })
+        .ok_or_else(|| invalid("BharatStock could not identify this mutual fund from its name."))?;
+    let isin = scheme_isin(&scheme, option)
+        .ok_or_else(|| invalid("BharatStock identified this fund but did not return its ISIN."))?;
+    Ok((scheme, isin))
+}
+
+async fn remember_fund_isin(
+    assets: &dyn AssetServiceTrait,
+    asset: &crate::assets::Asset,
+    isin: &str,
+) -> Result<()> {
+    let mut metadata = asset
+        .metadata
+        .clone()
+        .unwrap_or_else(|| serde_json::json!({}));
+    let Some(root) = metadata.as_object_mut() else {
+        return Ok(());
+    };
+    let identifiers = root
+        .entry("identifiers")
+        .or_insert_with(|| serde_json::json!({}));
+    if identifiers.is_null() {
+        *identifiers = serde_json::json!({});
+    }
+    let Some(identifiers) = identifiers.as_object_mut() else {
+        return Ok(());
+    };
+    if identifiers
+        .get("isin")
+        .and_then(serde_json::Value::as_str)
+        .is_some_and(|stored| !stored.trim().is_empty())
+    {
+        return Ok(());
+    }
+    identifiers.insert("isin".into(), serde_json::json!(isin));
+    assets.update_asset_metadata(&asset.id, metadata).await?;
+    Ok(())
+}
+
 async fn fetch_bharatstock_composition(
     asset: &crate::assets::Asset,
     secret_store: &dyn SecretStore,
-) -> Result<FundComposition> {
+) -> Result<(FundComposition, Option<String>)> {
     use crate::quotes::constants::DATA_SOURCE_BHARATSTOCK;
 
     let api_key = secret_store
@@ -662,41 +843,48 @@ async fn fetch_bharatstock_composition(
                 "Add a free BharatStock API key in Settings > Market Data to load the complete fund composition.",
             )
         })?;
-    let isin = asset
+    let stored_isin = asset
         .metadata
         .as_ref()
         .and_then(|value| value.pointer("/identifiers/isin"))
         .and_then(serde_json::Value::as_str)
         .map(str::trim)
         .filter(|value| !value.is_empty())
-        .ok_or_else(|| {
-            invalid("This Indian fund needs an ISIN before its full composition can be matched.")
-        })?;
+        .map(str::to_string);
     let client = wealthfolio_http::client_builder()
         .timeout(Duration::from_secs(45))
         .build()
         .map_err(|_| invalid("Could not initialize the full-composition provider."))?;
 
-    let mut schemes_url = url::Url::parse(&format!("{BHARATSTOCK_ROOT}/v1/mf/schemes"))
-        .expect("BharatStock base URL is valid");
-    schemes_url
-        .query_pairs_mut()
-        .append_pair("isin", isin)
-        .append_pair("limit", "10");
-    let schemes: BharatStockSchemePage = bharatstock_get(&client, &api_key, schemes_url).await?;
-    let scheme = schemes
-        .data
-        .into_iter()
-        .find(|scheme| {
-            [
-                scheme.isin_growth.as_deref(),
-                scheme.isin_div_reinvest.as_deref(),
-            ]
+    let (scheme, discovered_isin) = if let Some(isin) = stored_isin {
+        let mut schemes_url = url::Url::parse(&format!("{BHARATSTOCK_ROOT}/v1/mf/schemes"))
+            .expect("BharatStock base URL is valid");
+        schemes_url
+            .query_pairs_mut()
+            .append_pair("isin", &isin)
+            .append_pair("limit", "10");
+        let schemes: BharatStockSchemePage =
+            bharatstock_get(&client, &api_key, schemes_url).await?;
+        let scheme = schemes
+            .data
             .into_iter()
-            .flatten()
-            .any(|candidate| candidate.eq_ignore_ascii_case(isin))
-        })
-        .ok_or_else(|| invalid("BharatStock could not identify this mutual fund from its ISIN."))?;
+            .find(|scheme| {
+                [
+                    scheme.isin_growth.as_deref(),
+                    scheme.isin_div_reinvest.as_deref(),
+                ]
+                .into_iter()
+                .flatten()
+                .any(|candidate| candidate.eq_ignore_ascii_case(&isin))
+            })
+            .ok_or_else(|| {
+                invalid("BharatStock could not identify this mutual fund from its ISIN.")
+            })?;
+        (scheme, None)
+    } else {
+        let (scheme, isin) = find_scheme_by_fund_name(&client, &api_key, asset).await?;
+        (scheme, Some(isin))
+    };
 
     let mut portfolios_url = url::Url::parse(&format!("{BHARATSTOCK_ROOT}/v1/mf/portfolios"))
         .expect("BharatStock base URL is valid");
@@ -773,22 +961,25 @@ async fn fetch_bharatstock_composition(
             "BharatStock has no complete monthly portfolio for this fund yet. Import the AMC file instead.",
         ));
     }
-    Ok(FundComposition {
-        asset_id: asset.id.clone(),
-        source: BHARATSTOCK_SOURCE.into(),
-        as_of,
-        fetched_at: String::new(),
-        imported: false,
-        constituents: constituents
-            .into_iter()
-            .map(|(identifier, (name, weight_percent))| Constituent {
-                identifier,
-                name,
-                sector: None,
-                weight_percent,
-            })
-            .collect(),
-    })
+    Ok((
+        FundComposition {
+            asset_id: asset.id.clone(),
+            source: BHARATSTOCK_SOURCE.into(),
+            as_of,
+            fetched_at: String::new(),
+            imported: false,
+            constituents: constituents
+                .into_iter()
+                .map(|(identifier, (name, weight_percent))| Constituent {
+                    identifier,
+                    name,
+                    sector: None,
+                    weight_percent,
+                })
+                .collect(),
+        },
+        discovered_isin,
+    ))
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -939,6 +1130,21 @@ mod tests {
             exposure_identifier(Some(&legacy_metadata), Some("XNSE"), "NXST", "asset-id"),
             "INE0NDH25011"
         );
+    }
+
+    #[test]
+    fn yahoo_regular_growth_name_searches_the_scheme_without_plan_words() {
+        assert_eq!(
+            scheme_search_query("HDFC Flexi Cap Reg Gr"),
+            "hdfc flexi cap"
+        );
+        assert_eq!(scheme_plan_filter("HDFC Flexi Cap Reg Gr"), Some("Regular"));
+        assert_eq!(scheme_option_filter("HDFC Flexi Cap Reg Gr"), "Growth");
+        assert_eq!(
+            scheme_plan_filter("Parag Parikh Flexi Cap Dir Gr"),
+            Some("Direct")
+        );
+        assert_eq!(scheme_option_filter("HDFC Flexi Cap IDCW"), "IDCW");
     }
 
     #[test]

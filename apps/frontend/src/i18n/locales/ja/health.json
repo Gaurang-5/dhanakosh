@@ -157,6 +157,15 @@
       "title_one": "{{from}}と{{to}}の為替レートが一致しません",
       "title_other": "{{count}}組の通貨ペアで為替レートが一致しません",
       "message": "同じ日について両方向のレートが記録されており、互いに一致しません。各方向は記録どおりに使われるため、往復で換算すると金額が変わります。誤ったレートを修正または削除してください。"
+    },
+    "fund_composition_missing": {
+      "title": "{{name}} は展開されていません",
+      "message": "このファンドはまだ1つの銘柄のままです。公開されている構成を取得するか、運用会社のファイルをアップロードしてください。",
+      "fetched": "{{name}} の構成を保存しました",
+      "fetchFailed": "公開されている構成を取得できませんでした。",
+      "saved": "{{name}} の構成を保存しました",
+      "uploadTitle": "構成をアップロード",
+      "uploadDescription": "{{name}} の運用会社ファイルを取り込みます。保存する前に行を確認してください。"
     }
   },
   "page": {
@@ -185,6 +194,8 @@
     "migrate_classifications": "分類を移行",
     "migrate_legacy_classifications": "移行を開始",
     "retry_sync": "同期を再試行",
+    "refresh_fund_composition": "構成を取得",
+    "upload_fund_composition": "構成をアップロード",
     "to_holdings": "保有銘柄を表示",
     "to_activities": "取引を表示",
     "to_accounts": "口座を表示",

@@ -11,6 +11,7 @@
 pub mod account_configuration;
 pub mod classification;
 pub mod data_consistency;
+pub mod fund_composition;
 pub mod fx_integrity;
 pub mod price_staleness;
 pub mod quote_sync;

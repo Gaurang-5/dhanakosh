@@ -176,6 +176,8 @@ pub enum Subtype {
     StakingReward,
     DividendInKind,
     Bonus,
+    /// New shares issued at zero cost on the bonus date. Not a cash credit.
+    BonusIssue,
     Rebate,
     Refund,
     Reimbursement,

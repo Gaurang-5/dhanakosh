@@ -4,6 +4,9 @@ export interface InvestmentPlan {
   name: string;
   accountId: string;
   assetId: string;
+  /** Missing on plans saved before SWP and STP. Those stay SIP. */
+  kind?: "SIP" | "SWP" | "STP";
+  destinationAssetId?: string | null;
   amount: string;
   currency: string;
   startDate: string;

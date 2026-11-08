@@ -1,6 +1,13 @@
-# Wealthfolio - Production Docker Compose
+# Dhanakosh — build and run this repository.
 #
-# Usage: docker compose --env-file .env.docker up -d
+#   ./scripts/prepare-docker-env.sh
+#   docker compose --env-file .env.docker up -d --build
+#
+# Open http://localhost:8088
+#
+# This file builds the checkout. It does not pull wealthfolio/wealthfolio,
+# which is the official Wealthfolio app.
+#
 # Reverse proxy overlay: docker compose --env-file .env.docker -f compose.yml -f compose.proxy.yml up -d
 # Dev overlay: docker compose --env-file .env.docker -f compose.yml -f compose.dev.yml up
 #
@@ -8,8 +15,11 @@
 
 services:
   wealthfolio:
-    image: wealthfolio/wealthfolio:latest
-    container_name: wealthfolio
+    image: dhanakosh:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dhanakosh
     restart: unless-stopped
     ports:
       - "${WF_PORT:-8088}:8088"

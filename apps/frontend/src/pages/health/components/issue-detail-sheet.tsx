@@ -675,7 +675,7 @@ export function IssueDetailSheet({
                                 ) : (
                                   <Icons.Wand2 className="me-2 h-4 w-4" />
                                 )}
-                                {action.label}
+                                {t(`health:actions.${action.id}`, { defaultValue: action.label })}
                               </Button>
                             ),
                           )}

@@ -171,6 +171,7 @@ async fn fresh_health_reads_history_off_the_async_worker_and_populates_its_cache
             state.snapshot_service.clone(),
             state.activity_service.clone(),
             state.lots_repository.clone(),
+            state.settings_service.clone(),
             Some("UTC"),
             None,
         )

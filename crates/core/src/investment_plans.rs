@@ -10,6 +10,14 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 const KEY: &str = "investment_plans_v1";
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum PlanKind {
+    #[default]
+    Sip,
+    Swp,
+    Stp,
+}
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct InvestmentPlan {
@@ -17,6 +25,11 @@ pub struct InvestmentPlan {
     pub name: String,
     pub account_id: String,
     pub asset_id: String,
+    /// SIP buys this asset. SWP sells it. STP sells it and buys the destination.
+    #[serde(default)]
+    pub kind: PlanKind,
+    #[serde(default)]
+    pub destination_asset_id: Option<String>,
     #[serde(serialize_with = "rust_decimal::serde::str::serialize")]
     pub amount: Decimal,
     pub currency: String,
@@ -48,6 +61,16 @@ pub fn validate(plans: &[InvestmentPlan]) -> Result<()> {
             || p.end_date.is_some_and(|end| end < p.start_date)
         {
             return Err(invalid());
+        }
+        if p.kind == PlanKind::Stp {
+            let destination = p
+                .destination_asset_id
+                .as_deref()
+                .map(str::trim)
+                .filter(|id| !id.is_empty());
+            if !matches!(destination, Some(id) if id != p.asset_id) {
+                return Err(invalid());
+            }
         }
     }
     Ok(())
@@ -83,6 +106,14 @@ pub async fn save(
                 "Choose an investment asset".into(),
             ));
         }
+        if p.kind == PlanKind::Stp {
+            let destination = p.destination_asset_id.as_deref().unwrap_or_default();
+            if assets.get_asset_by_id(destination)?.kind != AssetKind::Investment {
+                return Err(Error::InvalidConfigValue(
+                    "Choose an investment to transfer into".into(),
+                ));
+            }
+        }
     }
     let value = serde_json::to_string(plans).map_err(|_| invalid())?;
     settings.set_setting_value(KEY, &value).await
@@ -102,7 +133,28 @@ mod tests {
             end_date: None,
             day_of_month: 31,
             paused: false,
+            kind: PlanKind::Sip,
+            destination_asset_id: None,
         }
+    }
+
+    #[test]
+    fn a_saved_sip_without_a_kind_is_still_a_sip() {
+        let stored = r#"{"id":"11111111-1111-4111-8111-111111111111","name":"Monthly fund","accountId":"account","assetId":"fund","amount":"5000","currency":"INR","startDate":"2026-01-01","endDate":null,"dayOfMonth":31,"paused":false}"#;
+        let plan: InvestmentPlan = serde_json::from_str(stored).unwrap();
+        assert_eq!(plan.kind, PlanKind::Sip);
+        assert_eq!(plan.destination_asset_id, None);
+    }
+
+    #[test]
+    fn a_transfer_needs_a_different_destination_fund() {
+        let mut transfer = plan();
+        transfer.kind = PlanKind::Stp;
+        assert!(validate(&[transfer.clone()]).is_err());
+        transfer.destination_asset_id = Some(transfer.asset_id.clone());
+        assert!(validate(&[transfer.clone()]).is_err());
+        transfer.destination_asset_id = Some("destination-fund".to_string());
+        assert!(validate(&[transfer]).is_ok());
     }
     #[test]
     fn rejects_invalid_amount_days_and_duplicate_ids() {

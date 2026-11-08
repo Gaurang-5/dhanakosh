@@ -173,8 +173,9 @@ const CustomizedContent: FC<CustomizedContentProps> = ({
   const formatting = useNumberFormatting();
   const fontSize = Math.min(width, height) < 80 ? Math.min(width, height) * 0.16 : 13;
   const fontSize2 = Math.min(width, height) < 80 ? Math.min(width, height) * 0.14 : 12;
+  const quotedGain = typeof gain === "number" ? gain : null;
   const { fill: fillColor, isLightTile } = getTreemapColor(
-    exposureMode ? weight : gain,
+    exposureMode ? weight : (quotedGain ?? 0),
     returnType,
     palette,
   );
@@ -186,9 +187,17 @@ const CustomizedContent: FC<CustomizedContentProps> = ({
   const displayText = displayMode === "name" && name ? name : symbol;
   // Truncate text to fit within the available width (with some padding)
   const truncatedText = truncateText(displayText || "", width - 16, fontSize + 1);
-  const showLabel = !logoOnly && width >= 80 && height >= 52;
   const showLogo = width >= 18 && height >= 18 && !!avatarSymbol;
-  const logoSize = Math.max(8, Math.min(48, Math.min(width, height) * (showLabel ? 0.28 : 0.65)));
+  const textBlock = fontSize + fontSize2 + 12;
+  const logoWithLabel = Math.min(64, Math.min(width, height) * 0.46);
+  // The mark stays. The ticker is added only when the tile still has room under it.
+  const showLabel =
+    !logoOnly &&
+    width >= 96 &&
+    (showLogo ? height >= logoWithLabel + textBlock && height >= 88 : width >= 80 && height >= 52);
+  const logoSize = showLogo
+    ? Math.max(14, Math.min(64, Math.min(width, height) * (showLabel ? 0.46 : 0.65)))
+    : 0;
   const labelCenterY = y + height / 2 + (showLogo ? logoSize * 0.42 : 0);
   const logoY = !showLabel ? y + height / 2 - logoSize / 2 : labelCenterY - logoSize - fontSize - 4;
 
@@ -268,16 +277,20 @@ const CustomizedContent: FC<CustomizedContentProps> = ({
 
   if (mobile && isTile) {
     const tile = mobileTileLayout(width, height, !!avatarSymbol);
-    const percentText = exposureMode
-      ? formatting.formatPercent(weight)
-      : gain > 0
-        ? "+" + formatting.formatPercent(gain)
-        : formatting.formatPercent(gain);
+    const percentText =
+      !exposureMode && quotedGain == null
+        ? ""
+        : exposureMode
+          ? formatting.formatPercent(weight)
+          : quotedGain > 0
+            ? "+" + formatting.formatPercent(quotedGain)
+            : formatting.formatPercent(quotedGain ?? 0);
+    const showPercent = tile.showPercent && percentText.length > 0;
     const symbolText = truncateText(displayText || "", Math.max(0, width - 8), tile.symbolSize);
     const rows = [
       tile.showLogo ? tile.logoSize : 0,
       tile.showSymbol ? tile.symbolSize : 0,
-      tile.showPercent ? tile.percentSize : 0,
+      showPercent ? tile.percentSize : 0,
     ].filter((size) => size > 0);
     const rowGap = 2;
     const stackHeight =
@@ -294,7 +307,7 @@ const CustomizedContent: FC<CustomizedContentProps> = ({
       symbolY = cursor + tile.symbolSize * 0.82;
       cursor += tile.symbolSize + rowGap;
     }
-    if (tile.showPercent) {
+    if (showPercent) {
       percentY = cursor + tile.percentSize * 0.82;
     }
     const tileBody = (
@@ -341,7 +354,7 @@ const CustomizedContent: FC<CustomizedContentProps> = ({
             {symbolText}
           </text>
         ) : null}
-        {tile.showPercent ? (
+        {showPercent ? (
           <text
             x={x + width / 2}
             y={percentY}
@@ -356,7 +369,8 @@ const CustomizedContent: FC<CustomizedContentProps> = ({
       </g>
     );
     const sectorName = grouped ? root?.name : undefined;
-    const openHolding = !exposureMode && (tile.showSymbol || !sectorName) && Boolean(id || symbol);
+    const openHolding =
+      !exposureMode && (tile.showLogo || tile.showSymbol || !sectorName) && Boolean(id || symbol);
     if (!openHolding && sectorName && !tile.showSymbol && !tile.showPercent) {
       return (
         <g
@@ -469,9 +483,11 @@ const CustomizedContent: FC<CustomizedContentProps> = ({
             >
               {exposureMode
                 ? formatting.formatPercent(weight)
-                : gain > 0
-                  ? "+" + formatting.formatPercent(gain)
-                  : formatting.formatPercent(gain)}
+                : quotedGain == null
+                  ? ""
+                  : quotedGain > 0
+                    ? "+" + formatting.formatPercent(quotedGain)
+                    : formatting.formatPercent(quotedGain)}
             </text>
           )}
         </>
@@ -519,8 +535,8 @@ const CompositionTooltip = ({
   if (active && payload?.length) {
     const data = payload[0].payload;
     const value = payload[0].value;
-    const gain = data.gain || 0;
-    const isPositive = gain >= 0;
+    const gain = typeof data.gain === "number" ? data.gain : null;
+    const isPositive = (gain ?? 0) >= 0;
 
     return (
       <Card>
@@ -554,7 +570,7 @@ const CompositionTooltip = ({
             </div>
 
             {/* Gain/Loss */}
-            {!exposureMode && (
+            {!exposureMode && gain != null && (
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground text-sm">{t("holdings:return")}</span>
                 <span
@@ -653,7 +669,7 @@ export function PortfolioComposition({
         if (!symbol) return null; // Skip if no symbol
         const avatarIdentity = getInstrumentAvatarIdentity(holding.instrument);
 
-        const gain = getBaseHoldingPerformancePercentForMode(holding, returnType) ?? 0;
+        const gain = getBaseHoldingPerformancePercentForMode(holding, returnType);
 
         const marketValue = Number(holding.marketValue?.base) || 0;
 

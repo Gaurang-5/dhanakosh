@@ -15,7 +15,7 @@ import {
   localHouseholdDate,
 } from "@/features/household/household-api";
 import { useHouseholdScope } from "@/features/household/household-scope";
-import { installmentDate } from "./schedule";
+import { installmentDate, planKind } from "./schedule";
 import { SipPlanCard, SipSummary } from "./plan-card";
 import { monthlyTotals } from "./plan-form";
 
@@ -56,7 +56,17 @@ export function HouseholdInvestmentPlansPage() {
           countLabel={t("sip.active")}
           count={activePlans.length}
           totalLabel={t("sip.total")}
-          totals={monthlyTotals(activePlans)}
+          totals={monthlyTotals(activePlans).map((total) => ({
+            currency: total.currency,
+            amount: total.amount,
+            label: t(
+              total.kind === "SWP"
+                ? "sip.kindSwp"
+                : total.kind === "STP"
+                  ? "sip.kindStp"
+                  : "sip.kindSip",
+            ),
+          }))}
         />
         {query.isPending ? (
           <div className="space-y-3" role="status">
@@ -103,6 +113,13 @@ export function HouseholdInvestmentPlansPage() {
                   <SipPlanCard
                     key={plan.id}
                     name={plan.name}
+                    kindLabel={t(
+                      planKind(plan) === "SWP"
+                        ? "sip.kindSwp"
+                        : planKind(plan) === "STP"
+                          ? "sip.kindStp"
+                          : "sip.kindSip",
+                    )}
                     amount={plan.amount}
                     currency={plan.currency}
                     badgeLabel={

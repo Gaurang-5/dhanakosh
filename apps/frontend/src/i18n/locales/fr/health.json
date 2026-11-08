@@ -187,6 +187,15 @@
       "title_other": "Les taux de change ne concordent pas pour {{count}} paires de devises",
       "title_many": "Les taux de change ne concordent pas pour {{count}} paires de devises",
       "message": "Des taux sont enregistrés dans les deux sens pour les mêmes jours et ne correspondent pas. Chaque sens est utilisé tel qu'enregistré, donc une conversion aller-retour donne un montant différent. Corrigez ou supprimez les taux erronés."
+    },
+    "fund_composition_missing": {
+      "title": "{{name}} n'est pas détaillé",
+      "message": "Ce fonds est encore une seule ligne. Récupérez sa composition publiée ou importez le fichier de l'émetteur.",
+      "fetched": "Composition enregistrée pour {{name}}",
+      "fetchFailed": "Impossible de récupérer une composition publiée.",
+      "saved": "Composition enregistrée pour {{name}}",
+      "uploadTitle": "Importer la composition",
+      "uploadDescription": "Importez le fichier de l'émetteur pour {{name}}. Vérifiez les lignes avant d'enregistrer."
     }
   },
   "page": {
@@ -215,6 +224,8 @@
     "migrate_classifications": "Migrer les classifications",
     "migrate_legacy_classifications": "Démarrer la migration",
     "retry_sync": "Réessayer la synchronisation",
+    "refresh_fund_composition": "Récupérer la composition",
+    "upload_fund_composition": "Importer la composition",
     "to_holdings": "Voir les positions",
     "to_activities": "Voir les activités",
     "to_accounts": "Voir les comptes",

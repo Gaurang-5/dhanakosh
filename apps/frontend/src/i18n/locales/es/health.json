@@ -187,6 +187,15 @@
       "title_other": "Los tipos de cambio no coinciden en {{count}} pares de monedas",
       "title_many": "Los tipos de cambio no coinciden en {{count}} pares de monedas",
       "message": "Hay tipos registrados en ambos sentidos para los mismos días y no coinciden. Cada sentido se usa tal como está registrado, así que convertir en un sentido y volver da un importe distinto. Corrige o elimina los tipos incorrectos."
+    },
+    "fund_composition_missing": {
+      "title": "{{name}} no está desglosado",
+      "message": "Este fondo sigue siendo una sola posición. Obtén su composición publicada o sube el archivo del emisor.",
+      "fetched": "Composición guardada para {{name}}",
+      "fetchFailed": "No se pudo obtener una composición publicada.",
+      "saved": "Composición guardada para {{name}}",
+      "uploadTitle": "Subir composición",
+      "uploadDescription": "Importa el archivo del emisor para {{name}}. Revisa las filas antes de guardar."
     }
   },
   "page": {
@@ -215,6 +224,8 @@
     "migrate_classifications": "Migrar clasificaciones",
     "migrate_legacy_classifications": "Iniciar migración",
     "retry_sync": "Reintentar sincronización",
+    "refresh_fund_composition": "Obtener composición",
+    "upload_fund_composition": "Subir composición",
     "to_holdings": "Ver posiciones",
     "to_activities": "Ver actividades",
     "to_accounts": "Ver cuentas",

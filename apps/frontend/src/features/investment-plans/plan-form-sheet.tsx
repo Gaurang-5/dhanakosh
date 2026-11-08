@@ -26,11 +26,13 @@ export function PlanFormSheet({
   accounts,
   assets,
   marketAsset,
+  destinationMarket,
   pending,
   error,
   form,
   onOpenChange,
   onMarketAsset,
+  onDestinationMarket,
   onSubmit,
 }: {
   open: boolean;
@@ -38,16 +40,23 @@ export function PlanFormSheet({
   accounts: Account[];
   assets: Asset[];
   marketAsset?: SymbolSearchResult;
+  destinationMarket?: SymbolSearchResult;
   pending: boolean;
   error?: string;
   form: UseFormReturn<PlanFormValues>;
   onOpenChange: (open: boolean) => void;
   onMarketAsset: (result: SymbolSearchResult | undefined) => void;
+  onDestinationMarket: (result: SymbolSearchResult | undefined) => void;
   onSubmit: (values: PlanFormValues) => void;
 }) {
   const { t } = useTranslation("common");
+  const kind = form.watch("kind");
   const assetId = form.watch("assetId");
+  const destinationAssetId = form.watch("destinationAssetId");
   const saved = assets.find((asset) => asset.id === assetId);
+  const savedDestination = assets.find((asset) => asset.id === destinationAssetId);
+  const sourceLabel =
+    kind === "STP" ? t("sip.from") : kind === "SWP" ? t("sip.redeem") : t("sip.asset");
   const currencyField = form.register("currency");
 
   return (
@@ -62,6 +71,41 @@ export function PlanFormSheet({
             <Label htmlFor="sip-name">{t("sip.name")}</Label>
             <Input id="sip-name" {...form.register("name")} />
           </div>
+          <Controller
+            control={form.control}
+            name="kind"
+            render={({ field }) => (
+              <div className="space-y-2">
+                <Label htmlFor="sip-kind">{t("sip.kind")}</Label>
+                <Select
+                  items={[
+                    { value: "SIP", label: t("sip.kindSip") },
+                    { value: "SWP", label: t("sip.kindSwp") },
+                    { value: "STP", label: t("sip.kindStp") },
+                  ]}
+                  value={field.value}
+                  onValueChange={(value) => {
+                    if (value !== "SIP" && value !== "SWP" && value !== "STP") return;
+                    field.onChange(value);
+                    if (value !== "STP") {
+                      form.setValue("destinationAssetId", "");
+                      onDestinationMarket(undefined);
+                    }
+                  }}
+                >
+                  <SelectTrigger id="sip-kind" aria-label={t("sip.kind")}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="SIP">{t("sip.kindSip")}</SelectItem>
+                    <SelectItem value="SWP">{t("sip.kindSwp")}</SelectItem>
+                    <SelectItem value="STP">{t("sip.kindStp")}</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-muted-foreground text-sm">{t("sip.kindHelp")}</p>
+              </div>
+            )}
+          />
           <Controller
             control={form.control}
             name="accountId"
@@ -99,7 +143,7 @@ export function PlanFormSheet({
             )}
           />
           <div className="space-y-2">
-            <Label htmlFor="sip-market-search">{t("sip.asset")}</Label>
+            <Label htmlFor="sip-market-search">{sourceLabel}</Label>
             <TickerSearchInput
               id="sip-market-search"
               placeholder={t("sip.searchMarket")}
@@ -122,6 +166,33 @@ export function PlanFormSheet({
               <p className="text-muted-foreground text-sm">{assetLabel(saved)}</p>
             ) : null}
           </div>
+          {kind === "STP" ? (
+            <div className="space-y-2">
+              <Label htmlFor="sip-destination-search">{t("sip.to")}</Label>
+              <TickerSearchInput
+                id="sip-destination-search"
+                placeholder={t("sip.searchMarket")}
+                hideCustomCreate
+                selectedResult={destinationMarket}
+                onSelectResult={(_symbol, result) => {
+                  if (!result) return;
+                  onDestinationMarket(result);
+                  form.setValue(
+                    "destinationAssetId",
+                    result.existingAssetId ?? `market:${result.symbol}`,
+                    { shouldValidate: true },
+                  );
+                }}
+                onClear={() => {
+                  onDestinationMarket(undefined);
+                  form.setValue("destinationAssetId", "");
+                }}
+              />
+              {savedDestination && !destinationMarket ? (
+                <p className="text-muted-foreground text-sm">{assetLabel(savedDestination)}</p>
+              ) : null}
+            </div>
+          ) : null}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="sip-amount">{t("sip.amount")}</Label>

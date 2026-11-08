@@ -21,7 +21,15 @@ import {
   EmptyTitle,
 } from "@wealthfolio/ui/components/ui/empty";
 import { Page, PageHeader, PageContent } from "@/components/page";
-import { getAssets, getInvestmentPlans, saveInvestmentPlans, searchActivities } from "@/adapters";
+import {
+  createActivity,
+  getAssets,
+  getInvestmentPlans,
+  getQuoteHistory,
+  saveInvestmentPlans,
+  searchActivities,
+  syncMarketData,
+} from "@/adapters";
 import type { InvestmentPlan } from "@/adapters/shared/investment-plans";
 import { useAccounts } from "@/hooks/use-accounts";
 import { AccountPurpose } from "@/lib/constants";
@@ -29,10 +37,19 @@ import { localHouseholdDate } from "@/features/household/household-api";
 import { createAsset } from "@/adapters";
 import { buildNewAssetFromSearchResult } from "@/pages/activity/import/utils/asset-review-utils";
 import type { SymbolSearchResult } from "@/lib/types";
-import { installmentDate, purchaseCandidates } from "./schedule";
+import { priceOnOrBefore, unitsForAmount } from "./record-installment";
+import {
+  installmentDate,
+  installmentSettled,
+  missingLegs,
+  planKind,
+  purchaseCandidates,
+  sipInstallmentMarker,
+} from "./schedule";
 import { SipPlanCard, SipSummary, type SipBadgeVariant } from "./plan-card";
 import { PlanFormSheet } from "./plan-form-sheet";
 import {
+  assetIsin,
   assetLabel,
   blankPlan,
   monthlyTotals,
@@ -46,6 +63,7 @@ interface PlanView {
   badgeLabel: string;
   badgeVariant: SipBadgeVariant;
   dueLabel: string | null;
+  settled: boolean;
   matches: { id: string }[];
 }
 
@@ -61,13 +79,16 @@ export function InvestmentPlansPage() {
   const [editing, setEditing] = useState<string>();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [marketAsset, setMarketAsset] = useState<SymbolSearchResult>();
+  const [destinationMarket, setDestinationMarket] = useState<SymbolSearchResult>();
   const [submitError, setSubmitError] = useState<string>();
   const [isCreatingAsset, setIsCreatingAsset] = useState(false);
+  const [recordingId, setRecordingId] = useState<string>();
+  const [recordError, setRecordError] = useState<string>();
   const accounts = useAccounts({ accountPurpose: AccountPurpose.HOLDINGS });
   const assets = useQuery({ queryKey: ["sip-assets"], queryFn: getAssets });
   const plans = useQuery({ queryKey: ["investment-plans"], queryFn: getInvestmentPlans });
   const activities = useQuery({
-    queryKey: ["sip-purchases", month],
+    queryKey: ["sip-purchases", month, "trades"],
     queryFn: async () => {
       const rows = [];
       const [year, m] = month.split("-").map(Number);
@@ -76,7 +97,7 @@ export function InvestmentPlansPage() {
         const result = await searchActivities(
           page,
           1000,
-          { activityTypes: ["BUY"], dateFrom: `${month}-01`, dateTo: `${month}-${last}` },
+          { activityTypes: ["BUY", "SELL"], dateFrom: `${month}-01`, dateTo: `${month}-${last}` },
           "",
         );
         rows.push(...result.data);
@@ -100,6 +121,7 @@ export function InvestmentPlansPage() {
     setSheetOpen(false);
     setEditing(undefined);
     setMarketAsset(undefined);
+    setDestinationMarket(undefined);
     setSubmitError(undefined);
     form.reset(blankPlan(today, accounts.accounts[0]));
   }
@@ -107,6 +129,7 @@ export function InvestmentPlansPage() {
   function openCreate() {
     setEditing(undefined);
     setMarketAsset(undefined);
+    setDestinationMarket(undefined);
     setSubmitError(undefined);
     form.reset(blankPlan(today, accounts.accounts[0]));
     setSheetOpen(true);
@@ -115,11 +138,14 @@ export function InvestmentPlansPage() {
   function openEdit(plan: InvestmentPlan) {
     setEditing(plan.id);
     setMarketAsset(undefined);
+    setDestinationMarket(undefined);
     setSubmitError(undefined);
     form.reset({
       name: plan.name,
+      kind: planKind(plan),
       accountId: plan.accountId,
       assetId: plan.assetId,
+      destinationAssetId: plan.destinationAssetId ?? "",
       amount: plan.amount,
       currency: plan.currency,
       startDate: plan.startDate,
@@ -129,33 +155,111 @@ export function InvestmentPlansPage() {
     setSheetOpen(true);
   }
 
+  async function resolveAsset(
+    selectedId: string,
+    market: SymbolSearchResult | undefined,
+    currency: string,
+  ): Promise<string> {
+    if (!market || market.existingAssetId || !selectedId.startsWith("market:")) return selectedId;
+    const created = await createAsset(buildNewAssetFromSearchResult(market, currency));
+    return created.id;
+  }
+
   async function submit(values: PlanFormValues) {
     setSubmitError(undefined);
-    let assetId = values.assetId;
-    if (marketAsset && !marketAsset.existingAssetId) {
-      setIsCreatingAsset(true);
-      try {
-        const created = await createAsset(
-          buildNewAssetFromSearchResult(marketAsset, values.currency),
-        );
-        assetId = created.id;
+    setIsCreatingAsset(true);
+    try {
+      const assetId = await resolveAsset(values.assetId, marketAsset, values.currency);
+      const destinationAssetId =
+        values.kind === "STP"
+          ? await resolveAsset(values.destinationAssetId, destinationMarket, values.currency)
+          : null;
+      if (assetId !== values.assetId || destinationAssetId) {
         await client.invalidateQueries({ queryKey: ["sip-assets"] });
-      } catch (error) {
-        setSubmitError(error instanceof Error ? error.message : String(error));
-        return;
-      } finally {
-        setIsCreatingAsset(false);
       }
+      const old = plans.data?.find((plan) => plan.id === editing);
+      const plan: InvestmentPlan = {
+        ...values,
+        assetId,
+        kind: values.kind,
+        destinationAssetId,
+        id: editing ?? crypto.randomUUID(),
+        endDate: values.endDate || null,
+        paused: old?.paused ?? false,
+      };
+      mutation.mutate([...(plans.data ?? []).filter((item) => item.id !== editing), plan]);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setIsCreatingAsset(false);
     }
-    const old = plans.data?.find((plan) => plan.id === editing);
-    const plan: InvestmentPlan = {
-      ...values,
-      assetId,
-      id: editing ?? crypto.randomUUID(),
-      endDate: values.endDate || null,
-      paused: old?.paused ?? false,
-    };
-    mutation.mutate([...(plans.data ?? []).filter((item) => item.id !== editing), plan]);
+  }
+
+  const isinByAssetId = useMemo(() => {
+    const isins = new Map<string, string>();
+    for (const asset of assets.data ?? []) {
+      const isin = assetIsin(asset);
+      if (isin) isins.set(asset.id, isin);
+    }
+    return isins;
+  }, [assets.data]);
+
+  async function priceForInstallment(assetId: string, due: string): Promise<number | null> {
+    const saved = priceOnOrBefore(await getQuoteHistory(assetId), due);
+    if (saved != null) return saved;
+    await syncMarketData([assetId], true);
+    return priceOnOrBefore(await getQuoteHistory(assetId), due);
+  }
+
+  async function recordInstallment(plan: InvestmentPlan) {
+    const due = installmentDate(plan, month);
+    if (!due || due > today) return;
+    setRecordError(undefined);
+    setRecordingId(plan.id);
+    let recorded = false;
+    try {
+      const matches = purchaseCandidates(
+        plan,
+        month,
+        activities.data ?? [],
+        localization.timezone,
+        isinByAssetId,
+      );
+      for (const leg of missingLegs(plan, month, matches, isinByAssetId)) {
+        const price = await priceForInstallment(leg.assetId, due);
+        const quantity = price == null ? "" : unitsForAmount(plan.amount, price);
+        if (price == null || !quantity) {
+          setRecordError(t("sip.noPrice"));
+          if (recorded) await client.invalidateQueries();
+          return;
+        }
+        try {
+          await createActivity({
+            idempotencyKey: leg.idempotencyKey,
+            sourceGroupId: leg.sourceGroupId,
+            accountId: plan.accountId,
+            activityType: leg.activityType,
+            activityDate: due,
+            asset: { id: leg.assetId },
+            quantity,
+            unitPrice: String(price),
+            amount: plan.amount,
+            currency: plan.currency,
+            comment: sipInstallmentMarker(plan, month),
+          });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          if (!message.includes("Duplicate activity")) throw error;
+        }
+        recorded = true;
+      }
+      await client.invalidateQueries();
+    } catch (error) {
+      if (recorded) await client.invalidateQueries();
+      setRecordError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setRecordingId(undefined);
+    }
   }
 
   const rows = useMemo(() => {
@@ -172,7 +276,14 @@ export function InvestmentPlansPage() {
     for (const plan of plans.data ?? []) {
       if (!accountIsVisible(plan.accountId)) continue;
       const due = installmentDate(plan, month);
-      const matches = purchaseCandidates(plan, month, activities.data ?? [], localization.timezone);
+      const matches = purchaseCandidates(
+        plan,
+        month,
+        activities.data ?? [],
+        localization.timezone,
+        isinByAssetId,
+      );
+      const settled = installmentSettled(plan, matches, isinByAssetId);
       let rank = 6;
       let badgeLabel = t("sip.outside");
       let badgeVariant: SipBadgeVariant = "outline";
@@ -190,10 +301,14 @@ export function InvestmentPlansPage() {
         rank = 1;
         badgeLabel = t("sip.unavailable");
         badgeVariant = "warning-subtle";
-      } else if (matches.length > 0) {
+      } else if (settled) {
         rank = 4;
         badgeLabel = t("sip.candidates", { count: matches.length });
         badgeVariant = "success-subtle";
+      } else if (matches.length > 0) {
+        rank = 0;
+        badgeLabel = t("sip.partial");
+        badgeVariant = "warning-subtle";
       } else if (due < today) {
         rank = 0;
         badgeLabel = t("sip.overdue");
@@ -209,6 +324,7 @@ export function InvestmentPlansPage() {
         badgeLabel,
         badgeVariant,
         dueLabel: due ? t("sip.dueOn", { date: dates.formatCalendarDate(due) }) : null,
+        settled,
         matches,
       });
     }
@@ -226,10 +342,12 @@ export function InvestmentPlansPage() {
     t,
     scope,
     portfolios,
+    isinByAssetId,
   ]);
 
   const activePlans = rows.filter((row) => !row.plan.paused).map((row) => row.plan);
-  const pageError = plans.error ?? assets.error ?? accounts.error ?? mutation.error ?? submitError;
+  const pageError =
+    plans.error ?? assets.error ?? accounts.error ?? mutation.error ?? submitError ?? recordError;
 
   return (
     <Page>
@@ -278,7 +396,17 @@ export function InvestmentPlansPage() {
           countLabel={t("sip.active")}
           count={activePlans.length}
           totalLabel={t("sip.total")}
-          totals={monthlyTotals(activePlans)}
+          totals={monthlyTotals(activePlans).map((total) => ({
+            currency: total.currency,
+            amount: total.amount,
+            label: t(
+              total.kind === "SWP"
+                ? "sip.kindSwp"
+                : total.kind === "STP"
+                  ? "sip.kindStp"
+                  : "sip.kindSip",
+            ),
+          }))}
         />
         {activities.isError ? (
           <p role="alert" className="text-destructive text-sm">
@@ -307,15 +435,33 @@ export function InvestmentPlansPage() {
         ) : (
           <div className="grid gap-3">
             {rows.map((row) => {
+              const due = installmentDate(row.plan, month);
               const asset = assets.data?.find((item) => item.id === row.plan.assetId);
+              const destination = assets.data?.find(
+                (item) => item.id === row.plan.destinationAssetId,
+              );
               const account = accounts.accounts.find((item) => item.id === row.plan.accountId);
-              const detail = [asset ? assetLabel(asset) : undefined, account?.name]
-                .filter(Boolean)
-                .join(" · ");
+              const holding =
+                planKind(row.plan) === "STP" && asset && destination
+                  ? t("sip.transferDetail", {
+                      from: assetLabel(asset),
+                      to: assetLabel(destination),
+                    })
+                  : asset
+                    ? assetLabel(asset)
+                    : undefined;
+              const detail = [holding, account?.name].filter(Boolean).join(" · ");
               return (
                 <SipPlanCard
                   key={row.plan.id}
                   name={row.plan.name}
+                  kindLabel={t(
+                    planKind(row.plan) === "SWP"
+                      ? "sip.kindSwp"
+                      : planKind(row.plan) === "STP"
+                        ? "sip.kindStp"
+                        : "sip.kindSip",
+                  )}
                   detail={detail}
                   amount={row.plan.amount}
                   currency={row.plan.currency}
@@ -323,6 +469,19 @@ export function InvestmentPlansPage() {
                   badgeVariant={row.badgeVariant}
                   dueLabel={row.plan.paused ? null : row.dueLabel}
                 >
+                  {due &&
+                  due <= today &&
+                  !row.settled &&
+                  !activities.isPending &&
+                  !activities.isError ? (
+                    <Button
+                      size="sm"
+                      disabled={recordingId != null}
+                      onClick={() => void recordInstallment(row.plan)}
+                    >
+                      {recordingId === row.plan.id ? t("sip.recording") : t("sip.record")}
+                    </Button>
+                  ) : null}
                   {row.matches.map((activity) => (
                     <Link
                       key={activity.id}
@@ -361,6 +520,7 @@ export function InvestmentPlansPage() {
         accounts={accounts.accounts}
         assets={(assets.data ?? []).filter((asset) => asset.kind === "INVESTMENT")}
         marketAsset={marketAsset}
+        destinationMarket={destinationMarket}
         pending={isCreatingAsset || mutation.isPending || plans.isPending || plans.isError}
         error={
           submitError ?? (mutation.error instanceof Error ? mutation.error.message : undefined)
@@ -371,6 +531,7 @@ export function InvestmentPlansPage() {
           else setSheetOpen(true);
         }}
         onMarketAsset={setMarketAsset}
+        onDestinationMarket={setDestinationMarket}
         onSubmit={submit}
       />
     </Page>

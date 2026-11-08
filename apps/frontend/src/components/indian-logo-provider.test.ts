@@ -25,9 +25,16 @@ describe("Indian company logo fallback", () => {
       "https://assets.parqet.com/logos/isin/US5949181045?format=png",
     ]);
   });
-  it("preserves BSE identity and escapes symbols", () => {
-    expect(getTickerLogoPaths("M&M", "XBOM")[0]).toBe(
+  it("loads a BSE listing from the NSE symbol the logo service actually has", () => {
+    expect(getTickerLogoPaths("M&M", "XBOM").slice(0, 2)).toEqual([
+      "https://api.dharun.dev/v1/logos/NSE%3AM%26M?format=png&size=128",
       "https://api.dharun.dev/v1/logos/BSE%3AM%26M?format=png&size=128",
+    ]);
+    expect(getTickerLogoPaths("HAL", "XBOM")[0]).toBe(
+      "https://api.dharun.dev/v1/logos/NSE%3AHAL?format=png&size=128",
+    );
+    expect(getTickerLogoPaths("532540", "XBOM")[0]).toBe(
+      "https://api.dharun.dev/v1/logos/NSE%3ATCS?format=png&size=128",
     );
     expect(getTickerLogoPaths("532540", "XBOM")).toContain("/ticker-logos/532540-XBOM.png");
   });

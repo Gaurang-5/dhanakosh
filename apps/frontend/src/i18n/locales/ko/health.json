@@ -157,6 +157,15 @@
       "title_one": "{{from}}/{{to}} 환율 불일치",
       "title_other": "통화쌍 {{count}}개의 환율 불일치",
       "message": "같은 날짜에 양방향 환율이 모두 기록되어 있지만 서로 맞지 않습니다. 각 방향은 기록된 그대로 사용되므로 한 방향으로 환산했다가 되돌리면 금액이 달라집니다. 잘못된 환율을 수정하거나 삭제하세요."
+    },
+    "fund_composition_missing": {
+      "title": "{{name}}이(가) 펼쳐지지 않았습니다",
+      "message": "이 펀드는 아직 하나의 종목으로만 보입니다. 공개된 구성 종목을 가져오거나 운용사 파일을 올리세요.",
+      "fetched": "{{name}} 구성을 저장했습니다",
+      "fetchFailed": "공개된 구성을 가져오지 못했습니다.",
+      "saved": "{{name}} 구성을 저장했습니다",
+      "uploadTitle": "구성 업로드",
+      "uploadDescription": "{{name}}의 운용사 파일을 가져옵니다. 저장하기 전에 행을 확인하세요."
     }
   },
   "page": {
@@ -185,6 +194,8 @@
     "migrate_classifications": "분류 마이그레이션",
     "migrate_legacy_classifications": "마이그레이션 시작",
     "retry_sync": "동기화 재시도",
+    "refresh_fund_composition": "구성 가져오기",
+    "upload_fund_composition": "구성 업로드",
     "to_holdings": "보유 종목 보기",
     "to_activities": "활동 보기",
     "to_accounts": "계좌 보기",

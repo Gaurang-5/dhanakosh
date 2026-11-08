@@ -187,6 +187,15 @@
       "title_other": "I tassi di cambio non coincidono per {{count}} coppie di valute",
       "title_many": "I tassi di cambio non coincidono per {{count}} coppie di valute",
       "message": "Per gli stessi giorni sono registrati tassi in entrambe le direzioni che non corrispondono. Ogni direzione viene usata come registrata, quindi una conversione di andata e ritorno dà un importo diverso. Correggi o rimuovi i tassi errati."
+    },
+    "fund_composition_missing": {
+      "title": "{{name}} non è scomposto",
+      "message": "Questo fondo è ancora una sola posizione. Recupera la composizione pubblicata o carica il file dell'emittente.",
+      "fetched": "Composizione salvata per {{name}}",
+      "fetchFailed": "Impossibile recuperare una composizione pubblicata.",
+      "saved": "Composizione salvata per {{name}}",
+      "uploadTitle": "Carica la composizione",
+      "uploadDescription": "Importa il file dell'emittente per {{name}}. Controlla le righe prima di salvare."
     }
   },
   "page": {
@@ -215,6 +224,8 @@
     "migrate_classifications": "Migra classificazioni",
     "migrate_legacy_classifications": "Avvia migrazione",
     "retry_sync": "Riprova sincronizzazione",
+    "refresh_fund_composition": "Recupera la composizione",
+    "upload_fund_composition": "Carica la composizione",
     "to_holdings": "Visualizza posizioni",
     "to_activities": "Visualizza movimenti",
     "to_accounts": "Visualizza conti",

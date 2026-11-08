@@ -157,6 +157,15 @@
       "title_one": "Wechselkurse für {{from}} und {{to}} widersprechen sich",
       "title_other": "Wechselkurse widersprechen sich für {{count}} Währungspaare",
       "message": "Für dieselben Tage sind Kurse in beide Richtungen erfasst, die nicht zusammenpassen. Jede Richtung wird wie erfasst verwendet, sodass eine Umrechnung hin und zurück einen anderen Betrag ergibt. Korrigieren oder entfernen Sie die falschen Kurse."
+    },
+    "fund_composition_missing": {
+      "title": "{{name}} ist nicht aufgeschlüsselt",
+      "message": "Dieser Fonds ist noch eine einzelne Position. Rufen Sie die veröffentlichte Zusammensetzung ab oder laden Sie die Datei des Emittenten hoch.",
+      "fetched": "Zusammensetzung für {{name}} gespeichert",
+      "fetchFailed": "Eine veröffentlichte Zusammensetzung konnte nicht abgerufen werden.",
+      "saved": "Zusammensetzung für {{name}} gespeichert",
+      "uploadTitle": "Zusammensetzung hochladen",
+      "uploadDescription": "Datei des Emittenten für {{name}} importieren. Prüfen Sie die Zeilen vor dem Speichern."
     }
   },
   "page": {
@@ -185,6 +194,8 @@
     "migrate_classifications": "Klassifizierungen migrieren",
     "migrate_legacy_classifications": "Migration starten",
     "retry_sync": "Synchronisierung wiederholen",
+    "refresh_fund_composition": "Zusammensetzung abrufen",
+    "upload_fund_composition": "Zusammensetzung hochladen",
     "to_holdings": "Bestände anzeigen",
     "to_activities": "Aktivitäten anzeigen",
     "to_accounts": "Konten anzeigen",

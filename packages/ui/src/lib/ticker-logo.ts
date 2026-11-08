@@ -209,12 +209,23 @@ export function getTickerLogoPaths(
       : (canonical?.[2] ??
         normalizeExchangeMic(exchangeMic) ??
         (suffix?.[2] === "BO" ? "XBOM" : "XNSE"));
-    const exchange = mic === "XBOM" ? "BSE" : "NSE";
     if (base === "NXST" && mic === "XNSE") {
       return ["/ticker-logos/NXST-XNSE.ico"];
     }
+    // The logo service keys NSE trading symbols. A BSE trade still uses that
+    // symbol (HAL on XBOM), and BSE:HAL 404s, so the NSE mark has to be first.
+    const nseSymbol =
+      mic === "XBOM" ? (BSE_TO_NSE_LOGO[base] ?? (/^\d+$/.test(base) ? undefined : base)) : base;
+    const remote = [
+      nseSymbol
+        ? `https://api.dharun.dev/v1/logos/${encodeURIComponent(`NSE:${nseSymbol}`)}?format=png&size=128`
+        : "",
+      mic === "XBOM"
+        ? `https://api.dharun.dev/v1/logos/${encodeURIComponent(`BSE:${base}`)}?format=png&size=128`
+        : "",
+    ].filter((url, index, urls) => !!url && urls.indexOf(url) === index);
     return [
-      `https://api.dharun.dev/v1/logos/${encodeURIComponent(`${exchange}:${base}`)}?format=png&size=128`,
+      ...remote,
       // Unsuffixed US logos can belong to a completely different company.
       ...filenames
         .filter((filename) => /-(XNSE|XBOM)$/.test(filename))

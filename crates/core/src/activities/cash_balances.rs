@@ -16,8 +16,8 @@ use rust_decimal::Decimal;
 
 use super::{
     effective_activity_type, is_cash_symbol, is_securities_transfer, Activity, ActivityStatus,
-    DefaultActivityCompiler, NewActivity, ACTIVITY_SUBTYPE_RETURN_OF_CAPITAL, ACTIVITY_TYPE_BUY,
-    ACTIVITY_TYPE_SELL,
+    DefaultActivityCompiler, NewActivity, ACTIVITY_SUBTYPE_BONUS_ISSUE,
+    ACTIVITY_SUBTYPE_RETURN_OF_CAPITAL, ACTIVITY_TYPE_BUY, ACTIVITY_TYPE_SELL,
 };
 use crate::accounts::{account_types, Account, TrackingMode};
 use crate::portfolio::economic_events::{ActivityCashInputs, ActivityEconomicsResolver};
@@ -153,12 +153,18 @@ pub fn running_cash_balances(
         // A row the engine books no cash for (a split, an adjustment, a
         // missing amount) adds zero; a row with no currency books in the
         // account's, as the engine assumes.
-        let amount = ActivityEconomicsResolver::resolve_cash_inputs_with_account_context(
-            activity.cash_inputs(),
-            is_credit_card,
-        )
-        .signed_cash_effect
-        .unwrap_or(Decimal::ZERO);
+        let bonus_issue = activity.effective_type() == ACTIVITY_TYPE_BUY
+            && activity.subtype.as_deref() == Some(ACTIVITY_SUBTYPE_BONUS_ISSUE);
+        let amount = if bonus_issue {
+            Decimal::ZERO
+        } else {
+            ActivityEconomicsResolver::resolve_cash_inputs_with_account_context(
+                activity.cash_inputs(),
+                is_credit_card,
+            )
+            .signed_cash_effect
+            .unwrap_or(Decimal::ZERO)
+        };
         let currency = match activity.currency.trim() {
             "" => account.currency.trim(),
             currency => currency,
@@ -213,15 +219,16 @@ mod tests {
         activities.iter().map(CashLedgerActivity::from).collect()
     }
     use crate::activities::{
-        ActivityStatus, ACTIVITY_SUBTYPE_BONUS, ACTIVITY_SUBTYPE_DIVIDEND_IN_KIND,
-        ACTIVITY_SUBTYPE_DRIP, ACTIVITY_SUBTYPE_NOTIONAL_DISTRIBUTION,
-        ACTIVITY_SUBTYPE_OPTION_EXPIRY, ACTIVITY_SUBTYPE_POSITION_CLOSE,
-        ACTIVITY_SUBTYPE_POSITION_OPEN, ACTIVITY_SUBTYPE_REBATE, ACTIVITY_SUBTYPE_REFUND,
-        ACTIVITY_SUBTYPE_REIMBURSEMENT, ACTIVITY_SUBTYPE_RETURN_OF_CAPITAL,
-        ACTIVITY_SUBTYPE_STAKING_REWARD, ACTIVITY_TYPE_ADJUSTMENT, ACTIVITY_TYPE_CREDIT,
-        ACTIVITY_TYPE_DEPOSIT, ACTIVITY_TYPE_DIVIDEND, ACTIVITY_TYPE_FEE, ACTIVITY_TYPE_INTEREST,
-        ACTIVITY_TYPE_SPLIT, ACTIVITY_TYPE_TAX, ACTIVITY_TYPE_TRANSFER_IN,
-        ACTIVITY_TYPE_TRANSFER_OUT, ACTIVITY_TYPE_UNKNOWN, ACTIVITY_TYPE_WITHDRAWAL,
+        ActivityStatus, ACTIVITY_SUBTYPE_BONUS, ACTIVITY_SUBTYPE_BONUS_ISSUE,
+        ACTIVITY_SUBTYPE_DIVIDEND_IN_KIND, ACTIVITY_SUBTYPE_DRIP,
+        ACTIVITY_SUBTYPE_NOTIONAL_DISTRIBUTION, ACTIVITY_SUBTYPE_OPTION_EXPIRY,
+        ACTIVITY_SUBTYPE_POSITION_CLOSE, ACTIVITY_SUBTYPE_POSITION_OPEN, ACTIVITY_SUBTYPE_REBATE,
+        ACTIVITY_SUBTYPE_REFUND, ACTIVITY_SUBTYPE_REIMBURSEMENT,
+        ACTIVITY_SUBTYPE_RETURN_OF_CAPITAL, ACTIVITY_SUBTYPE_STAKING_REWARD,
+        ACTIVITY_TYPE_ADJUSTMENT, ACTIVITY_TYPE_CREDIT, ACTIVITY_TYPE_DEPOSIT,
+        ACTIVITY_TYPE_DIVIDEND, ACTIVITY_TYPE_FEE, ACTIVITY_TYPE_INTEREST, ACTIVITY_TYPE_SPLIT,
+        ACTIVITY_TYPE_TAX, ACTIVITY_TYPE_TRANSFER_IN, ACTIVITY_TYPE_TRANSFER_OUT,
+        ACTIVITY_TYPE_UNKNOWN, ACTIVITY_TYPE_WITHDRAWAL,
     };
     use crate::portfolio::coordinator::raw_activity;
 
@@ -753,6 +760,7 @@ mod tests {
             Some(ACTIVITY_SUBTYPE_STAKING_REWARD),
             Some(ACTIVITY_SUBTYPE_DIVIDEND_IN_KIND),
             Some(ACTIVITY_SUBTYPE_BONUS),
+            Some(ACTIVITY_SUBTYPE_BONUS_ISSUE),
             Some(ACTIVITY_SUBTYPE_REBATE),
             Some(ACTIVITY_SUBTYPE_REFUND),
             Some(ACTIVITY_SUBTYPE_REIMBURSEMENT),
@@ -815,7 +823,7 @@ mod tests {
             }
         }
 
-        assert_eq!(checked, 2 * 14 * 13 * 4 * 3);
+        assert_eq!(checked, 2 * 14 * 14 * 4 * 3);
         // Cash rows must still reach the comparison, or the table proves nothing.
         assert!(
             compared >= 1_500,

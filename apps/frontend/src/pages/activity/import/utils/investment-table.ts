@@ -22,6 +22,7 @@ const TRADE_COLUMNS: Partial<Record<ImportFormat, readonly string[]>> = {
   ],
   symbol: ["symbol", "ticker", "trading symbol", "stock symbol", "security symbol"],
   isin: ["isin"],
+  exchange: ["exchange", "exchange mic"],
   quantity: ["quantity", "qty", "shares", "units"],
   unitPrice: ["trade price", "execution price", "unit price", "price", "rate", "nav"],
   amount: ["gross amount", "trade value", "transaction amount", "amount"],

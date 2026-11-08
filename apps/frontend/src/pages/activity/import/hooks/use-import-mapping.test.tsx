@@ -29,6 +29,13 @@ describe("useImportMapping activity type mappings", () => {
     expect(mapping[ImportFormat.AMOUNT]).toBeUndefined();
   });
 
+  it("maps an exchange column without taking the FX rate column", () => {
+    const mapping = initializeColumnMapping(["Date", "Exchange", "Exchange Rate", "Amount"]);
+
+    expect(mapping[ImportFormat.EXCHANGE]).toBe("Exchange");
+    expect(mapping[ImportFormat.FX_RATE]).toBe("Exchange Rate");
+  });
+
   it("auto-maps tax and withholding aliases", () => {
     const tradeMapping = initializeColumnMapping(["Date", "Stamp Duty", "Amount"]);
     const incomeMapping = initializeColumnMapping(["Date", "Withholding Tax", "Amount"]);

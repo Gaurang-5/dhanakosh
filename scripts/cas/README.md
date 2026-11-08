@@ -23,13 +23,13 @@ server, as with all financial uploads.
 
 Supported conversion: purchases/SIPs, redemptions, switches, dividends,
 reinvestment and supported tax rows. Running and closing units must reconcile.
-Nonzero opening holdings, missing AMFI identities, mixed owners, parser
-warnings, mergers, reversals, summary/demat CAS and unsupported transactions
-reject the whole conversion. No inferred opening cost or silently omitted
-transactions. Re-imported generated rows have stable comments for native
-duplicate detection; CSV imports from another source can have different
-identifiers and still need review. Tax amounts/fees should be compared with the
-source before committing.
+Missing AMFI identities, mixed owners, parser warnings, mergers, reversals,
+summary/demat CAS and unsupported transactions reject the whole conversion.
+Nonzero opening units are imported as a buy with the quantity and no price,
+marked cost unknown. No inferred opening cost or silently omitted transactions.
+Re-imported generated rows have stable comments for native duplicate detection;
+CSV imports from another source can have different identifiers and still need
+review. Tax amounts/fees should be compared with the source before committing.
 
 Tests use synthetic parsed statements. Real password-protected issuer PDFs still
 need acceptance testing against redacted samples. EPFO/NPS PDFs and MF Central

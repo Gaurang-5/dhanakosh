@@ -442,11 +442,12 @@ Implemented in this increment:
   placement and no automatic import. Both use the original review/commit flow.
   Historical trades continue to use CSV. Broker fees are not included in these
   endpoints; review them against statements. External access terms still apply.
-- Per-member monthly SIP/recurring investment instructions in the existing
-  SQLite settings store. Month-end dates clamp to the actual month, plans can
-  pause/ resume, and exact account/asset/currency/amount purchases are review
-  suggestions. A schedule never inserts a fictional executed trade or transfers
-  money.
+- Per-member monthly SIP, SWP, and STP instructions in the existing SQLite
+  settings store. Month-end dates clamp to the actual month, plans can pause/
+  resume, and matching buys, sells, or transfer pairs are review suggestions.
+  Recording an installment that is already due writes that trade at the saved
+  price. It does not place a broker order, and a future date is not written as a
+  trade.
 - Scheduled backup catalogue timestamps survive restarts; unprotected members
   start with the server when scheduling is enabled. Retention affects scheduled
   local copies only. Optional verified encrypted copies use a mounted off-device
@@ -493,16 +494,17 @@ remain acceptance gates; the full application E2E suite was not run.
 
 ### PPF statement tracking
 
-Use Settings → Accounts → the member's investment accounts → Add account →
-**Set up a PPF account**. This presets an INR transaction-tracked investment
-account and classifies its cash balance as fixed income. The existing ledger
-records contributions (deposits), statement-credited interest, withdrawals, and
-internal transfers. Existing member and household valuations include the balance.
+Use Settings → Accounts → the member's investment accounts → Add account → **Set
+up a PPF account**. This presets an INR transaction-tracked investment account
+and classifies its cash balance as fixed income. The existing ledger records
+contributions (deposits), statement-credited interest, withdrawals, and internal
+transfers. Existing member and household valuations include the balance.
 
 For an existing PPF, enter the opening statement balance once, then only later
 transactions. If funding comes from an account already tracked here, use an
 internal transfer instead of another deposit. The old synthetic demo PPF bond is
-not automatically migrated; do not recreate that same balance in a second account.
+not automatically migrated; do not recreate that same balance in a second
+account.
 
 This is statement tracking, not a PPF eligibility, maturity, tax, annual-limit,
 or projected-interest calculator. No interest is automatically posted and no

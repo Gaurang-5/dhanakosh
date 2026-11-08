@@ -30,6 +30,7 @@ coverage
 .env.*
 !.env.example
 !.env.web.example
+!.env.docker.example
 
 # Editor directories and files
 .vscode/*

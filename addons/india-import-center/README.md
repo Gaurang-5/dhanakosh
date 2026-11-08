@@ -35,10 +35,15 @@ requests, and remote CSS imports are intentionally unavailable.
 
 ## Features
 
-- Opens the native import wizard, preserving member ownership, preview, validation and duplicate review.
-- Zerodha equity tradebook, India CSV and global CSV presets are supplied by this fork's frontend.
-- The addon no longer opens files or pretends that counting file characters is an import.
-- Groww and CAMS/KFintech-specific adapters are still planned; arbitrary PDFs are not supported.
+- Opens the native import wizard, preserving member ownership, preview,
+  validation and duplicate review.
+- Zerodha equity tradebook, India CSV and global CSV presets are supplied by
+  this fork's frontend.
+- The addon no longer opens files or pretends that counting file characters is
+  an import.
+- Detailed CAMS/KFintech statements are converted by the host importer. Groww
+  files, summary CAS, and demat CAS are not supported in this version.
 
-See `docs/import-examples/` in the fork for synthetic sample files and scope limits.
-The addon requires no file permission and does not keep a separate financial ledger.
+See `docs/import-examples/` in the fork for synthetic sample files and scope
+limits. The addon requires no file permission and does not keep a separate
+financial ledger.

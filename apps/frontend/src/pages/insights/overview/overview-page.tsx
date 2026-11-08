@@ -52,7 +52,7 @@ import { PortfolioExplorer } from "./portfolio-explorer";
 import { TargetRailsCard } from "./target-rails-card";
 import { ValueWidget } from "./value-strip";
 import { InsightsDashboard } from "./insights-dashboard";
-import { buildStockOnlyOverview } from "./stock-only-overview";
+import { buildStockOnlyOverview, compositionHoldings } from "./stock-only-overview";
 import {
   accountCurrencyScale,
   accountValuesInDisplayCurrency,
@@ -119,10 +119,10 @@ export function OverviewPage({
   const exposureQuery = useQuery({
     queryKey: ["fund-exposure", baseCurrency, accountFilter],
     queryFn: () => getFundExposure(baseCurrency, accountFilter),
-    enabled: stockOnly && !family,
+    enabled: !family,
   });
   useEffect(() => {
-    if (!stockOnly || !exposureQuery.data) return;
+    if (!exposureQuery.data) return;
     const candidates = new Set(exposureQuery.data.report.uncoveredFunds);
     for (const snapshot of exposureQuery.data.snapshots) {
       if (!snapshot.imported && snapshot.source.toUpperCase() === "YAHOO") {
@@ -132,7 +132,7 @@ export function OverviewPage({
     void refreshMissingFundCompositions([...candidates], refreshFundComposition).then((count) => {
       if (count > 0) void queryClient.invalidateQueries({ queryKey: ["fund-exposure"] });
     });
-  }, [exposureQuery.data, queryClient, stockOnly]);
+  }, [exposureQuery.data, queryClient]);
 
   useEffect(() => {
     setSelectedTargetId(null);
@@ -250,6 +250,14 @@ export function OverviewPage({
     () => displayHoldings.filter((h) => h.holdingType?.toLowerCase() !== "cash"),
     [displayHoldings],
   );
+  const lookThroughHoldings = useMemo(() => {
+    if (!stockOverview || !exposureQuery.data) return null;
+    const uncovered = new Set(exposureQuery.data.report.uncoveredFunds);
+    const pendingFunds = nonCashHoldings.filter((holding) =>
+      uncovered.has(holding.instrument?.id ?? ""),
+    );
+    return [...stockOverview.holdings, ...pendingFunds];
+  }, [exposureQuery.data, nonCashHoldings, stockOverview]);
   const totalCash = useMemo(
     () =>
       holdings
@@ -558,7 +566,7 @@ export function OverviewPage({
         {stockOnly && exposureQuery.isError && (
           <span className="text-destructive text-sm">{t("insights:exposure.load_error")}</span>
         )}
-        {stockOnly && stockOverview && stockOverview.unexpandedValue > 0 && (
+        {stockOnly && exposureQuery.data && exposureQuery.data.report.uncoveredFunds.length > 0 && (
           <span className="text-muted-foreground text-sm">
             {t("insights:exposure.coverage_short")}
           </span>
@@ -664,11 +672,13 @@ export function OverviewPage({
           ),
           composition: (
             <PortfolioComposition
-              holdings={stockOnly ? analysisHoldings : nonCashHoldings}
+              holdings={compositionHoldings(stockOnly, nonCashHoldings, lookThroughHoldings)}
               currency={effectiveCurrency}
-              isLoading={analysisLoading}
+              isLoading={stockOnly ? analysisLoading || exposureQuery.isLoading : isLoading}
               exposureMode={stockOnly}
-              sectorByHoldingId={stockOnly ? stockOverview?.sectorByHoldingId : undefined}
+              sectorByHoldingId={
+                stockOnly && lookThroughHoldings ? stockOverview?.sectorByHoldingId : undefined
+              }
             />
           ),
           targets: (

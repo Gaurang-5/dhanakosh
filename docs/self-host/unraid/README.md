@@ -1,5 +1,9 @@
 # Wealthfolio on Unraid
 
+The Community Apps template below installs the official Wealthfolio image, not
+Dhanakosh. To run this project, build it from the repository with Docker
+Compose. See the [README](../../../README.md#download-and-run).
+
 Wealthfolio runs as a standard Docker container managed through Unraid's Docker
 tab.
 

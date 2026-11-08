@@ -6,6 +6,8 @@
     "migrate_classifications": "ترحيل التصنيفات",
     "migrate_legacy_classifications": "بدء الترحيل",
     "retry_sync": "إعادة محاولة المزامنة",
+    "refresh_fund_composition": "جلب التركيب",
+    "upload_fund_composition": "رفع التركيب",
     "review_transfers": "مراجعة التحويلات",
     "sync_prices": "مزامنة الأسعار",
     "to_accounts": "عرض الحسابات",
@@ -364,6 +366,15 @@
       "title_other": "تم اكتشاف {{count}} تحويل غير مكتمل",
       "title_two": "تم اكتشاف تحويلين غير مكتملين",
       "title_zero": "تم اكتشاف {{count}} تحويلات غير مكتملة"
+    },
+    "fund_composition_missing": {
+      "title": "{{name}} غير مفصّل",
+      "message": "هذا الصندوق ما زال مركزًا واحدًا. اجلب التركيب المنشور أو ارفع ملف الجهة المصدرة.",
+      "fetched": "تم حفظ تركيب {{name}}",
+      "fetchFailed": "تعذر جلب تركيب منشور.",
+      "saved": "تم حفظ تركيب {{name}}",
+      "uploadTitle": "رفع التركيب",
+      "uploadDescription": "استورد ملف الجهة المصدرة لـ {{name}}. راجع الصفوف قبل الحفظ."
     }
   },
   "loadError": {

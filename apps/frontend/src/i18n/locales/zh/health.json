@@ -157,6 +157,15 @@
       "title_one": "{{from}} 与 {{to}} 的汇率不一致",
       "title_other": "{{count}} 个货币对的汇率不一致",
       "message": "同一天在两个方向都记录了汇率，但两者不相符。每个方向都按记录使用，因此来回换算会得到不同的金额。请更正或删除错误的汇率。"
+    },
+    "fund_composition_missing": {
+      "title": "{{name}} 尚未展开",
+      "message": "这只基金仍显示为单一持仓。获取已公布的成分，或上传发行人文件。",
+      "fetched": "已保存 {{name}} 的成分",
+      "fetchFailed": "无法获取已公布的成分。",
+      "saved": "已保存 {{name}} 的成分",
+      "uploadTitle": "上传成分",
+      "uploadDescription": "导入 {{name}} 的发行人文件。保存前请核对各行。"
     }
   },
   "page": {
@@ -185,6 +194,8 @@
     "migrate_classifications": "迁移分类",
     "migrate_legacy_classifications": "开始迁移",
     "retry_sync": "重试同步",
+    "refresh_fund_composition": "获取成分",
+    "upload_fund_composition": "上传成分",
     "to_holdings": "查看持仓",
     "to_activities": "查看活动",
     "to_accounts": "查看账户",

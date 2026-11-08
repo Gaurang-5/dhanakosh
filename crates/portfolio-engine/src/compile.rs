@@ -63,6 +63,17 @@ struct Leg {
 /// a BUY leg whose cash mirrors the income so the composite is cash-neutral
 /// (legacy `DefaultActivityCompiler`).
 fn expand(activity: &Activity) -> Vec<Leg> {
+    if activity.kind == ActivityKind::Buy && activity.subtype == Some(Subtype::BonusIssue) {
+        let mut issue = activity.clone();
+        issue.unit_price = Decimal::ZERO;
+        issue.amount = None;
+        issue.fee = Decimal::ZERO;
+        issue.tax = Decimal::ZERO;
+        return vec![Leg {
+            event_id: EventId::new(activity.id.as_str()),
+            activity: issue,
+        }];
+    }
     let composite = match (activity.kind, activity.subtype) {
         (ActivityKind::Dividend, Some(Subtype::Drip | Subtype::DividendInKind)) => {
             Some((ActivityKind::Dividend, "dividend"))
@@ -186,6 +197,10 @@ fn resolve_cash(
     diagnostics: &mut Vec<Diagnostic>,
 ) -> Option<CashEffect> {
     use ActivityKind::*;
+
+    if activity.kind == Buy && activity.subtype == Some(Subtype::BonusIssue) {
+        return None;
+    }
 
     if activity.kind == Split || activity.kind == Adjustment || activity.kind == Unknown {
         return None;

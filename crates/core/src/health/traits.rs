@@ -322,6 +322,7 @@ pub trait HealthServiceTrait: Send + Sync {
     /// * `snapshot_service` - Service for accessing generated holdings snapshots
     /// * `activity_service` - Service for accessing activities
     /// * `lot_repository` - Repository for accessing lot disposal records
+    /// * `settings_service` - Settings used to read saved fund compositions
     /// * `configured_timezone` - App-configured timezone from settings
     /// * `client_timezone` - Client/browser timezone from request context
     #[allow(clippy::too_many_arguments)]
@@ -337,6 +338,7 @@ pub trait HealthServiceTrait: Send + Sync {
         snapshot_service: Arc<dyn SnapshotServiceTrait>,
         activity_service: Arc<dyn ActivityServiceTrait>,
         lot_repository: Arc<dyn LotRepositoryTrait>,
+        settings_service: Arc<dyn crate::settings::SettingsServiceTrait>,
         configured_timezone: Option<&str>,
         client_timezone: Option<&str>,
     ) -> Result<HealthStatus>;

@@ -1,10 +1,12 @@
+import { refreshFundComposition } from "@/adapters";
 import {
   useDismissHealthIssue,
   useExecuteHealthFix,
   useHealthStatus,
   useRunHealthChecks,
 } from "@/hooks/use-health";
-import type { HealthCategory, HealthIssue, HealthSeverity } from "@/lib/types";
+import type { FixAction, HealthCategory, HealthIssue, HealthSeverity } from "@/lib/types";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Badge,
   Button,
@@ -22,6 +24,8 @@ import {
 import { cn } from "@wealthfolio/ui/lib/utils";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
+import { FundCompositionUploadDialog } from "./components/fund-composition-upload-dialog";
 import { IssueDetailSheet } from "./components/issue-detail-sheet";
 import { translateIssueText } from "./translate-issue";
 
@@ -263,11 +267,24 @@ function HealthyState() {
   );
 }
 
+function compositionTarget(payload: unknown): { assetId: string; name: string } | null {
+  if (!payload || typeof payload !== "object") return null;
+  const record = payload as { assetId?: unknown; name?: unknown };
+  if (typeof record.assetId !== "string" || record.assetId.length === 0) return null;
+  return {
+    assetId: record.assetId,
+    name: typeof record.name === "string" && record.name.length > 0 ? record.name : record.assetId,
+  };
+}
+
 export default function HealthPage() {
   const formatting = useDateFormatting();
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const [selectedSeverity, setSelectedSeverity] = useState<HealthSeverity | null>(null);
   const [selectedIssue, setSelectedIssue] = useState<HealthIssue | null>(null);
+  const [uploadTarget, setUploadTarget] = useState<{ assetId: string; name: string } | null>(null);
+  const [compositionBusy, setCompositionBusy] = useState(false);
 
   const { data: status, isLoading, error } = useHealthStatus();
   const runChecksMutation = useRunHealthChecks();
@@ -276,6 +293,38 @@ export default function HealthPage() {
 
   const handleRefresh = () => {
     runChecksMutation.mutate();
+  };
+
+  const refreshHealthAfterComposition = () => {
+    void queryClient.invalidateQueries({ queryKey: ["fund-exposure"] });
+    setSelectedIssue(null);
+    runChecksMutation.mutate();
+  };
+
+  const runDiagnosticAction = (action: FixAction) => {
+    const target = compositionTarget(action.payload);
+    if (action.id === "upload_fund_composition" && target) {
+      setUploadTarget(target);
+      return;
+    }
+    if (action.id === "refresh_fund_composition" && target) {
+      setCompositionBusy(true);
+      void refreshFundComposition(target.assetId)
+        .then(() => {
+          toast.success(t("health:issues.fund_composition_missing.fetched", { name: target.name }));
+          refreshHealthAfterComposition();
+        })
+        .catch((caught: unknown) => {
+          toast.error(
+            caught instanceof Error
+              ? caught.message
+              : t("health:issues.fund_composition_missing.fetchFailed"),
+          );
+        })
+        .finally(() => setCompositionBusy(false));
+      return;
+    }
+    fixMutation.mutate(action);
   };
 
   const filteredIssues = status?.issues.filter((issue) => {
@@ -419,9 +468,19 @@ export default function HealthPage() {
             fixMutation.mutate(selectedIssue.fixAction);
           }
         }}
-        onRunFixAction={(action) => fixMutation.mutate(action)}
+        onRunFixAction={runDiagnosticAction}
         isDismissing={dismissMutation.isPending}
-        isFixing={fixMutation.isPending}
+        isFixing={fixMutation.isPending || compositionBusy}
+      />
+      <FundCompositionUploadDialog
+        target={uploadTarget}
+        onOpenChange={(open) => {
+          if (!open) setUploadTarget(null);
+        }}
+        onSaved={(name) => {
+          toast.success(t("health:issues.fund_composition_missing.saved", { name }));
+          refreshHealthAfterComposition();
+        }}
       />
     </Page>
   );

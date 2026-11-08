@@ -59,7 +59,7 @@ function buildStaticNavigation(t: TFunction): NavigationProps {
         icon: <Icons.CalendarDots className="size-6" />,
         title: t("common:sip.title"),
         href: "/investment-plans",
-        keywords: ["SIP", "recurring", "installment"],
+        keywords: ["SIP", "SWP", "STP", "recurring", "installment", "withdrawal", "transfer"],
         label: t("common:sip.title"),
       },
       {

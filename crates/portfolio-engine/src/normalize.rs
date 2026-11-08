@@ -667,6 +667,7 @@ fn canonical_subtype(
         "DRIP" => Some(Subtype::Drip),
         "DIVIDEND_IN_KIND" => Some(Subtype::DividendInKind),
         "STAKING_REWARD" => Some(Subtype::StakingReward),
+        "BONUS_ISSUE" => Some(Subtype::BonusIssue),
         "BONUS" => Some(Subtype::Bonus),
         "REBATE" => Some(Subtype::Rebate),
         "REFUND" => Some(Subtype::Refund),

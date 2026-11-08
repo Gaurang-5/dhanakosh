@@ -187,6 +187,15 @@
       "title_other": "As taxas de câmbio não batem para {{count}} pares de moedas",
       "title_many": "As taxas de câmbio não batem para {{count}} pares de moedas",
       "message": "Há taxas registradas nos dois sentidos para os mesmos dias, e elas não correspondem. Cada sentido é usado como registrado, então converter em um sentido e voltar dá um valor diferente. Corrija ou remova as taxas erradas."
+    },
+    "fund_composition_missing": {
+      "title": "{{name}} não está detalhado",
+      "message": "Este fundo ainda é uma única posição. Busque a composição publicada ou envie o arquivo do emissor.",
+      "fetched": "Composição salva para {{name}}",
+      "fetchFailed": "Não foi possível buscar uma composição publicada.",
+      "saved": "Composição salva para {{name}}",
+      "uploadTitle": "Enviar composição",
+      "uploadDescription": "Importe o arquivo do emissor para {{name}}. Revise as linhas antes de salvar."
     }
   },
   "page": {
@@ -215,6 +224,8 @@
     "migrate_classifications": "Migrar classificações",
     "migrate_legacy_classifications": "Iniciar migração",
     "retry_sync": "Tentar sincronização novamente",
+    "refresh_fund_composition": "Buscar composição",
+    "upload_fund_composition": "Enviar composição",
     "to_holdings": "Ver posições",
     "to_activities": "Ver atividades",
     "to_accounts": "Ver contas",

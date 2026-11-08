@@ -239,6 +239,10 @@ pub const ACTIVITY_SUBTYPE_DIVIDEND_IN_KIND: &str = "DIVIDEND_IN_KIND";
 /// Examples: sign-up bonus, referral bonus, promotional credit.
 pub const ACTIVITY_SUBTYPE_BONUS: &str = "BONUS";
 
+/// Bonus issue: additional shares at zero cost on the issue date.
+/// This is not the cash `BONUS` credit.
+pub const ACTIVITY_SUBTYPE_BONUS_ISSUE: &str = "BONUS_ISSUE";
+
 /// Rebate: Trading rebate (negative fee, internal flow).
 /// Does NOT affect net_contribution - represents reduced trading costs.
 /// Examples: maker rebate, volume rebate.

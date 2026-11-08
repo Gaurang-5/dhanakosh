@@ -43,6 +43,21 @@ class ConversionTests(unittest.TestCase):
             with self.subTest(change=change), self.assertRaises(ValueError):
                 bridge.convert(data)
 
+    def test_opening_units_keep_their_quantity_and_no_cost(self):
+        data = statement()
+        scheme = data['folios'][0]['schemes'][0]
+        scheme['open'] = '2'
+        scheme['close'] = '10'
+        scheme['close_calculated'] = '10'
+        scheme['transactions'][0]['units'] = '8'
+        scheme['transactions'][0]['balance'] = '10'
+        rows = list(csv.DictReader(io.StringIO(bridge.convert(data)['csv'])))
+        self.assertEqual(rows[0]['activityType'], 'BUY')
+        self.assertEqual(rows[0]['quantity'], '2')
+        self.assertEqual(rows[0]['unitPrice'], '')
+        self.assertIn('cost unknown', rows[0]['comment'])
+        self.assertEqual(rows[1]['quantity'], '8')
+
     def test_reinvestment_has_income_and_purchase(self):
         data = statement()
         data['folios'][0]['schemes'][0]['transactions'][0]['type'] = 'DIVIDEND_REINVEST'

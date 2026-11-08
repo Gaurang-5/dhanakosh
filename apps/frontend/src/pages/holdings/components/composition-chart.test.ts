@@ -24,10 +24,15 @@ describe("mobile composition heatmap", () => {
     });
   });
 
-  it("keeps the ticker and return when a logo would not fit", () => {
+  it("drops the ticker before the logo on a medium tile", () => {
+    expect(mobileTileLayout(101, 40, true)).toMatchObject({
+      showLogo: true,
+      showSymbol: false,
+      showPercent: true,
+    });
     expect(mobileTileLayout(70, 44, true)).toMatchObject({
-      showLogo: false,
-      showSymbol: true,
+      showLogo: true,
+      showSymbol: false,
       showPercent: true,
     });
   });

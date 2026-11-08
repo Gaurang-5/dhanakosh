@@ -365,6 +365,72 @@ describe("import asset rules", () => {
     expect(candidate?.providerSymbol).toBe("XAU-1KG");
   });
 
+  it("does not ask which Indian exchange a stock was bought on", () => {
+    const validation = validateDraft(
+      createDraft({
+        currency: "INR",
+        symbol: "RELIANCE",
+        isin: "INE002A01018",
+      }),
+    );
+
+    expect(validation.errors.symbol).toBeUndefined();
+  });
+
+  it("accepts an Indian stock once the listing is known", () => {
+    const validation = validateDraft(
+      createDraft({
+        currency: "INR",
+        symbol: "RELIANCE",
+        isin: "INE002A01018",
+        exchangeMic: "XNSE",
+      }),
+    );
+
+    expect(validation.errors.symbol).toBeUndefined();
+  });
+
+  it("accepts a listed Indian ETF without an AMFI scheme code", () => {
+    const validation = validateDraft(
+      createDraft({
+        currency: "INR",
+        symbol: "MONIFTY500",
+        isin: "INF247L01BU1",
+        exchangeMic: "NSE",
+      }),
+    );
+
+    expect(validation.errors.symbol).toBeUndefined();
+  });
+
+  it("requires an AMFI scheme code for an Indian fund ISIN", () => {
+    const validation = validateDraft(
+      createDraft({
+        currency: "INR",
+        symbol: "HDFC Flexi Cap Direct Growth",
+        isin: "INF179K01UT0",
+      }),
+    );
+
+    expect(validation.errors.symbol?.[0]).toMatch(/AMFI/);
+  });
+
+  it("allows a bonus issue with no purchase price", () => {
+    const validation = validateDraft(
+      createDraft({
+        currency: "INR",
+        symbol: "RELIANCE",
+        isin: "INE002A01018",
+        exchangeMic: "XNSE",
+        subtype: ACTIVITY_SUBTYPES.BONUS_ISSUE,
+        unitPrice: "0",
+        amount: "0",
+      }),
+    );
+
+    expect(validation.errors.unitPrice).toBeUndefined();
+  });
+
   it("requires a symbol for DRIP dividends", () => {
     const validation = validateDraft(
       createDraft({

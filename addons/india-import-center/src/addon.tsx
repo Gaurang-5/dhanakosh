@@ -22,19 +22,24 @@ let addonCtx: AddonContext | undefined;
 
 const sources = [
   {
-    name: "Zerodha",
-    detail: "Equity tradebook CSV preset in the native importer",
-    status: "CSV preset",
+    name: "Zerodha equity",
+    detail: "Tradebook CSV. ISIN identifies the stock; NSE or BSE sets the price.",
+    status: "Supported",
   },
   {
-    name: "Groww",
-    detail: "Stocks and mutual-fund exports",
-    status: "Planned",
+    name: "Zerodha Coin",
+    detail: "Mutual-fund tradebook. The fund ISIN resolves to an AMFI scheme.",
+    status: "Supported",
   },
   {
     name: "CAMS / KFintech",
-    detail: "Consolidated mutual-fund statements",
-    status: "Planned",
+    detail: "Detailed statement in the import wizard. Summary and demat files are not read.",
+    status: "Supported",
+  },
+  {
+    name: "Groww and other brokers",
+    detail: "Not in this version. Use the generic CSV after checking the columns.",
+    status: "Unsupported",
   },
 ] as const;
 
@@ -78,8 +83,8 @@ function IndiaImportCenter({ ctx }: { ctx: AddonContext }) {
               Import investment CSV
             </CardTitle>
             <CardDescription>
-              Choose the owning member and investment account, then select the Zerodha equity, India
-              CSV or global CSV preset. Files are processed by your Wealthfolio installation.
+              Choose the owning member and investment account, then use Zerodha, Coin, Value
+              Research, a detailed CAS, or the generic CSV. Files stay in this installation.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -90,8 +95,9 @@ function IndiaImportCenter({ ctx }: { ctx: AddonContext }) {
             <Alert>
               <ShieldCheck className="size-4" />
               <AlertDescription>
-                Review the exchange, currency and fees before importing. Completed SIP installments
-                are BUY transactions. CAMS/KFintech PDF statements are not supported yet.
+                A stock or ETF needs its ISIN and its exchange. A mutual fund needs its AMFI scheme
+                code. Completed SIP instalments are buys. Opening CAS units have no cost until you
+                enter one. Groww, demat CAS, and live broker sync are not in this version.
               </AlertDescription>
             </Alert>
 
@@ -126,13 +132,13 @@ function IndiaImportCenter({ ctx }: { ctx: AddonContext }) {
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {sources.map((source) => (
           <Card key={source.name}>
             <CardHeader className="gap-3">
               <div className="flex items-center justify-between gap-3">
                 <CardTitle className="text-base">{source.name}</CardTitle>
-                <Badge variant={source.status === "CSV preset" ? "default" : "outline"}>
+                <Badge variant={source.status === "Supported" ? "default" : "outline"}>
                   {source.status}
                 </Badge>
               </div>

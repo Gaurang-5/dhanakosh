@@ -157,6 +157,15 @@
       "title_one": "{{from}} 與 {{to}} 的匯率不一致",
       "title_other": "{{count}} 組幣別對的匯率不一致",
       "message": "同一天在兩個方向都記錄了匯率，但兩者不相符。每個方向都依記錄使用，因此來回換算會得到不同的金額。請更正或刪除錯誤的匯率。"
+    },
+    "fund_composition_missing": {
+      "title": "{{name}} 尚未展開",
+      "message": "這檔基金仍顯示為單一持倉。取得已公布的成分，或上傳發行人檔案。",
+      "fetched": "已儲存 {{name}} 的成分",
+      "fetchFailed": "無法取得已公布的成分。",
+      "saved": "已儲存 {{name}} 的成分",
+      "uploadTitle": "上傳成分",
+      "uploadDescription": "匯入 {{name}} 的發行人檔案。儲存前請核對各列。"
     }
   },
   "page": {
@@ -185,6 +194,8 @@
     "migrate_classifications": "移轉分類",
     "migrate_legacy_classifications": "開始移轉",
     "retry_sync": "重試同步",
+    "refresh_fund_composition": "取得成分",
+    "upload_fund_composition": "上傳成分",
     "to_holdings": "查看持有部位",
     "to_activities": "查看交易紀錄",
     "to_accounts": "查看帳戶",

@@ -1,5 +1,5 @@
 <div align="center">
-  <a href="https://github.com/wealthfolio/wealthfolio">
+  <a href="https://github.com/Gaurang-5/dhanakosh">
     <img src="assets/brand/icon.png" alt="Logo" width="80" height="80">
   </a>
 
@@ -22,17 +22,55 @@ Wealthfolio. It is for one local installation or one private server, with India
 and global holdings in the same books. Wealthfolio is a trademark of Teymz Inc.
 This project is not the official Wealthfolio app.
 
-## Open it on your computer
+This version tracks stocks, ETFs, and mutual funds. A security is stored by its
+ISIN. Indian fund prices come from AMFI. NSE and BSE prices come from Yahoo once
+the exchange is known. EPF, NPS, deposits, and other passbooks are not part of
+this version. The release contract is
+[docs/securities-public-release.md](docs/securities-public-release.md).
 
-There is no App Store download for this copy. You open Dhanakosh from the folder
-that contains this file. Your portfolios stay on that computer. The first time
-takes a while, because the app is built on your machine. After that, the same
-last step opens it again.
+## Download and run
 
-Do not install the app from [wealthfolio.app](https://wealthfolio.app/). That is
-the official Wealthfolio app, which is a different product.
+Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) and
+[Git](https://git-scm.com/). Those are the only tools.
 
-### On a Mac
+```bash
+git clone https://github.com/Gaurang-5/dhanakosh.git
+cd dhanakosh
+./scripts/prepare-docker-env.sh
+docker compose --env-file .env.docker up -d --build
+```
+
+The script asks for the password you will type in the browser. It writes
+`.env.docker` on this computer. That file is not part of the git repository.
+Keep it. It holds the key that unlocks the saved data.
+
+The first build compiles the app. It needs an internet connection, several
+gigabytes of disk, and often 15 to 40 minutes. Later starts reuse that build.
+
+When the command finishes, open [http://localhost:8088](http://localhost:8088)
+and sign in with the password you chose. On the first screen, create the
+household and the first family member. Your portfolios stay in Docker on this
+computer. Write the password down. Dhanakosh cannot reset it.
+
+Next time, from the `dhanakosh` folder:
+
+```bash
+docker compose --env-file .env.docker up -d
+```
+
+Stop the app with `docker compose --env-file .env.docker down`. That keeps your
+data. `docker compose --env-file .env.docker down -v` deletes it.
+
+Do not install the app from [wealthfolio.app](https://wealthfolio.app/), and do
+not run the `wealthfolio/wealthfolio` Docker image. That is the official
+Wealthfolio app, which is a different product.
+
+CSV import, including a Zerodha tradebook, works in this container. A CAMS or
+KFintech PDF also needs the parser in
+[scripts/cas/README.md](scripts/cas/README.md). The container does not include
+it.
+
+### On a Mac, without Docker
 
 You only install the tools once.
 
@@ -63,8 +101,16 @@ You only install the tools once.
 
    Close Terminal and open it again so it can find Rust.
 
-6. Go to the Dhanakosh folder. Type `cd` and a space. Do not press Return yet.
-   Drag the folder onto the Terminal window, then press Return.
+6. Get the code, if you do not already have the folder:
+
+   ```bash
+   git clone https://github.com/Gaurang-5/dhanakosh.git
+   cd dhanakosh
+   ```
+
+   If the folder is already on this Mac, type `cd` and a space, drag the folder
+   onto the Terminal window, then press Return.
+
 7. Fetch the pieces and open the app:
 
    ```bash
@@ -228,8 +274,8 @@ Ensure you have the following installed on your machine:
 1. **Clone the repository**:
 
    ```bash
-   git clone https://github.com/wealthfolio/wealthfolio.git
-   cd wealthfolio
+   git clone https://github.com/Gaurang-5/dhanakosh.git
+   cd dhanakosh
    ```
 
 2. **Install dependencies using pnpm**:
@@ -520,29 +566,15 @@ environment variables.
 
 ## Docker
 
-You can either pull the official Docker image or build it yourself locally.
-
-### Using the Pre-built Image
-
-The latest server build is published to Docker Hub.
-
-```bash
-docker pull wealthfolio/wealthfolio:latest
-```
-
-After pulling, use `wealthfolio/wealthfolio:latest` in the run commands below.
-If you build the image locally, swap the image name back to `wealthfolio`.
-
-> **Legacy image:** the same build is also mirrored to `afadil/wealthfolio` so
-> existing `compose.yml` files keep working. New deployments should prefer
-> `wealthfolio/wealthfolio`.
+There is no published Dhanakosh image. Build this repository. The short path is
+[Download and run](#download-and-run).
 
 ### Building the Image
 
 Build the Docker image directly from source (no pre-build required):
 
 ```bash
-docker build -t wealthfolio .
+docker build -t dhanakosh:latest .
 ```
 
 The build process:
@@ -591,8 +623,8 @@ See examples below for inline configuration.
 
 ### Running the Container
 
-All examples below use the published image (`wealthfolio/wealthfolio:latest`).
-If you built locally, substitute your local tag (e.g., `wealthfolio`).
+All examples below use the image built from this repository
+(`dhanakosh:latest`).
 
 **Docker Compose** (recommended):
 
@@ -643,32 +675,32 @@ EOF
 
 ```bash
 docker run --rm -d \
-  --name wealthfolio \
+  --name dhanakosh \
   --env-file .env.docker-run \
   -p 8088:8088 \
   -v wealthfolio-data:/data \
-  wealthfolio/wealthfolio:latest
+  dhanakosh:latest
 ```
 
 **Basic usage** (inline environment variables, testing only):
 
 ```bash
 docker run --rm -d \
-  --name wealthfolio \
+  --name dhanakosh \
   -e WF_LISTEN_ADDR=0.0.0.0:8088 \
   -e WF_DB_PATH=/data/wealthfolio.db \
   -e WF_SECRET_KEY="$(openssl rand -base64 32)" \
   -e WF_AUTH_REQUIRED=false \
   -p 8088:8088 \
   -v wealthfolio-data:/data \
-  wealthfolio/wealthfolio:latest
+  dhanakosh:latest
 ```
 
 **Development mode** (with CORS for local Vite dev server, no built-in auth):
 
 ```bash
 docker run --rm -it \
-  --name wealthfolio \
+  --name dhanakosh \
   -e WF_LISTEN_ADDR=0.0.0.0:8088 \
   -e WF_DB_PATH=/data/wealthfolio.db \
   -e WF_CORS_ALLOW_ORIGINS=http://localhost:1420 \
@@ -676,14 +708,14 @@ docker run --rm -it \
   -e WF_AUTH_REQUIRED=false \
   -p 8088:8088 \
   -v wealthfolio-data:/data \
-  wealthfolio/wealthfolio:latest
+  dhanakosh:latest
 ```
 
 **Production with encryption** (recommended):
 
 ```bash
 docker run --rm -d \
-  --name wealthfolio \
+  --name dhanakosh \
   -e WF_LISTEN_ADDR=0.0.0.0:8088 \
   -e WF_DB_PATH=/data/wealthfolio.db \
   -e WF_SECRET_KEY="$(openssl rand -base64 32)" \
@@ -691,7 +723,7 @@ docker run --rm -d \
   -e WF_CORS_ALLOW_ORIGINS=https://wealthfolio.example.com \
   -p 8088:8088 \
   -v wealthfolio-data:/data \
-  wealthfolio/wealthfolio:latest
+  dhanakosh:latest
 ```
 
 ### Environment Variables
@@ -760,13 +792,13 @@ steps and provides an isolated environment with all necessary dependencies.
 
 1. **Clone the repository** (if you haven't already):
    ```bash
-   git clone https://github.com/wealthfolio/wealthfolio.git
-   cd wealthfolio
+   git clone https://github.com/Gaurang-5/dhanakosh.git
+   cd dhanakosh
    ```
 2. **Open in VS Code**:
    - Open VS Code
    - Go to File > Open Folder
-   - Select the wealthfolio directory
+   - Select the dhanakosh directory
 
 3. **Launch DevContainer**:
    - Press `F1` or `Ctrl+Shift+P`
@@ -977,9 +1009,5 @@ Brand assets in `assets/brand/` are trademarks; see
 Dhanakosh is an independent project based on Wealthfolio. Wealthfolio and the
 Wealthfolio logo are trademarks of Teymz Inc. The code is licensed under
 AGPL-3.0; those trademarks are not granted under that license.
-
-## 🌟 Star History
-
-## [![Star History Chart](https://api.star-history.com/svg?repos=wealthfolio/wealthfolio&type=Timeline)](https://star-history.com/#wealthfolio/wealthfolio&Date)
 
 Enjoy managing your wealth with **Dhanakosh**.

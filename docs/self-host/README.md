@@ -1,7 +1,11 @@
-# Self-Hosting Wealthfolio
+# Self-hosting Dhanakosh
 
-Wealthfolio ships an official Docker image so you can run the web edition on
-your own hardware.
+Dhanakosh is not published on Docker Hub. Build the image from this repository
+with `docker compose --env-file .env.docker up -d --build`, as described in the
+[README](../../README.md#download-and-run). The `wealthfolio/wealthfolio` image
+is the official Wealthfolio app, which is a different product.
+
+The notes below are the shared server settings this fork still uses.
 
 For more documentation, including platform setup, configuration, reverse
 proxies, and troubleshooting, see the
@@ -13,21 +17,16 @@ own repositories.
 
 ## Image
 
-Multi-arch (`linux/amd64`, `linux/arm64`), published on every `v*.*.*` tag:
-
-| Registry   | Image                                         |
-| ---------- | --------------------------------------------- |
-| Docker Hub | `wealthfolio/wealthfolio:latest` _(primary)_  |
-| Docker Hub | `afadil/wealthfolio:latest` _(legacy mirror)_ |
-| GHCR       | `ghcr.io/wealthfolio/wealthfolio:latest`      |
+Build it from this checkout:
 
 ```bash
-docker pull wealthfolio/wealthfolio:latest
+docker build -t dhanakosh:latest .
 ```
 
-Existing deployments that pin `afadil/wealthfolio:latest` keep working — both
-Docker Hub repos receive the same multi-arch build from CI. New deployments
-should prefer `wealthfolio/wealthfolio`.
+`docker compose --env-file .env.docker up -d --build` does the same build and
+tags `dhanakosh:latest`. The official Wealthfolio registries
+(`wealthfolio/wealthfolio`, `afadil/wealthfolio`,
+`ghcr.io/wealthfolio/wealthfolio`) are not this project.
 
 ## Reverse proxies and profile startup
 
@@ -381,7 +380,7 @@ With plain Docker, run a one-shot container over the same volume and the same
 database the server cannot open:
 
 ```bash
-docker run --rm -v wealthfolio-data:/data -e WF_SECRET_KEY='<your-secret>' wealthfolio/wealthfolio:latest wealthfolio-server db encrypt
+docker run --rm -v wealthfolio-data:/data -e WF_SECRET_KEY='<your-secret>' dhanakosh:latest wealthfolio-server db encrypt
 ```
 
 Expect `Database at /data/wealthfolio.db is now encrypted`. The command refuses
@@ -417,7 +416,7 @@ directory, which is created owner-only — end up owned by a user the server
 cannot read or write:
 
 ```bash
-docker run --rm --user=99:100 -v /mnt/user/appdata/wealthfolio:/data -e WF_SECRET_KEY='<your-secret>' wealthfolio/wealthfolio:latest wealthfolio-server db encrypt
+docker run --rm --user=99:100 -v /mnt/user/appdata/wealthfolio:/data -e WF_SECRET_KEY='<your-secret>' dhanakosh:latest wealthfolio-server db encrypt
 ```
 
 Add `WF_DB_REQUIRE_ENCRYPTION` as a Variable in **Docker → wealthfolio → Edit**

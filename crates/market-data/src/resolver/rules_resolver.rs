@@ -264,6 +264,40 @@ impl RulesResolver {
     }
 }
 
+/// Indian listings are not guessed. A missing MIC must not become a US ticker.
+fn equity_quote_needs_listing(
+    ticker: &str,
+    mic: &Option<std::borrow::Cow<'_, str>>,
+    context: &QuoteContext,
+) -> bool {
+    if mic.as_deref().is_some_and(|value| !value.trim().is_empty()) {
+        return false;
+    }
+    let ticker = ticker.trim();
+    if ticker.starts_with("AMFI-")
+        || ticker.ends_with(".NS")
+        || ticker.ends_with(".BO")
+        || ticker.ends_with(".ns")
+        || ticker.ends_with(".bo")
+    {
+        return false;
+    }
+    let isin = context
+        .identifiers
+        .isin
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(|value| value.to_ascii_uppercase());
+    if isin.as_deref().is_some_and(|value| value.starts_with("IN")) {
+        return true;
+    }
+    context
+        .currency_hint
+        .as_deref()
+        .is_some_and(|currency| currency.eq_ignore_ascii_case("INR"))
+}
+
 impl Default for RulesResolver {
     fn default() -> Self {
         Self::new()
@@ -316,6 +350,14 @@ impl Resolver for RulesResolver {
 
         let (instrument, source) = match &context.instrument {
             InstrumentId::Equity { ticker, mic } => {
+                // An Indian security is the ISIN, not its name and not a Yahoo
+                // ticker. NSE and BSE prices still come from Yahoo, but only
+                // after the listing (MIC or a .NS/.BO suffix) is known. Funds
+                // are quoted by AMFI scheme code. Google Finance is not a
+                // source: it has no supported API.
+                if equity_quote_needs_listing(ticker, mic, context) {
+                    return None;
+                }
                 self.resolve_equity(ticker, mic, context.identifiers.isin.as_deref(), provider)?
             }
 
@@ -823,6 +865,44 @@ mod tests {
             .unwrap();
 
         assert_eq!(resolved.source, ResolutionSource::RulesFallback);
+    }
+
+    fn indian_context(
+        ticker: &str,
+        mic: Option<&'static str>,
+        isin: Option<&'static str>,
+        currency: Option<&'static str>,
+    ) -> QuoteContext {
+        let mut context = make_equity_context(ticker, mic);
+        context.identifiers.isin = isin.map(std::borrow::Cow::Borrowed);
+        context.currency_hint = currency.map(std::borrow::Cow::Borrowed);
+        context
+    }
+
+    #[test]
+    fn indian_security_without_a_listing_is_not_sent_to_yahoo() {
+        let resolver = RulesResolver::new();
+        for context in [
+            indian_context("RELIANCE", None, Some("INE002A01018"), None),
+            indian_context("HDFC FLEXI CAP", None, Some("INF179K01UT0"), Some("INR")),
+            indian_context("RELIANCE", None, None, Some("INR")),
+        ] {
+            assert!(
+                resolver.resolve(&"YAHOO".into(), &context).is_none(),
+                "{context:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn indian_listing_with_a_mic_still_uses_yahoo_for_the_price() {
+        let resolver = RulesResolver::new();
+        let context = indian_context("RELIANCE", Some("XNSE"), Some("INE002A01018"), Some("INR"));
+        let resolved = resolver
+            .resolve(&"YAHOO".into(), &context)
+            .expect("listed NSE security")
+            .expect("yahoo symbol");
+        assert_eq!(resolved.instrument.to_symbol_string(), "RELIANCE.NS");
     }
 
     #[test]

@@ -1,7 +1,18 @@
 import { describe, expect, it } from "vitest";
 import type { ExposureView } from "@/adapters/shared/fund-exposure";
 import type { Asset } from "@/lib/types";
-import { buildStockOnlyOverview } from "./stock-only-overview";
+import { buildStockOnlyOverview, compositionHoldings } from "./stock-only-overview";
+
+describe("overview composition", () => {
+  it("keeps the mutual fund whole until stock-only is turned on", () => {
+    const fund = { id: "fund" };
+    const stock = { id: "hdfcbank" };
+
+    expect(compositionHoldings(false, [fund], [stock])).toEqual([fund]);
+    expect(compositionHoldings(true, [fund], [stock])).toEqual([stock]);
+    expect(compositionHoldings(true, [fund], null)).toEqual([fund]);
+  });
+});
 
 describe("stock-only overview", () => {
   it("combines direct and fund exposure and omits the fund itself", () => {

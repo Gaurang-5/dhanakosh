@@ -32,9 +32,11 @@ use crate::portfolio::snapshot::{
 };
 use crate::portfolio::valuation::{DailyAccountValuation, ValuationServiceTrait};
 use crate::quotes::QuoteServiceTrait;
+use crate::settings::SettingsServiceTrait;
 use crate::taxonomies::TaxonomyServiceTrait;
 use crate::utils::time_utils::{activity_date_in_tz, parse_user_timezone_or_default, user_today};
 
+use super::checks::fund_composition::{analyze as analyze_uncovered_funds, UnexpandedFund};
 use super::checks::{
     AccountConfigurationCheck, AssetHoldingInfo, ClassificationCheck, ConsistencyIssueInfo,
     ConsistencyIssueType, DataConsistencyCheck, FxConflictInfo, FxIntegrityCheck, FxPairInfo,
@@ -287,6 +289,7 @@ impl HealthService {
         snapshot_service: Arc<dyn SnapshotServiceTrait>,
         activity_service: Arc<dyn ActivityServiceTrait>,
         lot_repository: Arc<dyn LotRepositoryTrait>,
+        settings_service: Arc<dyn SettingsServiceTrait>,
         configured_timezone: Option<&str>,
         client_timezone: Option<&str>,
     ) -> Result<HealthStatus> {
@@ -475,6 +478,9 @@ impl HealthService {
         ));
         let projection_freshness = self.projection_freshness.clone();
         let handle = tokio::runtime::Handle::current();
+        // History gathering takes these services. Fund composition is read after that.
+        let fund_account_service = Arc::clone(&account_service);
+        let fund_asset_service = Arc::clone(&asset_service);
         let gather_history = async move {
             let effective_timezone = timezone.as_deref();
             let negative_balance_accounts = valuation_service
@@ -711,23 +717,114 @@ impl HealthService {
             blocking(move || handle.block_on(gather_history)).await?;
 
         // Run checks with gathered data
-        self.run_checks_with_data(
-            base_currency,
-            total_portfolio_value,
-            &all_holdings,
-            &latest_quote_times,
-            &quote_sync_errors,
-            &fx_pairs,
-            &fx_conflicts,
-            &unclassified_assets,
-            &consistency_issues,
-            &legacy_migration_info,
-            &unconfigured_accounts,
-            configured_timezone,
-            client_timezone,
-            &invalid_transfer_groups,
-        )
-        .await
+        let mut status = self
+            .run_checks_with_data(
+                base_currency,
+                total_portfolio_value,
+                &all_holdings,
+                &latest_quote_times,
+                &quote_sync_errors,
+                &fx_pairs,
+                &fx_conflicts,
+                &unclassified_assets,
+                &consistency_issues,
+                &legacy_migration_info,
+                &unconfigured_accounts,
+                configured_timezone,
+                client_timezone,
+                &invalid_transfer_groups,
+            )
+            .await?;
+        let fund_issues = self
+            .uncovered_fund_issues(
+                settings_service.as_ref(),
+                fund_account_service.as_ref(),
+                fund_asset_service.as_ref(),
+                holdings_service.as_ref(),
+                base_currency,
+                total_portfolio_value,
+            )
+            .await?;
+        if !fund_issues.is_empty() {
+            let mut issues = status.issues;
+            issues.extend(fund_issues);
+            status = HealthStatus::from_issues(issues);
+            *self.cached_status.write().await = Some(CachedStatus {
+                status: status.clone(),
+                cached_at: Utc::now(),
+            });
+        }
+        Ok(status)
+    }
+
+    /// Reports funds that look-through still holds as a single position.
+    ///
+    /// A failed exposure read leaves the rest of the health status intact.
+    async fn uncovered_fund_issues(
+        &self,
+        settings: &dyn SettingsServiceTrait,
+        accounts: &dyn AccountServiceTrait,
+        assets: &dyn AssetServiceTrait,
+        holdings: &dyn HoldingsServiceTrait,
+        currency: &str,
+        total_portfolio_value: f64,
+    ) -> Result<Vec<HealthIssue>> {
+        let view =
+            match crate::fund_exposure::read(settings, accounts, assets, holdings, currency, None)
+                .await
+            {
+                Ok(view) => view,
+                Err(error) => {
+                    warn!("Fund composition health check skipped: {error}");
+                    return Ok(Vec::new());
+                }
+            };
+        let uncovered: HashSet<&str> = view
+            .report
+            .uncovered_funds
+            .iter()
+            .map(String::as_str)
+            .collect();
+        if uncovered.is_empty() {
+            return Ok(Vec::new());
+        }
+        let mut grouped: HashMap<String, (String, f64)> = HashMap::new();
+        for position in &view.positions {
+            if !uncovered.contains(position.asset_id.as_str()) {
+                continue;
+            }
+            let value = position.value.to_string().parse::<f64>().unwrap_or(0.0);
+            let entry = grouped
+                .entry(position.asset_id.clone())
+                .or_insert_with(|| (String::new(), 0.0));
+            if entry.0.is_empty() {
+                entry.0.clone_from(&position.name);
+            }
+            entry.1 += value;
+        }
+        let mut funds: Vec<UnexpandedFund> = grouped
+            .into_iter()
+            .map(|(asset_id, (name, value))| {
+                let name = if name.trim().is_empty() {
+                    asset_id.clone()
+                } else {
+                    name
+                };
+                UnexpandedFund {
+                    asset_id,
+                    name,
+                    value,
+                }
+            })
+            .collect();
+        funds.sort_by(|left, right| {
+            left.name
+                .to_lowercase()
+                .cmp(&right.name.to_lowercase())
+                .then_with(|| left.asset_id.cmp(&right.asset_id))
+        });
+        let issues = analyze_uncovered_funds(&funds, total_portfolio_value);
+        self.filter_dismissed_issues(issues).await
     }
 
     /// Filters out issues that have been dismissed (unless their data has changed).
@@ -2150,6 +2247,7 @@ impl HealthServiceTrait for HealthService {
         snapshot_service: Arc<dyn SnapshotServiceTrait>,
         activity_service: Arc<dyn ActivityServiceTrait>,
         lot_repository: Arc<dyn LotRepositoryTrait>,
+        settings_service: Arc<dyn SettingsServiceTrait>,
         configured_timezone: Option<&str>,
         client_timezone: Option<&str>,
     ) -> Result<HealthStatus> {
@@ -2165,6 +2263,7 @@ impl HealthServiceTrait for HealthService {
             snapshot_service,
             activity_service,
             lot_repository,
+            settings_service,
             configured_timezone,
             client_timezone,
         )
