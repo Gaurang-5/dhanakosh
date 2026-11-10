@@ -152,6 +152,7 @@ jobs:
           .github/scripts/check_connect_build.py --github-env
 
       - name: Build the app
+        if: ${{ !contains(matrix.platform, 'macos') || env.MACOS_SIGNING_ENABLED == 'true' }}
         uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -172,6 +173,22 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }} ${{ steps.win-bundles.outputs.args }} -- --locked
+
+      # Tauri treats the presence of an empty APPLE_CERTIFICATE variable as a
+      # signing request. Keep every Apple variable out of the unsigned process.
+      - name: Build the unsigned macOS app
+        if: contains(matrix.platform, 'macos') && env.MACOS_SIGNING_ENABLED != 'true'
+        uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.event_name == 'push' && github.ref_name || '' }}
+          releaseName: ${{ github.event_name == 'push' && 'Dhanakosh v__VERSION__' || '' }}
+          releaseBody:
+            "See the assets below to download and install Dhanakosh for your operating system."
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }} -- --locked
 
       - name: Verify macOS packages
         if: contains(matrix.platform, 'macos')
