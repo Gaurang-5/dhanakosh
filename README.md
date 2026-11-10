@@ -73,10 +73,10 @@ latest-release page has no installers, check the
 
 ### Download security
 
-New macOS releases are published only after Developer ID signing, Apple
-notarization, ticket stapling, and Gatekeeper verification. The workflow fails
-closed when a signing credential is missing or verification fails. Older builds,
-including v3.11.0, predate this rule and may still trigger Gatekeeper.
+macOS packages are signed and notarized when Apple Developer credentials are
+configured. Community builds made without those credentials are still checked
+for both app and DMG output, but macOS will show an unidentified-developer
+warning when they are opened.
 
 Windows installers are currently community builds, so SmartScreen may appear.
 Maintainer setup and the release checklist are in

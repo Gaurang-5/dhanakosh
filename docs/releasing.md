@@ -7,8 +7,7 @@ until every advertised platform succeeds and all required assets are present.
 
 ## macOS signing and notarization
 
-macOS releases are not allowed to fall back to unsigned builds. Add these
-repository secrets before creating a release:
+Add these repository secrets to produce signed and notarized macOS packages:
 
 | Secret                       | Value                                                                            |
 | :--------------------------- | :------------------------------------------------------------------------------- |
@@ -23,10 +22,15 @@ repository secrets before creating a release:
 Store these only as GitHub Actions secrets. Do not commit certificates, private
 keys, passwords, or API keys to the repository.
 
-The Tauri build signs the app, submits it to Apple's notary service, and staples
-the accepted ticket. The workflow then verifies the app signature, asks
-Gatekeeper to assess both the app and DMG, and validates the stapled ticket. Any
-failure prevents the draft release from being published.
+When all credentials are present, the Tauri build signs the app, submits it to
+Apple's notary service, and staples the accepted ticket. The workflow verifies
+the app signature, asks Gatekeeper to assess both the app and DMG, and validates
+the stapled ticket. Any verification failure prevents publication.
+
+When the credentials are absent, the workflow produces unsigned community builds
+instead. It verifies that the app and DMG were created, but macOS will show an
+unidentified-developer warning. This mode does not provide Apple notarization or
+remove Gatekeeper prompts.
 
 ## Publishing a version
 
@@ -37,5 +41,6 @@ failure prevents the draft release from being published.
 5. Confirm the release is public and contains both macOS architectures, both
    Windows architectures, and the Linux AppImage and Debian package.
 
-Never publish a draft manually to bypass a failed signing, notarization, build,
-or asset-verification step.
+Never publish a draft manually to bypass a failed build or asset-verification
+step. When signing is configured, do not bypass a signing or notarization
+failure.
