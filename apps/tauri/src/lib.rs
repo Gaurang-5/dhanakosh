@@ -311,6 +311,8 @@ pub fn run() {
             commands::activity::search_activities,
             commands::activity::create_activity,
             commands::activity::update_activity,
+            commands::activity::review_activity_split_effects,
+            commands::activity::review_internal_transfer_pair_split_effects,
             commands::activity::save_activities,
             commands::activity::delete_activity,
             commands::activity::get_transfer_pair_for_activity,
@@ -585,6 +587,7 @@ pub fn run() {
             commands::mcp::mcp_purge_audit_log,
             commands::mcp::mcp_list_tokens,
             commands::mcp::mcp_create_token,
+            commands::mcp::mcp_update_token_scopes,
             commands::mcp::mcp_delete_token,
             // Addon commands
             commands::addon::extract_addon_zip,
@@ -772,7 +775,9 @@ pub fn run() {
             commands::allocation_targets::list_target_constraints,
             commands::allocation_targets::save_target_constraints,
             commands::allocation_targets::get_allocation_target_drift,
+            commands::allocation_targets::generate_calculated_adjustments,
             commands::allocation_targets::calculate_rebalance_plan,
+            commands::allocation_targets::calculate_allocation_worksheet,
             // RetirementPlan-based FIRE commands
             commands::fire::calculate_retirement_projection,
             commands::fire::run_retirement_decision_sensitivity_map,

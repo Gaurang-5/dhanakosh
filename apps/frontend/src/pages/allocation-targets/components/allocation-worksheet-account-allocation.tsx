@@ -200,7 +200,7 @@ export function AccountAllocation({
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <p className="text-2xs font-mono font-medium tracking-[0.12em] uppercase">
+          <p className="text-2xs font-mono font-medium uppercase tracking-[0.12em]">
             {t("allocation:worksheet.accountAllocation")}
           </p>
           <p className="text-muted-foreground mt-1 text-xs">{t(hint, { account: holderName })}</p>

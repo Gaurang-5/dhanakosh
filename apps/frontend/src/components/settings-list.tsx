@@ -20,7 +20,7 @@ export function SettingsList({
       aria-label={label}
       className={cn(
         // settings-list: globals.css keeps its rows from clipping their controls below lg.
-        "settings-list divide-y [&>li]:py-3 [&>li:first-child]:pt-0 [&>li:last-child]:pb-0",
+        "settings-list divide-y [&>li:first-child]:pt-0 [&>li:last-child]:pb-0 [&>li]:py-3",
         className,
       )}
     >
@@ -40,7 +40,7 @@ export function SettingsListMedia({
   return (
     <div
       className={cn(
-        "bg-muted text-muted-foreground flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg [&_img]:size-full [&_img]:object-contain [&>svg]:size-5",
+        "bg-muted text-muted-foreground flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg [&>svg]:size-5 [&_img]:size-full [&_img]:object-contain",
         className,
       )}
     >
@@ -79,7 +79,7 @@ export function SettingsListRow({
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span
               className={cn(
-                "min-w-0 text-sm font-medium break-words",
+                "min-w-0 break-words text-sm font-medium",
                 inactive && "text-muted-foreground",
               )}
             >

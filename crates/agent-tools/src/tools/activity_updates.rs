@@ -281,6 +281,8 @@ fn build_update(row: &UpdateRow, existing: &Activity) -> Result<ActivityUpdate, 
     };
 
     Ok(ActivityUpdate {
+        unlink_transfer_pair_id: None,
+        split_review: None,
         id: existing.id.clone(),
         account_id: non_empty(&row.account_id, "accountId")?
             .unwrap_or_else(|| existing.account_id.clone()),

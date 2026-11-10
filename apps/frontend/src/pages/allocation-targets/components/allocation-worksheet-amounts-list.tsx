@@ -208,7 +208,7 @@ export function AmountsList({
       <div
         className={cn(
           AMOUNTS_GRID,
-          "text-muted-foreground hidden border-b px-5 py-2.5 text-xs @[36rem]/positions:grid @[36rem]/positions:items-center",
+          "text-muted-foreground @[36rem]/positions:grid @[36rem]/positions:items-center hidden border-b px-5 py-2.5 text-xs",
         )}
       >
         <span>{t("allocation:worksheet.position")}</span>
@@ -411,7 +411,7 @@ function AmountRow({
       <div className={AMOUNTS_GRID}>
         {/* Symbol above name, so the name is not cut short beside the symbol. */}
         <div className="flex min-w-0 items-start gap-2.5">
-          <span className="flex w-5 shrink-0 flex-wrap gap-[3px] pt-1.75" title={classesText}>
+          <span className="pt-1.75 flex w-5 shrink-0 flex-wrap gap-[3px]" title={classesText}>
             {position.categoryExposures.map((exposure) =>
               exposure.categoryId === UNCLASSIFIED_CATEGORY_ID ? (
                 <span
@@ -429,7 +429,7 @@ function AmountRow({
           </span>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-sm leading-5 font-medium">{position.symbol}</span>
+              <span className="text-sm font-medium leading-5">{position.symbol}</span>
               {shareBps !== null && (
                 <span className="border-foreground text-2xs shrink-0 rounded border px-1 font-mono">
                   {Math.round(shareBps / 100)}%
@@ -445,7 +445,7 @@ function AmountRow({
 
         {/* The projected weight stands out, so the eye finds what changes without
             reading the arrow; no colour says which way. */}
-        <span className="text-end text-xs tabular-nums @[36rem]/positions:pt-2 @[36rem]/positions:text-start">
+        <span className="@[36rem]/positions:pt-2 @[36rem]/positions:text-start text-end text-xs tabular-nums">
           {isChanged ? (
             <>
               <span className="text-muted-foreground">
@@ -458,7 +458,7 @@ function AmountRow({
           )}
         </span>
 
-        <div className="col-span-2 min-w-0 @[36rem]/positions:col-span-1">
+        <div className="@[36rem]/positions:col-span-1 col-span-2 min-w-0">
           <div className="flex items-center gap-1">
             <StepperField
               prefix={editMode === "amount" ? currency : undefined}
@@ -537,7 +537,7 @@ function AmountRow({
           )}
         </div>
 
-        <div className="col-span-2 flex min-w-0 items-start justify-between gap-1 text-xs @[36rem]/positions:col-span-1 @[36rem]/positions:pt-1.5">
+        <div className="@[36rem]/positions:col-span-1 @[36rem]/positions:pt-1.5 col-span-2 flex min-w-0 items-start justify-between gap-1 text-xs">
           <div className="min-w-0 space-y-1">
             <RowStatusCell
               status={status}

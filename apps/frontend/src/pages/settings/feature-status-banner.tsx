@@ -78,7 +78,7 @@ export function FeatureStatusBanner({
           </div>
 
           {toggle && (
-            <label className="flex shrink-0 cursor-pointer items-center gap-2 select-none">
+            <label className="flex shrink-0 cursor-pointer select-none items-center gap-2">
               <span className="text-background/75 hidden text-xs font-medium sm:inline">
                 {toggle.stateLabel}
               </span>

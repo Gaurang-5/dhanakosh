@@ -9,19 +9,19 @@ const messages = (schema: z.ZodType, input: unknown) => {
 
 describe("zod error helpers", () => {
   it("answers only a missing value with the required message", () => {
-    const schema = z.date({ error: requiredError("Pick a date.") });
+    const schema = z.date(requiredError("Pick a date."));
     expect(messages(schema, undefined)).toEqual(["Pick a date."]);
     expect(messages(schema, null)).not.toContain("Pick a date.");
   });
 
   it("answers wrong-type input, including a missing coerced number", () => {
-    const schema = z.coerce.number({ error: invalidTypeError("Enter a number.") });
+    const schema = z.coerce.number(invalidTypeError("Enter a number."));
     expect(messages(schema, "abc")).toEqual(["Enter a number."]);
     expect(messages(schema, undefined)).toEqual(["Enter a number."]);
   });
 
   it("leaves checks without their own message alone", () => {
-    const schema = z.coerce.number({ error: invalidTypeError("Enter a number.") }).positive();
+    const schema = z.coerce.number(invalidTypeError("Enter a number.")).positive();
     const result = messages(schema, 0);
     expect(result).toHaveLength(1);
     expect(result).not.toContain("Enter a number.");

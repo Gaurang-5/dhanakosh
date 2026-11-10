@@ -20,6 +20,13 @@ pub trait TaxonomyRepositoryTrait: Send + Sync {
     async fn delete_taxonomy(&self, id: &str) -> Result<usize>;
 
     // Category operations
+    fn get_category_references(
+        &self,
+        _taxonomy_id: &str,
+        _category_id: &str,
+    ) -> Result<super::CategoryReferences> {
+        Ok(super::CategoryReferences::default())
+    }
     fn get_categories(&self, taxonomy_id: &str) -> Result<Vec<Category>>;
     fn get_category(&self, taxonomy_id: &str, category_id: &str) -> Result<Option<Category>>;
     fn get_category_spending_reference_count(
@@ -34,6 +41,17 @@ pub trait TaxonomyRepositoryTrait: Send + Sync {
     ) -> Result<usize>;
     async fn create_category(&self, category: NewCategory) -> Result<Category>;
     async fn update_category(&self, category: Category) -> Result<Category>;
+    async fn update_category_reviewed(
+        &self,
+        _expected: Category,
+        category: Category,
+    ) -> Result<Category> {
+        self.update_category(category).await
+    }
+    async fn delete_category_reviewed(&self, expected: Category) -> Result<usize> {
+        self.delete_category(&expected.taxonomy_id, &expected.id)
+            .await
+    }
     async fn delete_category(&self, taxonomy_id: &str, category_id: &str) -> Result<usize>;
     async fn bulk_create_categories(&self, categories: Vec<NewCategory>) -> Result<usize>;
 
@@ -84,8 +102,26 @@ pub trait TaxonomyServiceTrait: Send + Sync {
     async fn delete_taxonomy(&self, id: &str) -> Result<usize>;
 
     // Category operations
+    fn get_category_references(
+        &self,
+        _taxonomy_id: &str,
+        _category_id: &str,
+    ) -> Result<super::CategoryReferences> {
+        Ok(super::CategoryReferences::default())
+    }
     async fn create_category(&self, category: NewCategory) -> Result<Category>;
     async fn update_category(&self, category: Category) -> Result<Category>;
+    async fn update_category_reviewed(
+        &self,
+        _expected: Category,
+        category: Category,
+    ) -> Result<Category> {
+        self.update_category(category).await
+    }
+    async fn delete_category_reviewed(&self, expected: Category) -> Result<usize> {
+        self.delete_category(&expected.taxonomy_id, &expected.id)
+            .await
+    }
     async fn delete_category(&self, taxonomy_id: &str, category_id: &str) -> Result<usize>;
     async fn move_category(
         &self,

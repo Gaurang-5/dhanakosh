@@ -201,7 +201,7 @@ function ErrorState({ message }: { message?: string }) {
 
 type AccountsToolUIContentProps = ToolCallMessagePartProps<GetAccountsArgs, GetAccountsResult>;
 
-function AccountsToolUIContentImpl({ args, result, status }: AccountsToolUIContentProps) {
+export function AccountsToolUIContentImpl({ args, result, status }: AccountsToolUIContentProps) {
   const { t } = useTranslation();
   const { settings } = useSettingsContext();
   const baseCurrency = settings?.baseCurrency ?? "USD";

@@ -59,6 +59,7 @@
   },
   "appearance": {
     "subtitle": "Customize your experience",
+    "changeLater": "You can change these anytime in Settings.",
     "themeLabel": "Theme",
     "fontLabel": "Font",
     "themeLight": "Light",

@@ -38,6 +38,17 @@ type CategorizationProposalsToolUIContentProps = ToolCallMessagePartProps<
   ProposeCategoriesOutput
 >;
 
+interface CategorizationProposalsContentProps {
+  result?:
+    | Partial<ProposeCategoriesOutput>
+    | {
+        data: Partial<ProposeCategoriesOutput>;
+        meta?: Partial<ProposeCategoriesOutput>;
+      };
+  status?: CategorizationProposalsToolUIContentProps["status"];
+  toolCallId: string;
+}
+
 interface RowDraft {
   activityId: string;
   activityDate: string;
@@ -84,11 +95,18 @@ function ProposalsLoadingState() {
   );
 }
 
-function CategorizationProposalsContentImpl({
-  result,
+export function CategorizationProposalsContentImpl({
+  result: persistedResult,
   status,
   toolCallId,
-}: CategorizationProposalsToolUIContentProps) {
+}: CategorizationProposalsContentProps) {
+  const result = useMemo(
+    () =>
+      persistedResult && "data" in persistedResult
+        ? { ...persistedResult.data, ...persistedResult.meta }
+        : persistedResult,
+    [persistedResult],
+  );
   const amountFormatting = useAmountFormatting();
   const dateFormatting = useDateFormatting();
 
@@ -188,14 +206,14 @@ function CategorizationProposalsContentImpl({
     );
   }
 
+  const proposals = result.proposals ?? [];
   const summary = result.summary ?? {
-    total: (result.proposals?.length ?? 0) + (result.unproposed?.length ?? 0),
-    proposed: result.proposals?.length ?? 0,
+    total: proposals.length + (result.unproposed?.length ?? 0),
+    proposed: proposals.length,
     unproposed: result.unproposed?.length ?? 0,
     avgConfidence:
-      (result.proposals?.length ?? 0) > 0
-        ? result.proposals.reduce((acc, p) => acc + (p.confidence ?? 0), 0) /
-          result.proposals.length
+      proposals.length > 0
+        ? proposals.reduce((acc, p) => acc + (p.confidence ?? 0), 0) / proposals.length
         : 0,
   };
 

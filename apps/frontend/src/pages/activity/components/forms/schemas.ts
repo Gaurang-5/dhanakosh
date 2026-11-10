@@ -285,4 +285,20 @@ export const newActivitySchema = z
     });
   });
 
+export function createActivitySchemas(_t?: import("i18next").TFunction) {
+  return {
+    base: baseActivitySchema,
+    transfer: transferActivitySchema,
+    bulkHoldingRow: bulkHoldingRowSchema,
+    bulkHoldingsForm: bulkHoldingsFormSchema,
+    trade: tradeActivitySchema,
+    cash: cashActivitySchema,
+    income: incomeActivitySchema,
+    other: otherActivitySchema,
+    credit: creditActivitySchema,
+    adjustment: adjustmentActivitySchema,
+    newActivity: newActivitySchema,
+  };
+}
+
 export type NewActivityFormValues = z.infer<typeof newActivitySchema>;

@@ -139,7 +139,12 @@ test("one workspace combines portfolios and filters accounts by country without 
   await page.locator("#account-portfolio").selectOption({ label: "Created in UI" });
   await page.locator("#account-country").fill("US");
   await page.getByTestId("account-name-input").fill("UI brokerage");
-  await page.getByRole("radio", { name: "Transactions Track every trade for performance analytics", exact: true }).click();
+  await page
+    .getByRole("radio", {
+      name: "Transactions Track every trade for performance analytics",
+      exact: true,
+    })
+    .click();
   await page.getByTestId("account-submit-button").click();
   await expect(page.getByTestId("account-form")).toHaveCount(0);
   await expect(page.getByText("UI brokerage", { exact: true })).toBeVisible();

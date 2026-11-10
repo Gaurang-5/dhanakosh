@@ -120,6 +120,8 @@ export {
   saveActivities,
   searchActivities,
   updateActivity,
+  reviewActivitiesSplitEffects,
+  reviewInternalTransferPairSplitEffects,
 } from "../shared/activities";
 export { parseCsv } from "./activities";
 
@@ -386,10 +388,12 @@ export {
 // Allocation Target Commands
 export {
   archiveAllocationTarget,
+  calculateAllocationWorksheet,
   calculateRebalancePlan,
   canonicalizeEligibleAssetIds,
   createAllocationTarget,
   deleteAllocationTarget,
+  generateCalculatedAdjustments,
   getAllocationTargetDrift,
   getAllocationTarget,
   listAllocationTargetWeights,
@@ -429,6 +433,7 @@ export { streamAiChat } from "./ai-streaming";
 
 // Event Listeners (web-specific SSE implementation)
 export {
+  listenBackButton,
   listenAssetClassificationsChanged,
   listenBrokerSyncComplete,
   listenBrokerSyncError,

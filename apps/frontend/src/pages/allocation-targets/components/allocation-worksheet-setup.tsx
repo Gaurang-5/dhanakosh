@@ -334,7 +334,7 @@ function AccountsLedger({
               onChange={(event) => setQuery(event.target.value)}
               placeholder={t("allocation:worksheet.findAccount")}
               aria-label={t("allocation:worksheet.findAccount")}
-              className="border-input bg-background text-foreground focus-visible:ring-ring h-7 w-full rounded-md border ps-7 pe-2 text-xs font-normal outline-none focus-visible:ring-1"
+              className="border-input bg-background text-foreground focus-visible:ring-ring h-7 w-full rounded-md border pe-2 ps-7 text-xs font-normal outline-none focus-visible:ring-1"
             />
           </div>
         ) : (

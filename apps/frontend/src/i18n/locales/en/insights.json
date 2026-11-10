@@ -39,10 +39,10 @@
     "rails": {
       "target_allocation": "Target allocation",
       "details": "Details",
-      "suggested_moves": "Suggested moves",
+      "target_differences": "Differences from target",
       "all_in_range": "All categories inside target range — no rebalancing needed",
-      "add": "Add",
-      "trim": "Trim",
+      "below_target_by": "{{amount}} below target",
+      "above_target_by": "{{amount}} above target",
       "inside_target_range": "Inside target range",
       "outside_range": "{{count}} outside range · largest gap {{gap}}",
       "tolerance": "tolerance {{tolerance}}",
@@ -52,15 +52,16 @@
       "compare_weights": "Compare current weights with your intended portfolio.",
       "set_target_allocation": "Set target allocation",
       "outside_range_one": "{{count}} outside range · largest gap {{gap}}",
-      "outside_range_other": "{{count}} outside range · largest gap {{gap}}"
+      "outside_range_other": "{{count}} outside range · largest gap {{gap}}",
+      "suggested_moves": "Suggested moves",
+      "add": "Add",
+      "trim": "Trim"
     },
     "value_strip": {
       "portfolio_value": "Portfolio value",
       "cash_balance": "Cash balance",
       "invested": "Invested",
       "book_cost": "Book cost",
-      "daily_change": "Today",
-      "daily_change_hint": "Since the previous close",
       "pnl_current_holdings": "Current holdings",
       "no_cash_balance": "No cash balance",
       "of_portfolio": "{{percent}} of portfolio",
@@ -68,7 +69,9 @@
       "holdings_count_one": "{{count}} holding",
       "holdings_count_other": "{{count}} holdings",
       "accounts_count_one": "{{count}} account",
-      "accounts_count_other": "{{count}} accounts"
+      "accounts_count_other": "{{count}} accounts",
+      "daily_change": "Today",
+      "daily_change_hint": "Since the previous close"
     }
   },
   "networth": {

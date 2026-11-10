@@ -76,7 +76,8 @@
       "serifLabel": "明朝",
       "serifDescription": "上品でクラシック"
     },
-    "navigationLabel": "ナビゲーション"
+    "navigationLabel": "ナビゲーション",
+    "changeLater": "設定からいつでも変更できます。"
   },
   "connect": {
     "optional": "任意",

@@ -3,7 +3,6 @@ import zhCommon from "@/i18n/locales/zh/common.json";
 import zhCommonTaxonomies from "@/i18n/locales/zh/taxonomies.json";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import userEvent from "@testing-library/user-event";
-import { chartSliceColor } from "@wealthfolio/ui";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { toast } from "sonner";
@@ -1850,8 +1849,8 @@ describe("AllocationWorksheetTab account allocation (§6)", () => {
 
     await goTo(user, "Review");
 
-    const brokerage = await waitFor(() =>
-      document.querySelector<HTMLElement>('[data-review-account="acc-1"]')!,
+    const brokerage = await waitFor(
+      () => document.querySelector<HTMLElement>('[data-review-account="acc-1"]')!,
     );
     expect(brokerage).toHaveTextContent("Brokerage · 1 entry");
     // The account's figures close its group, like a sum under its lines.
@@ -2962,9 +2961,9 @@ describe("AllocationWorksheetTab Setup", () => {
     expect(gapNote("bond")).toHaveTextContent(/30\.0%\s*→\s*40\.0%/);
     expect(gapNote("bond")).toHaveTextContent("+$300");
     expect(gapNote("us")).toHaveTextContent("−$300");
-    // Matches the allocation page's palette order, including theme changes.
+    // Matches the allocation page's calm palette order.
     expect(gapNote("us").querySelector("span[style]")).toHaveStyle({
-      background: chartSliceColor(0),
+      background: "#355c4c",
     });
     // Adding comes first, then reducing.
     expect(
@@ -3093,7 +3092,7 @@ describe("AllocationWorksheetTab Setup", () => {
 
     await waitFor(() => expect(gapNote("__UNKNOWN__")).toHaveTextContent("Reduces BTC"));
     expect(
-      within(screen.getByRole("group", { name: "Unknown" })).getByRole("checkbox", {
+      within(screen.getByRole("group", { name: /unknown/i })).getByRole("checkbox", {
         name: "Reduce BTC",
       }),
     ).toBeChecked();

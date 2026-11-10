@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { DateRange } from "react-day-picker";
 
@@ -18,6 +18,56 @@ import {
 import type { ActivityStatusFilter } from "../hooks/use-activity-search";
 
 export type ActivityViewMode = "table" | "datagrid";
+
+/** The list / edit-mode switch, shared by the Investments and Spending tabs. */
+export function ActivityViewModeToggle({
+  value,
+  onChange,
+  testId = "edit-mode-toggle",
+}: {
+  value: ActivityViewMode;
+  onChange: (mode: ActivityViewMode) => void;
+  /** Test id of the edit-mode option; both tabs can be mounted at once. */
+  testId?: string;
+}) {
+  const { t } = useTranslation();
+  return (
+    <AnimatedToggleGroup
+      value={value}
+      rounded="lg"
+      size="sm"
+      onValueChange={(next) => {
+        if (next === "datagrid" || next === "table") {
+          onChange(next);
+        }
+      }}
+      className="shrink-0"
+      items={[
+        {
+          value: "table",
+          label: (
+            <>
+              <Icons.Rows3 className="h-4 w-4" aria-hidden="true" />
+              <span className="sr-only">{t("activity:view_mode")}</span>
+            </>
+          ),
+          title: t("activity:view_mode"),
+        },
+        {
+          value: "datagrid",
+          label: (
+            <>
+              <Icons.Grid3x3 className="h-4 w-4" aria-hidden="true" />
+              <span className="sr-only">{t("activity:edit_mode")}</span>
+            </>
+          ),
+          title: t("activity:edit_mode"),
+          "data-testid": testId,
+        },
+      ]}
+    />
+  );
+}
 
 interface ActivityViewControlsProps {
   accounts: Account[];
@@ -42,7 +92,6 @@ interface ActivityViewControlsProps {
   /** Shown only in table view - total number of activities matching filters */
   totalRowCount?: number;
   isFetching: boolean;
-  /** Page actions that share this toolbar, so the page has one header row. */
   trailing?: ReactNode;
 }
 
@@ -86,28 +135,6 @@ export function ActivityViewControls({
 }: ActivityViewControlsProps) {
   const { t } = useTranslation();
   const [localSearch, setLocalSearch] = useState(searchQuery);
-  const barRef = useRef<HTMLDivElement>(null);
-  const pinsPageHeader = trailing != null;
-
-  // The activity table header sticks below this bar, using the same offset the
-  // old page header published.
-  useLayoutEffect(() => {
-    const bar = barRef.current;
-    if (!pinsPageHeader || !bar || typeof ResizeObserver === "undefined") return;
-    const scroll = bar.closest("[data-page-scroll-container]");
-    if (!scroll || !(scroll instanceof HTMLElement)) return;
-
-    const publish = () => {
-      scroll.style.setProperty("--page-header-height", `${bar.getBoundingClientRect().height}px`);
-    };
-    publish();
-    const observer = new ResizeObserver(publish);
-    observer.observe(bar);
-    return () => {
-      observer.disconnect();
-      scroll.style.removeProperty("--page-header-height");
-    };
-  }, [pinsPageHeader]);
 
   // Create a stable debounced search function
   const debouncedSearch = useMemo(
@@ -161,8 +188,12 @@ export function ActivityViewControls({
   );
 
   const instrumentTypeOptions = useMemo(
-    () => INSTRUMENT_TYPE_OPTIONS.map((opt) => ({ value: opt.value, label: opt.label })),
-    [],
+    () =>
+      INSTRUMENT_TYPE_OPTIONS.map((opt) => ({
+        value: opt.value,
+        label: t(`asset:createSecurity.instrumentType.${opt.value.toLowerCase()}`),
+      })),
+    [t],
   );
 
   const statusOptions = useMemo(
@@ -184,14 +215,7 @@ export function ActivityViewControls({
     !!dateRange?.to;
 
   return (
-    <div
-      ref={barRef}
-      className={
-        pinsPageHeader
-          ? "bg-background/80 sticky top-0 z-20 -mx-2 mb-4 flex flex-col gap-3 px-2 py-2 backdrop-blur-xl md:-mx-4 md:px-4 lg:flex-row lg:items-center lg:justify-between"
-          : "mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"
-      }
-    >
+    <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
       <div className="flex flex-1 flex-wrap items-center gap-2">
         <FacetedSearchInput
           value={localSearch}
@@ -260,7 +284,7 @@ export function ActivityViewControls({
         ) : null}
       </div>
 
-      <div className="flex flex-wrap items-center justify-end gap-2">
+      <div className="flex items-center gap-3">
         {/* Show fetched/total count only in table view (when totalFetched is provided) */}
         {totalFetched !== undefined && totalRowCount !== undefined && (
           <span className="text-muted-foreground text-xs">
@@ -274,40 +298,7 @@ export function ActivityViewControls({
             )}
           </span>
         )}
-        <AnimatedToggleGroup
-          value={viewMode}
-          rounded="lg"
-          size="sm"
-          onValueChange={(value) => {
-            if (value === "datagrid" || value === "table") {
-              onViewModeChange(value);
-            }
-          }}
-          className="shrink-0"
-          items={[
-            {
-              value: "table",
-              label: (
-                <>
-                  <Icons.Rows3 className="h-4 w-4" aria-hidden="true" />
-                  <span className="sr-only">{t("activity:view_mode")}</span>
-                </>
-              ),
-              title: t("activity:view_mode"),
-            },
-            {
-              value: "datagrid",
-              label: (
-                <>
-                  <Icons.Grid3x3 className="h-4 w-4" aria-hidden="true" />
-                  <span className="sr-only">{t("activity:edit_mode")}</span>
-                </>
-              ),
-              title: t("activity:edit_mode"),
-              "data-testid": "edit-mode-toggle",
-            },
-          ]}
-        />
+        <ActivityViewModeToggle value={viewMode} onChange={onViewModeChange} />
         {trailing}
       </div>
     </div>

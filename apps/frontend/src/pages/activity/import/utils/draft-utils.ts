@@ -1,3 +1,5 @@
+import englishActivity from "@/i18n/locales/en/activity.json";
+import type { LocalDraftErrorMessages } from "./draft-validation-messages";
 import {
   ACTIVITY_SUBTYPES,
   AccountType,
@@ -36,58 +38,6 @@ export const ACTIVITY_SKIP = "_SKIP_";
 const IMPORTABLE_ACTIVITY_TYPES = new Set<string>(
   Object.values(ActivityType).filter((type) => type !== ActivityType.UNKNOWN),
 );
-
-/** Zerodha writes NSE and BSE. A live quote needs one ISO MIC for the ISIN. */
-export function listingMic(value: string | undefined): string | undefined {
-  const raw = value?.trim().toUpperCase();
-  if (!raw) return undefined;
-  if (raw === "NSE" || raw === "XNSE" || raw === "NS") return "XNSE";
-  if (raw === "BSE" || raw === "XBOM" || raw === "BO") return "XBOM";
-  return raw;
-}
-
-/**
- * One Indian ISIN is one demat holding. NSE and BSE fills share it.
- * The live quote uses NSE when the name trades there, otherwise BSE.
- */
-export function assignIndianQuoteVenue(drafts: DraftActivity[]): DraftActivity[] {
-  const venuesByIsin = new Map<string, Set<string>>();
-  for (const draft of drafts) {
-    const isin = draft.isin?.trim().toUpperCase() ?? "";
-    if (!isin.startsWith("IN")) continue;
-    const mic = listingMic(draft.exchangeMic);
-    if (mic !== "XNSE" && mic !== "XBOM") continue;
-    const venues = venuesByIsin.get(isin) ?? new Set<string>();
-    venues.add(mic);
-    venuesByIsin.set(isin, venues);
-  }
-
-  return drafts.map((draft) => {
-    const isin = draft.isin?.trim().toUpperCase() ?? "";
-    const venues = venuesByIsin.get(isin);
-    const isEquity = isin.startsWith("INE");
-    const isListedEtf = isin.startsWith("INF") && venues !== undefined;
-    if (!isEquity && !isListedEtf) return draft;
-    const exchangeMic = !venues || venues.has("XNSE") ? "XNSE" : "XBOM";
-    if (draft.exchangeMic === exchangeMic) return draft;
-    const next: DraftActivity = { ...draft, exchangeMic };
-    if (!next.symbol || !next.accountId) return next;
-    return {
-      ...next,
-      assetCandidateKey: buildImportAssetCandidateKey({
-        accountId: next.accountId,
-        symbol: next.symbol,
-        instrumentType: next.instrumentType,
-        quoteMode: next.quoteMode,
-        quoteCcy: next.quoteCcy || (next.currencySource === "csv" ? next.currency : undefined),
-        exchangeMic,
-        isin: next.isin,
-        providerId: next.providerId,
-        providerSymbol: next.providerSymbol,
-      }),
-    };
-  });
-}
 
 // ---------------------------------------------------------------------------
 // Fallback-column helpers — support `string | string[]` in fieldMappings
@@ -509,38 +459,50 @@ export function validateDraft(
 ): {
   status: DraftActivityStatus;
   errors: Record<string, string[]>;
+  localErrorMessages: LocalDraftErrorMessages;
   warnings: Record<string, string[]>;
 } {
   const errors: Record<string, string[]> = {};
   const warnings: Record<string, string[]> = {};
+  const localKeys = new Map<string, string>();
+  const localMessage = (
+    key: `activity:validation.${keyof typeof englishActivity.validation}`,
+  ): string => {
+    const name = key.slice(
+      "activity:validation.".length,
+    ) as keyof typeof englishActivity.validation;
+    const message = englishActivity.validation[name];
+    localKeys.set(message, key);
+    return message;
+  };
 
   const activityType = draft.activityType?.toUpperCase();
   const subtype = draft.subtype?.trim().toUpperCase();
 
   // Required field validation
   if (!draft.activityDate) {
-    errors.activityDate = ["Date is required"];
+    errors.activityDate = [localMessage("activity:validation.date_is_required")];
   } else {
     // A cell no format could read stays raw text; a grid edit stores a Date.
     const date = draft.activityDate as string | Date;
     if (!isValid(typeof date === "string" ? parseISO(date) : date)) {
-      errors.activityDate = ["Date not recognized"];
+      errors.activityDate = [localMessage("activity:validation.date_not_recognized")];
     }
   }
 
   if (!draft.activityType) {
-    errors.activityType = ["Activity type is required"];
+    errors.activityType = [localMessage("activity:validation.activity_type_is_required")];
   } else if (!IMPORTABLE_ACTIVITY_TYPES.has(draft.activityType.toUpperCase() as ActivityType)) {
-    errors.activityType = ["Map the CSV activity type before continuing"];
+    errors.activityType = [localMessage("activity:validation.map_type")];
   }
 
   // SPLIT is a ratio event — currency is not meaningful
   if (!draft.currency && activityType !== ActivityType.SPLIT) {
-    errors.currency = ["Currency is required"];
+    errors.currency = [localMessage("activity:validation.currency_is_required")];
   }
 
   if (!draft.accountId) {
-    errors.accountId = ["Account is required"];
+    errors.accountId = [localMessage("activity:validation.account_is_required")];
   }
 
   const accountType = draft.accountId ? accountTypeById?.get(draft.accountId) : undefined;
@@ -552,33 +514,32 @@ export function validateDraft(
   ) {
     errors.activityType = [
       ...(errors.activityType ?? []),
-      "Credit card imports only support charges, payments, transfers out, refunds, fees, and interest",
+      localMessage("activity:validation.credit_card_types"),
     ];
   }
 
   // Trade activities (BUY/SELL)
   if (activityType === ActivityType.BUY || activityType === ActivityType.SELL) {
     if (!draft.symbol) {
-      errors.symbol = ["Symbol is required for trade activities"];
+      errors.symbol = [localMessage("activity:validation.symbol_is_required_for_trade_activities")];
     }
     if (!hasPositiveValue(draft.quantity)) {
-      errors.quantity = ["Quantity must be greater than 0"];
+      errors.quantity = [localMessage("activity:validation.quantity_must_be_greater_than_0")];
     }
-    if (subtype !== ACTIVITY_SUBTYPES.BONUS_ISSUE && !hasPositiveValue(draft.unitPrice)) {
-      errors.unitPrice = ["Unit price must be greater than 0"];
+    const isBonusIssue =
+      activityType === ActivityType.BUY && subtype === ACTIVITY_SUBTYPES.BONUS_ISSUE;
+    if (!isBonusIssue && !hasPositiveValue(draft.unitPrice)) {
+      errors.unitPrice = [localMessage("activity:validation.unit_price_must_be_greater_than_0")];
     }
-    const isin = draft.isin?.trim().toUpperCase() ?? "";
-    const symbol = (draft.providerSymbol || draft.symbol || "").trim().toUpperCase();
-    const mic = listingMic(draft.exchangeMic) ?? "";
-    const listedOnIndia =
-      mic === "XNSE" || mic === "XBOM" || symbol.endsWith(".NS") || symbol.endsWith(".BO");
-    // An INF isin on NSE or BSE is a listed ETF. An unlisted INF isin is a fund.
-    // An equity isin does not need the fill venue: NSE and BSE buys are one demat holding.
-    if (isin.startsWith("INF") && !listedOnIndia && !/^AMFI-\d{5,8}$/.test(symbol)) {
-      errors.symbol = [
-        ...(errors.symbol ?? []),
-        "This fund is identified by its ISIN. Resolve it to an AMFI scheme code before importing.",
-      ];
+
+    const isUnlistedIndianFund =
+      draft.currency?.toUpperCase() === "INR" &&
+      draft.isin?.toUpperCase().startsWith("INF") &&
+      !draft.exchangeMic?.trim();
+    const hasAmfiIdentity =
+      draft.providerId?.toUpperCase() === "AMFI" && Boolean(draft.providerSymbol?.trim());
+    if (isUnlistedIndianFund && !hasAmfiIdentity) {
+      errors.symbol = [localMessage("activity:validation.amfi_scheme_code_is_required")];
     }
   }
 
@@ -588,30 +549,48 @@ export function validateDraft(
       // DRIP: cash dividend → reinvested as BUY of same ticker
       // Needs: symbol, quantity, and either amount or unit price.
       if (!draft.symbol) {
-        errors.symbol = ["Symbol is required for DRIP dividends"];
+        errors.symbol = [localMessage("activity:validation.symbol_is_required_for_drip_dividends")];
       }
       if (!hasPositiveValue(draft.quantity)) {
-        errors.quantity = ["Quantity is required for DRIP (shares received)"];
+        errors.quantity = [
+          localMessage("activity:validation.quantity_is_required_for_drip_shares_received"),
+        ];
       }
       if (!hasNonZeroValue(draft.amount) && !hasPositiveValue(draft.unitPrice)) {
-        errors.unitPrice = ["Either amount or unit price is required for DRIP dividends"];
+        errors.unitPrice = [
+          localMessage(
+            "activity:validation.either_amount_or_unit_price_is_required_for_drip_dividends",
+          ),
+        ];
       }
     } else if (subtype === ACTIVITY_SUBTYPES.DIVIDEND_IN_KIND) {
       // DIVIDEND_IN_KIND: dividend paid as additional units of the same asset
       // Needs: symbol, quantity, and either amount or unit price.
       if (!draft.symbol) {
-        errors.symbol = ["Symbol is required for dividend in kind activities"];
+        errors.symbol = [
+          localMessage("activity:validation.symbol_is_required_for_dividend_in_kind_activities"),
+        ];
       }
       if (!hasPositiveValue(draft.quantity)) {
-        errors.quantity = ["Quantity is required for dividend in kind (shares received)"];
+        errors.quantity = [
+          localMessage(
+            "activity:validation.quantity_is_required_for_dividend_in_kind_shares_received",
+          ),
+        ];
       }
       if (!hasNonZeroValue(draft.amount) && !hasPositiveValue(draft.unitPrice)) {
-        errors.unitPrice = ["Either amount or unit price is required for dividend in kind"];
+        errors.unitPrice = [
+          localMessage(
+            "activity:validation.either_amount_or_unit_price_is_required_for_dividend_in_kind",
+          ),
+        ];
       }
     } else {
       // Regular cash dividend - amount is required
       if (!hasNonZeroValue(draft.amount)) {
-        errors.amount = ["Amount is required for dividend activities"];
+        errors.amount = [
+          localMessage("activity:validation.amount_is_required_for_dividend_activities"),
+        ];
       }
     }
   }
@@ -621,18 +600,30 @@ export function validateDraft(
     // STAKING_REWARD - needs quantity (tokens received) and may have unit price
     if (subtype === ACTIVITY_SUBTYPES.STAKING_REWARD) {
       if (!draft.symbol) {
-        errors.symbol = ["Symbol is required for staking rewards"];
+        errors.symbol = [
+          localMessage("activity:validation.symbol_is_required_for_staking_rewards"),
+        ];
       }
       if (!hasPositiveValue(draft.quantity)) {
-        errors.quantity = ["Quantity is required for staking rewards (tokens received)"];
+        errors.quantity = [
+          localMessage(
+            "activity:validation.quantity_is_required_for_staking_rewards_tokens_received",
+          ),
+        ];
       }
       if (!hasNonZeroValue(draft.amount) && !hasPositiveValue(draft.unitPrice)) {
-        errors.unitPrice = ["Either amount or unit price is required for staking rewards"];
+        errors.unitPrice = [
+          localMessage(
+            "activity:validation.either_amount_or_unit_price_is_required_for_staking_rewards",
+          ),
+        ];
       }
     } else {
       // Regular interest - amount is required
       if (!hasNonZeroValue(draft.amount)) {
-        errors.amount = ["Amount is required for interest activities"];
+        errors.amount = [
+          localMessage("activity:validation.amount_is_required_for_interest_activities"),
+        ];
       }
     }
   }
@@ -640,7 +631,9 @@ export function validateDraft(
   // DEPOSIT/WITHDRAWAL - amount is required
   if (activityType === ActivityType.DEPOSIT || activityType === ActivityType.WITHDRAWAL) {
     if (!hasNonZeroValue(draft.amount)) {
-      errors.amount = ["Amount is required for deposit/withdrawal activities"];
+      errors.amount = [
+        localMessage("activity:validation.amount_is_required_for_deposit_withdrawal_activities"),
+      ];
     }
   }
 
@@ -649,7 +642,7 @@ export function validateDraft(
     const hasFee = hasPositiveValue(draft.fee);
     const hasAmount = hasPositiveValue(draft.amount);
     if (!hasFee && !hasAmount) {
-      errors.fee = ["Either fee or amount is required for fee activities"];
+      errors.fee = [localMessage("activity:validation.fee_or_amount")];
     }
   }
 
@@ -658,7 +651,7 @@ export function validateDraft(
     const hasFee = hasPositiveValue(draft.fee);
     const hasAmount = hasPositiveValue(draft.amount);
     if (!hasFee && !hasAmount) {
-      errors.amount = ["Amount or fee is required for tax activities"];
+      errors.amount = [localMessage("activity:validation.amount_or_fee")];
     }
   }
 
@@ -667,24 +660,28 @@ export function validateDraft(
     const hasAmount = hasPositiveValue(draft.amount);
     const hasQuantity = hasPositiveValue(draft.quantity);
     if (!hasAmount && !hasQuantity) {
-      errors.amount = ["Amount or quantity is required for transfer activities"];
+      errors.amount = [localMessage("activity:validation.amount_or_quantity")];
     }
   }
 
   // SPLIT validation
   if (activityType === ActivityType.SPLIT) {
     if (!draft.symbol) {
-      errors.symbol = ["Symbol is required for split activities"];
+      errors.symbol = [localMessage("activity:validation.symbol_is_required_for_split_activities")];
     }
     if (!hasPositiveValue(draft.amount)) {
-      errors.amount = ["Amount (split ratio) must be greater than 0"];
+      errors.amount = [
+        localMessage("activity:validation.amount_split_ratio_must_be_greater_than_0"),
+      ];
     }
   }
 
   // CREDIT validation
   if (activityType === ActivityType.CREDIT) {
     if (!hasNonZeroValue(draft.amount)) {
-      errors.amount = ["Amount is required for credit activities"];
+      errors.amount = [
+        localMessage("activity:validation.amount_is_required_for_credit_activities"),
+      ];
     }
   }
 
@@ -699,7 +696,16 @@ export function validateDraft(
     status = "warning";
   }
 
-  return { status, errors, warnings };
+  const localErrorMessages: LocalDraftErrorMessages = Object.fromEntries(
+    Object.entries(errors).map(([field, messages]) => [
+      field,
+      messages.map((originalMessage) => ({
+        key: localKeys.get(originalMessage)!,
+        originalMessage,
+      })),
+    ]),
+  );
+  return { status, errors, warnings, localErrorMessages };
 }
 /**
  * Create DraftActivity objects from parsed CSV data and mapping
@@ -734,10 +740,11 @@ export function createDraftActivities(
   defaultAccountId: string,
   validAccountIds?: Set<string>,
   accountTypeById?: Map<string, string>,
-  options?: { importProfile?: ActivityImportProfile },
+  options?: { importProfile?: ActivityImportProfile; skippedRowIndexes?: readonly number[] },
 ): DraftActivity[] {
   const { fieldMappings, activityMappings, symbolMappings, accountMappings, symbolMappingMeta } =
     mapping;
+  const skippedRows = new Set(options?.skippedRowIndexes);
   const { dateFormat, decimalSeparator, thousandsSeparator, defaultCurrency } = parseConfig;
 
   // Create header index lookup
@@ -775,7 +782,10 @@ export function createDraftActivities(
         undefined)
       : undefined;
 
-  const drafts = parsedRows.flatMap((row, rowIndex): DraftActivity[] => {
+  return parsedRows.flatMap((row, rowIndex): DraftActivity[] => {
+    // Rows skipped in the mapping step are left out, keeping later rows' indexes
+    if (skippedRows.has(rowIndex)) return [];
+
     // Extract raw values from CSV
     const rawDate = getColumnValue(row, ImportFormat.DATE);
     const rawType = getColumnValue(row, ImportFormat.ACTIVITY_TYPE);
@@ -802,7 +812,6 @@ export function createDraftActivities(
     const rawInstrumentType = ignoresAssetFields
       ? undefined
       : getColumnValue(row, ImportFormat.INSTRUMENT_TYPE);
-    const rawExchange = ignoresAssetFields ? undefined : getColumnValue(row, ImportFormat.EXCHANGE);
 
     // Parse and normalize values
     const activityDate = parseDateValue(rawDate, dateFormat, dateOrder);
@@ -843,8 +852,6 @@ export function createDraftActivities(
       providerId: mappedProviderId,
       providerSymbol: mappedProviderSymbol,
     } = mapSymbol(rawSymbol, symbolMappings, symbolMappingMeta);
-    // A resolved symbol keeps its chosen venue. Otherwise the CSV exchange names the listing.
-    const exchangeMic = listingMic(mappedExchangeMic) || listingMic(rawExchange);
 
     // Parse typed symbol prefixes (e.g., "bond:US037833DU14")
     const { symbol: prefixParsedSymbol, instrumentType: prefixInstrumentType } =
@@ -891,23 +898,19 @@ export function createDraftActivities(
         : undefined;
     const subtype = inferredCreditSubtype ?? canonicalSubtype;
 
-    // Resolve account ID: use CSV account mapping, or fall back to default
-    let accountId = accountMappings[""] || defaultAccountId;
+    // Resolve only to an account that is still available in the active
+    // household. A stale mapping or an unknown CSV value must remain
+    // unresolved instead of silently crossing into the selected account.
+    const defaultMappedAccount = accountMappings[""] || defaultAccountId;
+    let accountId =
+      !validAccountIds || validAccountIds.has(defaultMappedAccount) ? defaultMappedAccount : "";
     if (rawAccount?.trim()) {
       const rawAccountId = rawAccount.trim();
       const mappedAccount =
         accountMappings[rawAccountId] ?? accountMappings[rawAccountId.toLowerCase()];
-      if (mappedAccount) {
-        accountId = mappedAccount;
-      } else if (!validAccountIds || validAccountIds.has(rawAccountId)) {
-        accountId = rawAccountId;
-      } else {
-        // A populated but unresolved CSV account must never use the default owner.
-        accountId = "";
-      }
+      const candidate = mappedAccount || rawAccountId;
+      accountId = !validAccountIds || validAccountIds.has(candidate) ? candidate : "";
     }
-
-    if (validAccountIds && !validAccountIds.has(accountId)) accountId = "";
 
     // For cash-like activities, some brokers (e.g. Schwab) put the dollar value
     // in the Quantity column instead of Amount.
@@ -948,7 +951,7 @@ export function createDraftActivities(
       activityType,
       symbol,
       isin: rawIsin?.trim() || undefined,
-      exchangeMic,
+      exchangeMic: mappedExchangeMic,
       symbolName: mappedSymbolName,
       quoteCcy: mappedQuoteCcy,
       instrumentType: resolvedInstrumentType,
@@ -963,7 +966,7 @@ export function createDraftActivities(
               instrumentType: resolvedInstrumentType,
               quoteMode: mappedQuoteMode,
               quoteCcy: mappedQuoteCcy || assetResolutionCurrency,
-              exchangeMic,
+              exchangeMic: mappedExchangeMic,
               isin: rawIsin?.trim() || undefined,
             })
           : undefined,
@@ -983,17 +986,18 @@ export function createDraftActivities(
       isEdited: false,
     };
 
-    return [{ ...draft, status: "valid", errors: {}, warnings: {} } as DraftActivity];
-  });
-
-  return assignIndianQuoteVenue(drafts).map((draft) => {
+    // Validate and get status
     const validation = validateDraft(draft, accountTypeById);
-    return {
-      ...draft,
-      status: validation.status,
-      errors: validation.errors,
-      warnings: validation.warnings,
-    };
+
+    return [
+      {
+        ...draft,
+        status: validation.status,
+        errors: validation.errors,
+        localErrorMessages: validation.localErrorMessages,
+        warnings: validation.warnings,
+      } as DraftActivity,
+    ];
   });
 }
 

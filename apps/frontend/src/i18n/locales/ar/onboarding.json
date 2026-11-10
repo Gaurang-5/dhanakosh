@@ -18,7 +18,8 @@
     "themeLight": "فاتح",
     "themeLightPreviewAlt": "معاينة السمة الفاتحة",
     "themeSystem": "النظام",
-    "themeSystemPreviewAlt": "معاينة سمة النظام"
+    "themeSystemPreviewAlt": "معاينة سمة النظام",
+    "changeLater": "يمكنك تغيير ذلك في أي وقت من الإعدادات."
   },
   "buttons": {
     "continue": "متابعة",

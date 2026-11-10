@@ -125,7 +125,7 @@ type ValuationContentProps = ToolCallMessagePartProps<ValuationArgs, ValuationRe
 
 const ValuationContent = memo(ValuationContentImpl);
 
-function ValuationContentImpl({ args, result, status }: ValuationContentProps) {
+export function ValuationContentImpl({ args, result, status }: ValuationContentProps) {
   const { t } = useTranslation();
   const { settings } = useSettingsContext();
   const baseCurrency = settings?.baseCurrency ?? "USD";

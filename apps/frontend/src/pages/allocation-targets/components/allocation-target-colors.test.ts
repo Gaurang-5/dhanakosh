@@ -14,11 +14,11 @@ describe("allocation target colours", () => {
       { categoryId: "__UNKNOWN__", currentValue: 3 },
     ]);
     expect([...colors]).toEqual([
-      ["americas", "var(--chart-1)"],
-      ["europe", "var(--chart-2)"],
-      ["__UNKNOWN__", "var(--chart-3)"],
-      ["africa", "var(--chart-4)"],
-      ["oceania", "var(--chart-5)"],
+      ["americas", "#355c4c"],
+      ["europe", "#7e9f8c"],
+      ["__UNKNOWN__", "#cbba8c"],
+      ["africa", "#c08a5f"],
+      ["oceania", "#9a7e92"],
     ]);
   });
 
@@ -44,14 +44,12 @@ describe("allocation target colours", () => {
       { categoryId: "a", currentValue: 1 },
       { categoryId: "b", currentValue: 0 },
     ]);
-    expect(colors.get("b")).toBe("var(--chart-1)");
-    expect(colors.get("a")).toBe("var(--chart-2)");
+    expect(colors.get("b")).toBe("#355c4c");
+    expect(colors.get("a")).toBe("#7e9f8c");
   });
 
   it("falls back to the row's position for a category missing from the map", () => {
-    expect(allocationTargetColorForRow({ categoryId: "x" }, new Map(), 2)).toBe("var(--chart-3)");
-    expect(allocationTargetColorForRow({ categoryId: "x" }, undefined, 8)).toBe(
-      "color-mix(in oklab, var(--chart-2) 50%, var(--card))",
-    );
+    expect(allocationTargetColorForRow({ categoryId: "x" }, new Map(), 2)).toBe("#cbba8c");
+    expect(allocationTargetColorForRow({ categoryId: "x" }, undefined, 8)).toBe("#8a6b49");
   });
 });

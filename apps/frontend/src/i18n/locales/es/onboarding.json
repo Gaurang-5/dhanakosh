@@ -76,7 +76,8 @@
       "serifLabel": "Serif",
       "serifDescription": "Clásica y elegante"
     },
-    "navigationLabel": "Navegación"
+    "navigationLabel": "Navegación",
+    "changeLater": "Puedes cambiarlo en cualquier momento en Ajustes."
   },
   "connect": {
     "optional": "Opcional",

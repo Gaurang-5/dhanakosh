@@ -76,7 +76,8 @@
       "serifLabel": "衬线",
       "serifDescription": "经典而优雅"
     },
-    "navigationLabel": "导航"
+    "navigationLabel": "导航",
+    "changeLater": "您可以随时在设置中更改。"
   },
   "connect": {
     "optional": "可选",

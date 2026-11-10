@@ -363,6 +363,31 @@ pub async fn mcp_create_token(
 }
 
 #[tauri::command]
+pub async fn mcp_update_token_scopes(
+    id: String,
+    scopes: Vec<String>,
+    state: ProfileAccess,
+) -> Result<TokenInfo, String> {
+    let context = state.context()?;
+    #[cfg(desktop)]
+    {
+        let scopes = validate_requested_scopes(&scopes)?;
+        context
+            .pat_repository()
+            .update_scopes(&id, scopes)
+            .await
+            .map_err(|e| format!("Failed to update access token permissions: {e}"))?
+            .map(TokenInfo::from)
+            .ok_or_else(|| "Access token not found".to_string())
+    }
+    #[cfg(not(desktop))]
+    {
+        let _ = (id, scopes, &context);
+        Err("MCP server is not available on mobile".to_string())
+    }
+}
+
+#[tauri::command]
 pub async fn mcp_delete_token(id: String, state: ProfileAccess) -> Result<(), String> {
     let context = state.context()?;
     #[cfg(desktop)]

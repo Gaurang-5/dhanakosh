@@ -468,7 +468,8 @@ export function MappingCell({
   if (field === ImportFormat.ACCOUNT) {
     const mappingKey = value?.trim() || "";
     const isInvalid = mappingKey === "" || invalidAccounts.includes(mappingKey);
-    const mappedAccountId = mapping.accountMappings?.[mappingKey] ?? mappingKey;
+    const mappedAccountId =
+      mapping.accountMappings?.[mappingKey] ?? (mappingKey ? mappingKey : mapping.accountId);
     const account = accounts.find((acc) => acc.id === mappedAccountId);
     return (
       <AccountIdDisplayCell

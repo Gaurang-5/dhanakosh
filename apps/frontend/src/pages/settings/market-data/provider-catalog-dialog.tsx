@@ -123,7 +123,7 @@ export function ProviderCatalogDialog({
                 <div className="flex items-start gap-3">
                   <ProviderLogo logoFilename={provider.logoFilename} />
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium break-words">
+                    <p className="break-words text-sm font-medium">
                       <bdi>{name}</bdi>
                     </p>
                     {instruments && <p className="text-muted-foreground text-xs">{instruments}</p>}

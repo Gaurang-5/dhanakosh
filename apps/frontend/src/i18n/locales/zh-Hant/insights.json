@@ -52,7 +52,10 @@
       "compare_weights": "比較目前權重與你的投資組合目標。",
       "set_target_allocation": "設定目標資產配置",
       "outside_range_other": "{{count}} 項超出區間 · 最大偏差 {{gap}}",
-      "outside_range_one": "{{count}} 項超出區間 · 最大偏差 {{gap}}"
+      "outside_range_one": "{{count}} 項超出區間 · 最大偏差 {{gap}}",
+      "target_differences": "與目標的差異",
+      "below_target_by": "低於目標 {{amount}}",
+      "above_target_by": "高於目標 {{amount}}"
     },
     "value_strip": {
       "portfolio_value": "投資組合價值",

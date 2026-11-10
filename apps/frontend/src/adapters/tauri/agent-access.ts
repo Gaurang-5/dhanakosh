@@ -59,6 +59,12 @@ export const getMcpStatus = async (): Promise<McpServerStatus> => {
   }
 };
 
+export const updateAgentAccessTokenScopes = (
+  id: string,
+  input: { scopes: string[] },
+): Promise<AgentAccessToken> =>
+  invoke<AgentAccessToken>("mcp_update_token_scopes", { id, scopes: input.scopes });
+
 export const setMcpEnabled = async (enabled: boolean): Promise<McpServerStatus> => {
   try {
     return await invoke<McpServerStatus>("mcp_set_enabled", { enabled });

@@ -270,7 +270,9 @@
       "return_before_hint": "積立期間中の想定年間利回り。運用手数料控除前です。",
       "return_during_hint": "取り崩し開始後の想定年間利回り。運用手数料控除前です。",
       "annual_fee_hint": "推定の年間ポートフォリオ手数料です。",
-      "inflation_hint": "想定される年間の物価上昇率。"
+      "inflation_hint": "想定される年間の物価上昇率。",
+      "savings_goals_contribution": "貯蓄目標でも月{{amount}}を予定",
+      "savings_goals_contribution_hint": "貯蓄目標でも月{{amount}}を予定しています。老後資金に回す分だけを入力してください。"
     },
     "spending": {
       "kicker": "支出",
@@ -348,7 +350,8 @@
       "growth_placeholder_inflation": "インフレ率{{pct}}",
       "growth_placeholder_fixed": "固定0.0",
       "add_income": "老後の収入を追加",
-      "add_pension_fund": "年金基金を追加"
+      "add_pension_fund": "年金基金を追加",
+      "fund_return_hint": "ファンド自体の手数料控除後の年平均成長率です。プランの運用手数料は差し引かれません。"
     },
     "assumptions": {
       "kicker": "前提条件",
@@ -595,7 +598,9 @@
       "taxable": "課税",
       "tax_deferred": "課税繰延",
       "tax_free": "非課税"
-    }
+    },
+    "retirement_share_note": "老後資金は各口座のこの配分まで計上します。有効な貯蓄目標が確保した配分は除外されます。",
+    "counting": "{{percent}}%を計上"
   },
   "value_mode": {
     "todays_value": "現在価値",
@@ -628,7 +633,14 @@
     "event_retirement": "退職",
     "fi_reference": "FI · {{age}}歳",
     "series_required": "必要額",
-    "series_projected": "予測"
+    "series_projected": "予測",
+    "goal_milestones": "貯蓄目標",
+    "goal_milestones_tip": "有効な貯蓄目標はそれぞれ目標日に表示され、状態に応じて色分けされます。貯蓄目標の資金は別に保たれ、この予測には含まれません。",
+    "goal_milestones_toggle": "クリックで表示／非表示を切り替えます。",
+    "goal_milestone_target": "{{date}}までに{{amount}}",
+    "goal_milestone_aria": "{{name}}、{{target}}、{{status}}",
+    "goal_milestone_aria_no_status": "{{name}}、{{target}}",
+    "goal_milestone_not_projected": "この予測には含まれません"
   },
   "snapshot": {
     "table": "表",
@@ -715,7 +727,8 @@
     "needed": "必要",
     "finish": "達成時期",
     "not_reached": "未達",
-    "edit_aria": "{{title}}を編集"
+    "edit_aria": "{{title}}を編集",
+    "highReturnWarning": "高いリターンの想定です。市場全体のリターンを継続的に上回ることを前提としています。"
   },
   "projection": {
     "kicker": "予測",

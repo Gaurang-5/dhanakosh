@@ -53,7 +53,10 @@
       "set_target_allocation": "Definir alocação alvo",
       "outside_range_one": "{{count}} fora do intervalo · maior diferença {{gap}}",
       "outside_range_other": "{{count}} fora do intervalo · maior diferença {{gap}}",
-      "outside_range_many": "{{count}} fora do intervalo · maior diferença {{gap}}"
+      "outside_range_many": "{{count}} fora do intervalo · maior diferença {{gap}}",
+      "target_differences": "Diferenças em relação à meta",
+      "below_target_by": "{{amount}} abaixo da meta",
+      "above_target_by": "{{amount}} acima da meta"
     },
     "value_strip": {
       "portfolio_value": "Valor da carteira",

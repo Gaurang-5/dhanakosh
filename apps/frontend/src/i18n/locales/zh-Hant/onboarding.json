@@ -76,7 +76,8 @@
       "serifLabel": "襯線",
       "serifDescription": "經典優雅"
     },
-    "navigationLabel": "導覽"
+    "navigationLabel": "導覽",
+    "changeLater": "隨時可在設定中變更。"
   },
   "connect": {
     "optional": "選用",

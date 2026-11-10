@@ -159,6 +159,11 @@ pub struct AppState {
     pub rebalance_service: Arc<
         dyn wealthfolio_core::portfolio::allocation_targets::RebalanceServiceTrait + Send + Sync,
     >,
+    pub allocation_worksheet_service: Arc<
+        dyn wealthfolio_core::portfolio::allocation_targets::AllocationWorksheetServiceTrait
+            + Send
+            + Sync,
+    >,
     pub pat_repository: Arc<PatRepository>,
     pub mcp_audit_repository: Arc<McpAuditRepository>,
     pub agent_environment: Arc<dyn wealthfolio_agent_tools::AgentEnvironment>,
@@ -743,6 +748,23 @@ async fn initialize_profile_state(
             holdings_service.clone(),
         ),
     );
+    let allocation_worksheet_service: Arc<
+        dyn wealthfolio_core::portfolio::allocation_targets::AllocationWorksheetServiceTrait
+            + Send
+            + Sync,
+    > = Arc::new(
+        wealthfolio_core::portfolio::allocation_targets::AllocationWorksheetService::new(
+            allocation_target_service.clone(),
+            drift_service.clone(),
+            allocation_service.clone(),
+            holdings_service.clone(),
+            account_service.clone(),
+            asset_service.clone(),
+            taxonomy_service.clone(),
+            quote_service.clone(),
+            fx_service.clone(),
+        ),
+    );
 
     let performance_service = Arc::new(
         wealthfolio_core::portfolio::performance::PerformanceService::new(
@@ -1176,6 +1198,7 @@ async fn initialize_profile_state(
         allocation_target_service,
         drift_service,
         rebalance_service,
+        allocation_worksheet_service,
         pat_repository,
         mcp_audit_repository,
         agent_environment,

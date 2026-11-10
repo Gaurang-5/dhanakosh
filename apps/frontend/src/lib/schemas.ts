@@ -95,6 +95,13 @@ export const newAccountSchema = z
         message: "Name must not be longer than 50 characters.",
       }),
     group: z.string().optional(),
+    accountNumber: z
+      .string()
+      .trim()
+      .max(64, {
+        message: "common:validation.accountNumberMax",
+      })
+      .optional(),
     isDefault: z.boolean().optional(),
     isActive: z.boolean().optional(),
     isArchived: z.boolean().optional().default(false),

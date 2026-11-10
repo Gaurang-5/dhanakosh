@@ -267,6 +267,8 @@
       "horizon_hint": "Age the plan should cover through.",
       "monthly_contribution": "Monthly contribution",
       "monthly_contribution_hint": "How much you add each month until retirement.",
+      "savings_goals_contribution": "Savings goals also plan {{amount}}/mo",
+      "savings_goals_contribution_hint": "Your savings goals also plan {{amount}}/mo. Enter only what goes to retirement.",
       "return_before_hint": "Assumed annual return while saving, before investment fees.",
       "return_during_hint": "Assumed annual return after withdrawals begin, before investment fees.",
       "annual_fee_hint": "Estimated yearly portfolio fees.",
@@ -329,6 +331,7 @@
       "current_fund_balance": "Current fund balance",
       "monthly_fund_contribution": "Monthly fund contribution",
       "fund_return_before_payout": "Fund return before payout",
+      "fund_return_hint": "Compound annual return after the fund's own fees. The plan's investment fee isn't deducted.",
       "fund_payout_rate": "Payout rate",
       "fund_payout_mode": "Payout mode",
       "fund_payout_mode_help": "Annuity models ongoing payments through the plan horizon; drawdown uses the fund balance until it is depleted.",
@@ -569,6 +572,7 @@
     "saving": "Saving...",
     "edit_account_shares": "Edit Account Shares",
     "reserved_share_note": "This share stays reserved while the goal is active. It is released when the goal is achieved or archived.",
+    "retirement_share_note": "Retirement counts up to this share of each account. Shares that active savings goals set aside are left out.",
     "set_type": "Set type",
     "change_tax_bucket": "Click to change tax bucket",
     "pension": "Pension",
@@ -579,6 +583,7 @@
     "used_by_other_goals": "{{percent}}% used by other active goals",
     "still_unassigned": "{{percent}}% still unassigned",
     "use_max": "Use max {{percent}}%",
+    "counting": "Counting {{percent}}%",
     "overallocated": "This account is overallocated by {{percent}}%.",
     "add_accounts": "Add accounts",
     "add_accounts_action": "Add accounts",
@@ -614,6 +619,13 @@
     "spending_covered": "Spending covered:"
   },
   "portfolio_chart": {
+    "goal_milestones": "Savings goals",
+    "goal_milestones_tip": "Each active savings goal sits at its target date, colored by its status. Savings goals keep their own money; the projection leaves it out.",
+    "goal_milestones_toggle": "Click to show or hide them.",
+    "goal_milestone_target": "{{amount}} by {{date}}",
+    "goal_milestone_aria": "{{name}}, {{target}}, {{status}}",
+    "goal_milestone_aria_no_status": "{{name}}, {{target}}",
+    "goal_milestone_not_projected": "Kept apart from this projection",
     "phase_retirement": "Retirement",
     "phase_accumulation": "Accumulation",
     "tooltip_header": "Age {{age}} · {{phase}} · {{valueLabel}}",
@@ -715,7 +727,8 @@
     "needed": "Needed",
     "finish": "Finish",
     "not_reached": "Not reached",
-    "edit_aria": "Edit {{title}}"
+    "edit_aria": "Edit {{title}}",
+    "highReturnWarning": "High return assumption. This assumes consistently beating broad market returns."
   },
   "projection": {
     "kicker": "Projection",

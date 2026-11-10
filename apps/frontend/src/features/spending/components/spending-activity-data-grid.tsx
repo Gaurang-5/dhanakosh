@@ -436,7 +436,7 @@ export function SpendingActivityDataGrid({
                 <Badge
                   data-slot="grid-cell-content"
                   variant="secondary"
-                  className="px-1.5 text-xs whitespace-pre-wrap"
+                  className="whitespace-pre-wrap px-1.5 text-xs"
                 >
                   {option?.label ?? value}
                 </Badge>

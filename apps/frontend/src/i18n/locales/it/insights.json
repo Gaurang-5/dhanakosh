@@ -53,7 +53,10 @@
       "set_target_allocation": "Imposta allocazione obiettivo",
       "outside_range_one": "{{count}} fuori intervallo · scostamento massimo {{gap}}",
       "outside_range_many": "{{count}} fuori intervallo · scostamento massimo {{gap}}",
-      "outside_range_other": "{{count}} fuori intervallo · scostamento massimo {{gap}}"
+      "outside_range_other": "{{count}} fuori intervallo · scostamento massimo {{gap}}",
+      "target_differences": "Scarti dall'obiettivo",
+      "below_target_by": "{{amount}} sotto l'obiettivo",
+      "above_target_by": "{{amount}} sopra l'obiettivo"
     },
     "value_strip": {
       "portfolio_value": "Valore del portafoglio",
