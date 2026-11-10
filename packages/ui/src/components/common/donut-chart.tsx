@@ -21,6 +21,11 @@ const COLORS = [
   "var(--chart-9)",
 ];
 
+export function chartSliceColor(index: number): string {
+  const color = COLORS[index % COLORS.length];
+  return index < COLORS.length ? color : `color-mix(in oklab, ${color} 50%, var(--card))`;
+}
+
 const PADDING_ANGLE = 4;
 const CORNER_RADIUS = 6;
 const ACTIVE_RING_TRIM_ANGLE = 1;

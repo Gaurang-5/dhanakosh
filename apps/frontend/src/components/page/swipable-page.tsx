@@ -272,17 +272,11 @@ export function SwipablePage({
                       onViewChange={handleViewChange}
                     />
                   </div>
-                  {(currentActions || true) && (
-                    <div className="flex min-w-0 flex-nowrap items-center gap-2">
-                      {workspaceFilterFirst && (
-                        <WorkspaceFilterHost hidden={!showWorkspaceFilter} />
-                      )}
-                      {currentActions}
-                      {!workspaceFilterFirst && (
-                        <WorkspaceFilterHost hidden={!showWorkspaceFilter} />
-                      )}
-                    </div>
-                  )}
+                  <div className="flex min-w-0 flex-nowrap items-center gap-2">
+                    {workspaceFilterFirst && <WorkspaceFilterHost hidden={!showWorkspaceFilter} />}
+                    {currentActions}
+                    {!workspaceFilterFirst && <WorkspaceFilterHost hidden={!showWorkspaceFilter} />}
+                  </div>
                 </>
               )}
             </div>

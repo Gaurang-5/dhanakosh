@@ -13,6 +13,9 @@ export type ScopeKey =
   | "financial-planning:read"
   | "health:read"
   | "classification:read"
+  | "spending:read"
+  | "spending:write"
+  | "budget:write"
   | "activities:draft"
   | "activities:write"
   | "classification:suggest"
@@ -37,11 +40,14 @@ export const SCOPES: ScopeMeta[] = [
   { key: "financial-planning:read", i18n: "financial_planning_read", group: "read" },
   { key: "health:read", i18n: "health_read", group: "read" },
   { key: "classification:read", i18n: "classification_read", group: "read" },
+  { key: "spending:read", i18n: "spending_read", group: "read" },
   { key: "activities:draft", i18n: "activities_draft", group: "write" },
   { key: "activities:write", i18n: "activities_write", group: "write" },
   { key: "classification:suggest", i18n: "classification_suggest", group: "write" },
   { key: "classification:write", i18n: "classification_write", group: "write" },
   { key: "market-data:write", i18n: "market_data_write", group: "write" },
+  { key: "spending:write", i18n: "spending_write", group: "write" },
+  { key: "budget:write", i18n: "budget_write", group: "write" },
 ];
 
 /** The 7 read scopes, in canonical order. */
@@ -62,6 +68,17 @@ export const SCOPE_PRESETS: ScopePreset[] = [
     key: "read-only",
     i18n: "read_only",
     scopes: [...READ_SCOPES],
+  },
+  { key: "spending-view", i18n: "spending_view", scopes: ["spending:read"] },
+  {
+    key: "spending-organize",
+    i18n: "spending_organize",
+    scopes: ["spending:read", "spending:write"],
+  },
+  {
+    key: "spending-budgets",
+    i18n: "spending_budgets",
+    scopes: ["spending:read", "budget:write"],
   },
   {
     key: "read-activity-draft",

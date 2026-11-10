@@ -3,10 +3,9 @@ import { buttonVariants } from "@wealthfolio/ui";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { getAppInfo } from "@/adapters";
+import { getAppInfo, openUrlInBrowser } from "@/adapters";
 import { ExternalLink } from "@/components/external-link";
 import { usePlatform } from "@/hooks/use-platform";
-import { useCheckForUpdates } from "@/hooks/use-updater";
 import { Button } from "@wealthfolio/ui/components/ui/button";
 import {
   Card,
@@ -26,7 +25,6 @@ export default function AboutSettingsPage() {
   const [dbPath, setDbPath] = useState<string>("");
   const [logsDir, setLogsDir] = useState<string>("");
   const { isMobile } = usePlatform();
-  const checkUpdateMutation = useCheckForUpdates();
 
   useEffect(() => {
     // Use unified command for both desktop and web
@@ -45,11 +43,18 @@ export default function AboutSettingsPage() {
     }
   }, [isMobile]);
 
-  const handleCheckForUpdates = () => {
-    checkUpdateMutation.mutate();
+  const handleCheckForUpdates = async () => {
+    try {
+      await openUrlInBrowser("https://github.com/Gaurang-5/dhanakosh/releases/latest");
+    } catch (error) {
+      toast({
+        title: t("common:component.unable_to_open_link"),
+        description: t("common:component.try_open_link_manually"),
+        variant: "destructive",
+      });
+      console.error("Failed to open the Dhanakosh releases page", error);
+    }
   };
-
-  const isCheckingUpdate = checkUpdateMutation.isPending;
 
   const handleCopy = async (value: string, label: string) => {
     try {
@@ -93,7 +98,7 @@ export default function AboutSettingsPage() {
             <p className="text-muted-foreground text-sm">{t("settings:about_attribution")}</p>
             <div className="flex flex-wrap items-center gap-2">
               {!isMobile && (
-                <Button size="sm" onClick={handleCheckForUpdates} disabled={isCheckingUpdate}>
+                <Button size="sm" onClick={handleCheckForUpdates}>
                   {t("settings:about_check_update_button")}
                 </Button>
               )}
@@ -118,7 +123,7 @@ export default function AboutSettingsPage() {
                 {t("settings:about_docs_button")}
               </ExternalLink>
               <ExternalLink
-                href="https://github.com/wealthfolio/wealthfolio"
+                href="https://github.com/Gaurang-5/dhanakosh"
                 className={cn(
                   buttonVariants({ variant: "outline", size: "sm" }),
                   "inline-flex items-center gap-2",

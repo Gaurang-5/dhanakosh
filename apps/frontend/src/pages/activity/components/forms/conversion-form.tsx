@@ -29,11 +29,9 @@ const msg = (t: MsgFn, key: string, en: string) => (t ? t(key) : en);
 
 const units = (t: MsgFn) =>
   z.coerce
-    .number({
-      error: invalidTypeError(
-        msg(t, "activity:form.err_quantity_number", "Quantity must be a number."),
-      ),
-    })
+    .number(
+      invalidTypeError(msg(t, "activity:form.err_quantity_number", "Quantity must be a number.")),
+    )
     .positive({
       message: msg(t, "activity:form.err_quantity_gt_zero", "Quantity must be greater than 0."),
     });
@@ -49,9 +47,9 @@ export const createConversionFormSchema = (t?: TFunction) =>
       accountId: z.string().min(1, {
         message: msg(t, "activity:form.err_select_account", "Please select an account."),
       }),
-      activityDate: z.date({
-        error: requiredError(msg(t, "activity:form.err_select_date", "Please select a date.")),
-      }),
+      activityDate: z.date(
+        requiredError(msg(t, "activity:form.err_select_date", "Please select a date.")),
+      ),
       fromAssetId: z.string().min(1, {
         message: msg(t, "activity:form.err_select_symbol", "Please select a symbol."),
       }),

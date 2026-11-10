@@ -299,7 +299,9 @@
     },
     "this_goal": "هذا الهدف",
     "use_max": "استخدام الحد الأقصى {{percent}}%",
-    "used_by_other_goals": "{{percent}}% مستخدمة من قبل أهداف نشطة أخرى"
+    "used_by_other_goals": "{{percent}}% مستخدمة من قبل أهداف نشطة أخرى",
+    "retirement_share_note": "يحتسب التقاعد ما يصل إلى هذه الحصة من كل حساب، باستثناء الحصص التي تحجزها أهداف الادخار النشطة.",
+    "counting": "يُحتسب {{percent}}%"
   },
   "funding_error": "خطأ في حفظ حصص الحسابات",
   "funding_saved": "تم حفظ حصص الحسابات بنجاح",
@@ -453,7 +455,14 @@
     "series_required": "المطلوب",
     "start_portfolio": "المحفظة الابتدائية:",
     "tooltip_header": "العمر {{age}} · {{phase}} · {{valueLabel}}",
-    "what_youll_need": "ما ستحتاج إليه:"
+    "what_youll_need": "ما ستحتاج إليه:",
+    "goal_milestones": "أهداف الادخار",
+    "goal_milestones_tip": "يظهر كل هدف ادخار نشط في تاريخه المستهدف، ملوّنًا حسب حالته. تحتفظ أهداف الادخار بأموالها الخاصة، ولا يشملها هذا التوقّع.",
+    "goal_milestones_toggle": "انقر لإظهارها أو إخفائها.",
+    "goal_milestone_target": "{{amount}} بحلول {{date}}",
+    "goal_milestone_aria": "{{name}}، {{target}}، {{status}}",
+    "goal_milestone_aria_no_status": "{{name}}، {{target}}",
+    "goal_milestone_not_projected": "مستبعد من هذا التوقّع"
   },
   "progress": "التقدم",
   "progress_percent": "مكتمل بنسبة {{percent}}%",
@@ -745,7 +754,8 @@
     "surplus": "الفائض",
     "target": "الهدف",
     "target_date": "التاريخ المستهدف",
-    "your_target_date": "تاريخك المستهدف"
+    "your_target_date": "تاريخك المستهدف",
+    "highReturnWarning": "افتراض عائد مرتفع. يفترض ذلك التفوق باستمرار على عوائد السوق العامة."
   },
   "select_accounts": "اختيار الحسابات",
   "sidebar": {
@@ -807,7 +817,8 @@
       "remove": "إزالة {{label}}",
       "start_age": "عمر البدء",
       "stream_fallback": "مصدر دخل",
-      "title": "دخل التقاعد"
+      "title": "دخل التقاعد",
+      "fund_return_hint": "عائد سنوي مركب بعد رسوم الصندوق نفسه. لا تُخصم منه رسوم الاستثمار الخاصة بالخطة."
     },
     "more_info_about": "مزيد من المعلومات حول {{label}}",
     "plan": {
@@ -836,7 +847,9 @@
       "return_before_hint": "العائد السنوي المفترض خلال فترة الادخار، قبل رسوم الاستثمار.",
       "return_during_hint": "العائد السنوي المفترض بعد بدء السحوبات، قبل رسوم الاستثمار.",
       "title": "مدخلات الخطة",
-      "traditional": "تقليدية"
+      "traditional": "تقليدية",
+      "savings_goals_contribution": "تخطط أهداف الادخار أيضًا لـ {{amount}} شهريًا",
+      "savings_goals_contribution_hint": "تخطط أهداف الادخار لديك أيضًا لـ {{amount}} شهريًا. أدخل فقط ما يذهب إلى التقاعد."
     },
     "spending": {
       "add_healthcare": "+ الرعاية الصحية",

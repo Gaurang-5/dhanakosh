@@ -187,7 +187,7 @@ export function ImpactRail({
           aria-busy={isCalculating}
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-muted-foreground text-2xs font-mono tracking-[0.16em] uppercase">
+            <p className="text-muted-foreground text-2xs font-mono uppercase tracking-[0.16em]">
               {t("allocation:worksheet.portfolioImpact")}
             </p>
             {/* Updating is routine; an out-of-date preview is amber, as everywhere else. */}
@@ -213,7 +213,7 @@ export function ImpactRail({
             </p>
           )}
 
-          <p className="mt-4 font-mono text-xl leading-tight font-semibold" data-impact-summary>
+          <p className="mt-4 font-mono text-xl font-semibold leading-tight" data-impact-summary>
             {outsideRangeCount === 0
               ? t("allocation:worksheet.withinTargetRange")
               : t("allocation:worksheet.categoriesOutsideTarget", { count: outsideRangeCount })}
@@ -493,10 +493,10 @@ function ImpactClassRow({
         </span>
       </span>
       <span className="relative mt-1.5 block h-3" aria-hidden>
-        <span className="bg-border/60 absolute start-0 end-0 top-[0.34375rem] h-px" />
+        <span className="bg-border/60 absolute end-0 start-0 top-[0.34375rem] h-px" />
         {/* The move, in the class's colour, so no legend is needed to read it. */}
         <span
-          className="absolute top-1.25 h-0.5"
+          className="top-1.25 absolute h-0.5"
           style={{
             left: `${Math.min(currentAt, projectedAt)}%`,
             width: `${Math.abs(projectedAt - currentAt)}%`,

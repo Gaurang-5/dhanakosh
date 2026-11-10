@@ -76,7 +76,8 @@
       "serifLabel": "세리프",
       "serifDescription": "고전적이고 우아함"
     },
-    "navigationLabel": "내비게이션"
+    "navigationLabel": "내비게이션",
+    "changeLater": "설정에서 언제든지 변경할 수 있습니다."
   },
   "connect": {
     "optional": "선택사항",

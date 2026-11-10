@@ -23,9 +23,9 @@ const NAMED_COLORS: Record<string, string> = {
   alternatives: "#b1aa9a", // stone
 };
 
-export interface AllocationTargetColorRow {
+export interface AllocationTargetColorInput {
   categoryId: string;
-  categoryName: string;
+  currentValue: number;
 }
 
 export type AllocationTargetColorMap = ReadonlyMap<string, string>;
@@ -42,26 +42,28 @@ export function allocationTargetColor(id: string, name: string, index = 0): stri
 }
 
 export function buildAllocationTargetColorMap(
-  rows: readonly AllocationTargetColorRow[],
+  rows: readonly AllocationTargetColorInput[],
 ): AllocationTargetColorMap {
-  const colors = new Map<string, string>();
-
-  rows.forEach((row, index) => {
-    if (!colors.has(row.categoryId)) {
-      colors.set(row.categoryId, allocationTargetColor(row.categoryId, row.categoryName, index));
-    }
-  });
-
-  return colors;
+  const values = new Map<string, number>();
+  for (const { categoryId, currentValue } of rows) {
+    values.set(categoryId, Math.max(values.get(categoryId) ?? 0, currentValue));
+  }
+  const ordered = [...values].sort(([aId, a], [bId, b]) => b - a || aId.localeCompare(bId));
+  return new Map(
+    ordered.map(([categoryId], index) => [
+      categoryId,
+      allocationTargetColor(categoryId, "", index),
+    ]),
+  );
 }
 
 export function allocationTargetColorForRow(
-  row: AllocationTargetColorRow,
+  row: { categoryId: string; categoryName?: string },
   colors: AllocationTargetColorMap | undefined,
   fallbackIndex = 0,
 ): string {
   return (
     colors?.get(row.categoryId) ??
-    allocationTargetColor(row.categoryId, row.categoryName, fallbackIndex)
+    allocationTargetColor(row.categoryId, row.categoryName ?? "", fallbackIndex)
   );
 }

@@ -1501,7 +1501,7 @@ pub(crate) mod tests {
                 source_record_id: None,
                 source_group_id: new_activity.source_group_id,
                 idempotency_key: new_activity.idempotency_key,
-                import_run_id: None,
+                import_run_id: new_activity.import_run_id,
                 is_user_modified: false,
                 // Mirrors the storage mapping: absent means not flagged.
                 needs_review: new_activity.needs_review.unwrap_or(false),
@@ -1702,6 +1702,17 @@ pub(crate) mod tests {
                 count += 1;
             }
             Ok(count)
+        }
+
+        async fn create_activities_returning(
+            &self,
+            activities: Vec<NewActivity>,
+        ) -> Result<Vec<Activity>> {
+            let mut created = Vec::with_capacity(activities.len());
+            for new_activity in activities {
+                created.push(self.create_activity(new_activity).await?);
+            }
+            Ok(created)
         }
 
         fn get_first_activity_date(
@@ -2033,6 +2044,8 @@ pub(crate) mod tests {
         currency: &str,
     ) -> ActivityUpdate {
         ActivityUpdate {
+            unlink_transfer_pair_id: None,
+            split_review: None,
             id: id.to_string(),
             account_id: account_id.to_string(),
             asset,
@@ -2160,6 +2173,8 @@ pub(crate) mod tests {
 
         let updated = activity_service
             .update_activity(ActivityUpdate {
+                unlink_transfer_pair_id: None,
+                split_review: None,
                 id: "activity-1".to_string(),
                 account_id: "acc-cad".to_string(),
                 asset: Some(AssetResolutionInput {
@@ -2218,6 +2233,8 @@ pub(crate) mod tests {
 
         let updated = activity_service
             .update_activity(ActivityUpdate {
+                unlink_transfer_pair_id: None,
+                split_review: None,
                 id: "activity-recalc".to_string(),
                 account_id: "acc-usd".to_string(),
                 asset: Some(AssetResolutionInput {
@@ -2289,6 +2306,8 @@ pub(crate) mod tests {
 
         let updated = activity_service
             .update_activity(ActivityUpdate {
+                unlink_transfer_pair_id: None,
+                split_review: None,
                 id: "activity-1".to_string(),
                 account_id: "acc-cad".to_string(),
                 asset: Some(AssetResolutionInput {
@@ -2350,6 +2369,8 @@ pub(crate) mod tests {
 
         let updated = activity_service
             .update_activity(ActivityUpdate {
+                unlink_transfer_pair_id: None,
+                split_review: None,
                 id: "activity-mini".to_string(),
                 account_id: "acc-usd".to_string(),
                 asset: Some(AssetResolutionInput {
@@ -2536,6 +2557,8 @@ pub(crate) mod tests {
 
         let updated = activity_service
             .update_activity(ActivityUpdate {
+                unlink_transfer_pair_id: None,
+                split_review: None,
                 id: "activity-swap".to_string(),
                 account_id: "acc-usd".to_string(),
                 asset: Some(AssetResolutionInput {
@@ -2595,6 +2618,8 @@ pub(crate) mod tests {
 
         let updated = activity_service
             .update_activity(ActivityUpdate {
+                unlink_transfer_pair_id: None,
+                split_review: None,
                 id: "activity-tag".to_string(),
                 account_id: "acc-usd".to_string(),
                 asset: Some(AssetResolutionInput {
@@ -2657,6 +2682,8 @@ pub(crate) mod tests {
 
         let updated = activity_service
             .update_activity(ActivityUpdate {
+                unlink_transfer_pair_id: None,
+                split_review: None,
                 id: "activity-meta".to_string(),
                 account_id: "acc-usd".to_string(),
                 asset: Some(AssetResolutionInput {
@@ -2844,6 +2871,8 @@ pub(crate) mod tests {
 
         let updated = activity_service
             .update_activity(ActivityUpdate {
+                unlink_transfer_pair_id: None,
+                split_review: None,
                 id: "activity-1".to_string(),
                 account_id: "acc-usd".to_string(),
                 asset: Some(AssetResolutionInput {
@@ -3011,6 +3040,8 @@ pub(crate) mod tests {
         );
 
         let update = ActivityUpdate {
+            unlink_transfer_pair_id: None,
+            split_review: None,
             id: "deposit-draft".to_string(),
             account_id: "acc-usd".to_string(),
             asset: None,
@@ -3058,6 +3089,8 @@ pub(crate) mod tests {
 
         let approved = activity_service
             .update_activity(ActivityUpdate {
+                unlink_transfer_pair_id: None,
+                split_review: None,
                 id: "deposit-draft".to_string(),
                 account_id: "acc-usd".to_string(),
                 asset: None,
@@ -3110,6 +3143,8 @@ pub(crate) mod tests {
 
         let approved = activity_service
             .update_activity(ActivityUpdate {
+                unlink_transfer_pair_id: None,
+                split_review: None,
                 id: "buy-custom".to_string(),
                 account_id: "acc-usd".to_string(),
                 asset: Some(AssetResolutionInput {
@@ -3161,6 +3196,8 @@ pub(crate) mod tests {
 
         let updated = activity_service
             .update_activity(ActivityUpdate {
+                unlink_transfer_pair_id: None,
+                split_review: None,
                 id: "buy-edited".to_string(),
                 account_id: "acc-usd".to_string(),
                 asset: Some(AssetResolutionInput {
@@ -3861,6 +3898,8 @@ pub(crate) mod tests {
 
         let updated = activity_service
             .update_activity(ActivityUpdate {
+                unlink_transfer_pair_id: None,
+                split_review: None,
                 id: "buy-custom-econ".to_string(),
                 account_id: "acc-usd".to_string(),
                 asset: Some(AssetResolutionInput {
@@ -3913,6 +3952,8 @@ pub(crate) mod tests {
 
         let updated = activity_service
             .update_activity(ActivityUpdate {
+                unlink_transfer_pair_id: None,
+                split_review: None,
                 id: "buy-calc-econ".to_string(),
                 account_id: "acc-usd".to_string(),
                 asset: Some(AssetResolutionInput {
@@ -3967,6 +4008,8 @@ pub(crate) mod tests {
 
         let updated = activity_service
             .update_activity(ActivityUpdate {
+                unlink_transfer_pair_id: None,
+                split_review: None,
                 id: "buy-fee-waived".to_string(),
                 account_id: "acc-usd".to_string(),
                 asset: Some(AssetResolutionInput {
@@ -4021,6 +4064,8 @@ pub(crate) mod tests {
 
         let updated = activity_service
             .update_activity(ActivityUpdate {
+                unlink_transfer_pair_id: None,
+                split_review: None,
                 id: "buy-reviewed".to_string(),
                 account_id: "acc-usd".to_string(),
                 asset: Some(AssetResolutionInput {
@@ -4075,6 +4120,8 @@ pub(crate) mod tests {
 
         let updated = activity_service
             .update_activity(ActivityUpdate {
+                unlink_transfer_pair_id: None,
+                split_review: None,
                 id: "buy-to-option".to_string(),
                 account_id: "acc-usd".to_string(),
                 asset: Some(AssetResolutionInput {
@@ -12818,6 +12865,7 @@ pub(crate) mod tests {
 
         let result = activity_service
             .save_internal_transfer_pair(InternalTransferPairRequest {
+                split_review: None,
                 edited_activity_id: None,
                 transfer_out_id: None,
                 transfer_in_id: None,
@@ -12879,6 +12927,7 @@ pub(crate) mod tests {
 
         let result = activity_service
             .save_internal_transfer_pair(InternalTransferPairRequest {
+                split_review: None,
                 edited_activity_id: None,
                 transfer_out_id: None,
                 transfer_in_id: None,
@@ -12924,6 +12973,7 @@ pub(crate) mod tests {
 
         let created = activity_service
             .save_internal_transfer_pair(InternalTransferPairRequest {
+                split_review: None,
                 edited_activity_id: None,
                 transfer_out_id: None,
                 transfer_in_id: None,
@@ -12960,6 +13010,7 @@ pub(crate) mod tests {
 
         let updated = activity_service
             .save_internal_transfer_pair(InternalTransferPairRequest {
+                split_review: None,
                 edited_activity_id: None,
                 transfer_out_id: Some(created.transfer_out.id.clone()),
                 transfer_in_id: Some(created.transfer_in.id.clone()),
@@ -13013,6 +13064,7 @@ pub(crate) mod tests {
             Arc::new(MockQuoteService),
         );
         let request = InternalTransferPairRequest {
+            split_review: None,
             edited_activity_id: None,
             transfer_out_id: None,
             transfer_in_id: None,
@@ -13348,6 +13400,7 @@ pub(crate) mod tests {
         let (_, _, request) = independent_transfer_fixture();
         let created = service
             .save_internal_transfer_pair(InternalTransferPairRequest {
+                split_review: None,
                 destination_currency: "HKD".into(),
                 destination_amount: Some(dec!(780)),
                 ..request
@@ -13393,6 +13446,7 @@ pub(crate) mod tests {
         // A single leg is still not converted on its own.
         let created = service
             .save_internal_transfer_pair(InternalTransferPairRequest {
+                split_review: None,
                 activity_date: "2026-06-04T20:20:00Z".into(),
                 ..independent_transfer_fixture().2
             })
@@ -13487,6 +13541,7 @@ pub(crate) mod tests {
         let (service, repository, request) = independent_transfer_fixture();
         let created = service
             .save_internal_transfer_pair(InternalTransferPairRequest {
+                split_review: None,
                 to_account_id: "other".into(),
                 source_amount: Some(dec!(1000)),
                 destination_amount: Some(dec!(920)),
@@ -13805,6 +13860,8 @@ pub(crate) mod tests {
             .bulk_mutate_activities(ActivityBulkMutationRequest {
                 creates: vec![],
                 updates: vec![ActivityUpdate {
+                    unlink_transfer_pair_id: None,
+                    split_review: None,
                     id: "cash-activity".to_string(),
                     account_id: "acc-usd".to_string(),
                     asset: None,
@@ -15580,6 +15637,8 @@ pub(crate) mod tests {
         ]);
 
         let update = crate::activities::ActivityUpdate {
+            unlink_transfer_pair_id: None,
+            split_review: None,
             id: "transfer-out".to_string(),
             account_id: "acc-out".to_string(),
             asset: None,
@@ -15667,6 +15726,8 @@ pub(crate) mod tests {
 
         let updated = activity_service
             .update_activity(ActivityUpdate {
+                unlink_transfer_pair_id: None,
+                split_review: None,
                 id: "deposit-1".to_string(),
                 account_id: "acc-1".to_string(),
                 asset: None,
@@ -15734,6 +15795,8 @@ pub(crate) mod tests {
 
         activity_service
             .update_activity(crate::activities::ActivityUpdate {
+                unlink_transfer_pair_id: None,
+                split_review: None,
                 id: "transfer-out".to_string(),
                 account_id: "acc-out".to_string(),
                 asset: None,
@@ -15803,6 +15866,8 @@ pub(crate) mod tests {
 
         activity_service
             .update_activity(crate::activities::ActivityUpdate {
+                unlink_transfer_pair_id: None,
+                split_review: None,
                 id: "transfer-out".to_string(),
                 account_id: "acc-out".to_string(),
                 asset: None,
@@ -16699,6 +16764,8 @@ pub(crate) mod tests {
                 // A grid save echoes the edited leg's date and notes, even
                 // when the deliberate changes are amount and approval only.
                 let mut update = ActivityUpdate {
+                    unlink_transfer_pair_id: None,
+                    split_review: None,
                     id: primary.id.clone(),
                     account_id: primary.account_id.clone(),
                     asset: None,
@@ -16817,6 +16884,8 @@ pub(crate) mod tests {
                     let counterpart = repository.get_activity(counterpart_id).unwrap();
                     let before = stored_snapshot(&repository);
                     let preview = service.preview_activity_update(ActivityUpdate {
+                        unlink_transfer_pair_id: None,
+                        split_review: None,
                         id: primary.id.clone(),
                         account_id: primary.account_id.clone(),
                         asset: None,
@@ -16868,6 +16937,7 @@ pub(crate) mod tests {
                 let before = stored_snapshot(&repository);
                 let result = service
                     .save_internal_transfer_pair(InternalTransferPairRequest {
+                        split_review: None,
                         edited_activity_id: None,
                         transfer_out_id: Some("pair-out".into()),
                         transfer_in_id: Some("pair-in".into()),
@@ -16898,6 +16968,7 @@ pub(crate) mod tests {
         let before = repository.get_activities().unwrap();
         let saved = service
             .save_internal_transfer_pair(InternalTransferPairRequest {
+                split_review: None,
                 edited_activity_id: None,
                 transfer_out_id: Some("pair-out".into()),
                 transfer_in_id: Some("pair-in".into()),
@@ -16986,6 +17057,7 @@ pub(crate) mod tests {
                         let before = repository.get_activities().unwrap();
                         let result = service
                             .save_internal_transfer_pair(InternalTransferPairRequest {
+                                split_review: None,
                                 edited_activity_id: Some(selected.into()),
                                 transfer_out_id: Some("pair-out".into()),
                                 transfer_in_id: Some("pair-in".into()),
@@ -17083,6 +17155,7 @@ pub(crate) mod tests {
                 let before = repository.get_activities().unwrap();
                 let saved = service
                     .save_internal_transfer_pair(InternalTransferPairRequest {
+                        split_review: None,
                         edited_activity_id: Some(selected.into()),
                         transfer_out_id: Some("pair-out".into()),
                         transfer_in_id: Some("pair-in".into()),
@@ -17134,6 +17207,7 @@ pub(crate) mod tests {
         seed_sourced_cash_transfer_pair(&repository);
         let service = preview_test_service(repository.clone(), Arc::new(MockFxService::new()));
         let mut request = InternalTransferPairRequest {
+            split_review: None,
             edited_activity_id: Some("unrelated-record".into()),
             transfer_out_id: Some("pair-out".into()),
             transfer_in_id: Some("pair-in".into()),
@@ -17234,6 +17308,8 @@ pub(crate) mod tests {
         let before = stored_snapshot(&activity_repository);
 
         let update = ActivityUpdate {
+            unlink_transfer_pair_id: None,
+            split_review: None,
             id: "pair-out".to_string(),
             account_id: "acc-a".to_string(),
             asset: None,

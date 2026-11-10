@@ -52,7 +52,10 @@
       "compare_weights": "Vergleichen Sie die aktuellen Gewichtungen mit Ihrem gewünschten Portfolio.",
       "set_target_allocation": "Zielaufteilung festlegen",
       "outside_range_one": "{{count}} außerhalb des Bereichs · größte Abweichung {{gap}}",
-      "outside_range_other": "{{count}} außerhalb des Bereichs · größte Abweichung {{gap}}"
+      "outside_range_other": "{{count}} außerhalb des Bereichs · größte Abweichung {{gap}}",
+      "target_differences": "Abweichungen vom Ziel",
+      "below_target_by": "{{amount}} unter dem Ziel",
+      "above_target_by": "{{amount}} über dem Ziel"
     },
     "value_strip": {
       "portfolio_value": "Portfoliowert",

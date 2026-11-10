@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use log::debug;
 use wealthfolio_core::activities::{
     Activity, ActivityBulkMutationRequest, ActivityBulkMutationResult, ActivityImport,
-    ActivitySearchResponse, ActivityServiceTrait, ActivityUpdate, ImportActivitiesResult,
+    ActivitySearchResponse, ActivitySplitEffect, ActivityUpdate, ImportActivitiesResult,
     ImportAssetCandidate, ImportAssetPreviewItem, ImportMappingData, ImportTemplateData,
     InternalTransferPairRequest, InternalTransferPairResponse, NewActivity, ParseConfig,
     ParsedCsvResult, Sort, TransferMatchCandidate, TransferMatchCandidateRequest,
@@ -84,6 +84,31 @@ pub async fn create_activity(
         .map_err(|e| e.to_string())?;
     context.health_service().clear_cache().await;
     Ok(created)
+}
+
+#[tauri::command]
+pub async fn review_activity_split_effects(
+    activities: Vec<ActivityUpdate>,
+    state: ProfileAccess,
+) -> Result<Vec<Vec<ActivitySplitEffect>>, String> {
+    state
+        .context()?
+        .activity_service()
+        .review_activity_split_effects_batch(activities)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn review_internal_transfer_pair_split_effects(
+    request: InternalTransferPairRequest,
+    state: ProfileAccess,
+) -> Result<Vec<ActivitySplitEffect>, String> {
+    state
+        .context()?
+        .activity_service()
+        .review_internal_transfer_pair_split_effects(request)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]

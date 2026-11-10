@@ -66,6 +66,29 @@ impl MeasureInputs<'_> {
             .unwrap_or_default()
     }
 
+    fn attribution_baseline(
+        &self,
+        holdings: bool,
+        start: Option<NaiveDate>,
+        scope: &[AccountId],
+    ) -> Baseline {
+        let inception = scope
+            .iter()
+            .filter_map(|account| self.series.get(account)?.days.first().map(|day| day.date))
+            .min();
+        let covers_inception = start.is_none_or(|start| {
+            inception.is_some_and(|date| {
+                start < date
+                    || (start == date && scope.iter().all(|account| self.account_is_base(account)))
+            })
+        });
+        if !holdings && covers_inception {
+            Baseline::Inception
+        } else {
+            Baseline::PeriodStart
+        }
+    }
+
     fn account_is_base(&self, account: &AccountId) -> bool {
         self.series.get(account).is_some_and(|s| {
             s.currency
@@ -270,10 +293,13 @@ pub fn measure_account(
         ));
     }
     let holdings = inputs.tracking(account) == TrackingMode::Holdings;
+    let baseline =
+        inputs.attribution_baseline(holdings, window.start, std::slice::from_ref(account));
     let mut result = performance_core(
         &history,
         holdings,
         window.start,
+        baseline,
         include_series,
         profile,
         inputs.account_is_base(account),
@@ -284,7 +310,6 @@ pub fn measure_account(
         apply_dashboard_amount(&mut result, &history, holdings);
         return Ok(result);
     }
-    let baseline = attribution_baseline(holdings, window.start);
     finalize_attribution(
         inputs,
         &mut result,
@@ -368,10 +393,12 @@ pub fn measure_scope(
         ));
     }
 
+    let baseline = inputs.attribution_baseline(has_holdings, window.start, scope);
     let mut result = performance_core(
         &history,
         has_holdings,
         window.start,
+        baseline,
         include_series,
         profile,
         true,
@@ -383,13 +410,6 @@ pub fn measure_scope(
         return Ok(result);
     }
 
-    // Transaction-only all-time scopes use inception attribution; holdings
-    // scopes stay period-based (snapshots carry no cash-flow history).
-    let baseline = if has_transactions && window.start.is_none() {
-        Baseline::Inception
-    } else {
-        Baseline::PeriodStart
-    };
     let unrealized = scoped_unrealized_effects(inputs, &result, scope, baseline);
     let mut seed = Seed::default();
     if unrealized.complete {
@@ -404,10 +424,12 @@ pub fn measure_scope(
 // ------------------------------------------------------------ core math
 
 /// Legacy `compute_account_performance_with_flow_basis` (base currency).
+#[allow(clippy::too_many_arguments)]
 fn performance_core(
     history: &[DailyValuation],
     holdings: bool,
     start_opt: Option<NaiveDate>,
+    baseline: Baseline,
     include_series: bool,
     profile: MeasureProfile,
     account_is_base: bool,
@@ -418,7 +440,6 @@ fn performance_core(
     let end_point = &history[history.len() - 1];
     let actual_start = start_point.date;
     let actual_end = end_point.date;
-    let baseline = attribution_baseline(holdings, start_opt);
     let full = profile == MeasureProfile::Full;
 
     let end_value = end_point.total_value_base;
@@ -1169,14 +1190,6 @@ fn total_flows(flows: &[PeriodFlow]) -> (Decimal, Decimal) {
         .fold((Decimal::ZERO, Decimal::ZERO), |(i, o), f| {
             (i + f.inflow, o + f.outflow)
         })
-}
-
-fn attribution_baseline(holdings: bool, start_opt: Option<NaiveDate>) -> Baseline {
-    if !holdings && start_opt.is_none() {
-        Baseline::Inception
-    } else {
-        Baseline::PeriodStart
-    }
 }
 
 fn flows_for_attribution(
@@ -2422,6 +2435,7 @@ fn mixed_scope_performance(
 
     let mut metrics = Vec::new();
     let mut skipped = Vec::new();
+    let mut series_unavailable = is_all_time;
     for component in &components {
         let history = &component.history;
         if history.len() < 2 {
@@ -2483,10 +2497,16 @@ fn mixed_scope_performance(
             }
             (amount, attribution, end_point.basis_status)
         } else {
+            let baseline = inputs.attribution_baseline(
+                false,
+                window.start,
+                std::slice::from_ref(&component.account),
+            );
             let mut component_result = performance_core(
                 history,
                 false,
                 window.start,
+                baseline,
                 false,
                 component_profile,
                 inputs.account_is_base(&component.account),
@@ -2496,12 +2516,13 @@ fn mixed_scope_performance(
             if component_profile == MeasureProfile::Dashboard {
                 apply_dashboard_amount(&mut component_result, history, false);
             } else {
+                series_unavailable |= baseline == Baseline::Inception;
                 finalize_attribution(
                     inputs,
                     &mut component_result,
                     std::slice::from_ref(&component.account),
                     history,
-                    attribution_baseline(false, window.start),
+                    baseline,
                     Seed::default(),
                 );
             }
@@ -2535,6 +2556,7 @@ fn mixed_scope_performance(
         base,
         window.start,
         include_series,
+        series_unavailable,
     )
 }
 
@@ -2545,8 +2567,8 @@ fn build_mixed_result(
     currency: &Currency,
     start_opt: Option<NaiveDate>,
     include_series: bool,
+    series_unavailable: bool,
 ) -> PerformanceResult {
-    let is_all_time = start_opt.is_none();
     let mut attribution = Attribution::default();
     let mut summary_amount = Decimal::ZERO;
     let mut denominator = Decimal::ZERO;
@@ -2631,7 +2653,7 @@ fn build_mixed_result(
 
     let mut series = Vec::new();
     if include_series && value_return.is_some() {
-        if is_all_time {
+        if series_unavailable {
             warnings.push(QualityNote::MixedSeriesUnavailable);
         } else {
             series = mixed_bounded_series(components, actual_start);
@@ -3001,6 +3023,7 @@ mod tests {
                 history,
                 false,
                 None,
+                Baseline::Inception,
                 false,
                 MeasureProfile::Full,
                 true,
@@ -3076,6 +3099,7 @@ mod tests {
             &history,
             false,
             None,
+            Baseline::Inception,
             false,
             MeasureProfile::Full,
             true,

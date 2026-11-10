@@ -275,7 +275,9 @@
       "return_before_hint": "Rendimento annuo ipotizzato durante il risparmio, prima delle commissioni.",
       "return_during_hint": "Rendimento annuo ipotizzato dopo l’inizio dei prelievi, prima delle commissioni.",
       "annual_fee_hint": "Commissioni annue stimate del portafoglio.",
-      "inflation_hint": "Aumento annuo ipotizzato dei prezzi."
+      "inflation_hint": "Aumento annuo ipotizzato dei prezzi.",
+      "savings_goals_contribution": "Gli obiettivi di risparmio prevedono anche {{amount}}/mese",
+      "savings_goals_contribution_hint": "I tuoi obiettivi di risparmio prevedono anche {{amount}}/mese. Inserisci solo ciò che va alla pensione."
     },
     "spending": {
       "kicker": "Spesa",
@@ -353,7 +355,8 @@
       "growth_placeholder_inflation": "Inflazione {{pct}}",
       "growth_placeholder_fixed": "Fissa 0,0",
       "add_income": "Aggiungi entrata pensionistica",
-      "add_pension_fund": "Aggiungi fondo pensione"
+      "add_pension_fund": "Aggiungi fondo pensione",
+      "fund_return_hint": "Rendimento annuo composto al netto delle commissioni del fondo. La commissione di investimento del piano non viene detratta."
     },
     "assumptions": {
       "kicker": "Ipotesi",
@@ -601,7 +604,9 @@
       "taxable": "Tassabile",
       "tax_deferred": "A tassazione differita",
       "tax_free": "Esente da imposte"
-    }
+    },
+    "retirement_share_note": "La pensione conteggia fino a questa quota di ogni conto. Le quote riservate dagli obiettivi di risparmio attivi sono escluse.",
+    "counting": "Conteggia {{percent}}%"
   },
   "value_mode": {
     "todays_value": "Valore attuale",
@@ -634,7 +639,14 @@
     "event_retirement": "Pensione",
     "fi_reference": "IF · {{age}}",
     "series_required": "Richiesto",
-    "series_projected": "Proiettato"
+    "series_projected": "Proiettato",
+    "goal_milestones": "Obiettivi di risparmio",
+    "goal_milestones_tip": "Ogni obiettivo di risparmio attivo compare alla sua data obiettivo, colorato in base al suo stato. Gli obiettivi di risparmio tengono il proprio denaro; la proiezione lo esclude.",
+    "goal_milestones_toggle": "Fai clic per mostrarli o nasconderli.",
+    "goal_milestone_target": "{{amount}} entro {{date}}",
+    "goal_milestone_aria": "{{name}}, {{target}}, {{status}}",
+    "goal_milestone_aria_no_status": "{{name}}, {{target}}",
+    "goal_milestone_not_projected": "Escluso da questa proiezione"
   },
   "snapshot": {
     "table": "Tabella",
@@ -721,7 +733,8 @@
     "needed": "Necessario",
     "finish": "Fine",
     "not_reached": "Non raggiunto",
-    "edit_aria": "Modifica {{title}}"
+    "edit_aria": "Modifica {{title}}",
+    "highReturnWarning": "Ipotesi di rendimento elevato. Presuppone di superare costantemente i rendimenti del mercato generale."
   },
   "projection": {
     "kicker": "Proiezione",

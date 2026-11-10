@@ -270,7 +270,9 @@
       "return_before_hint": "저축 기간의 연간 가정 수익률이며 투자 수수료 차감 전입니다.",
       "return_during_hint": "인출 시작 후의 연간 가정 수익률이며 투자 수수료 차감 전입니다.",
       "annual_fee_hint": "예상 연간 포트폴리오 수수료입니다.",
-      "inflation_hint": "연간 가정 물가 상승률입니다."
+      "inflation_hint": "연간 가정 물가 상승률입니다.",
+      "savings_goals_contribution": "저축 목표에서도 월 {{amount}} 계획",
+      "savings_goals_contribution_hint": "저축 목표에서도 월 {{amount}}을(를) 계획하고 있습니다. 은퇴에 들어가는 금액만 입력하세요."
     },
     "spending": {
       "kicker": "지출",
@@ -348,7 +350,8 @@
       "growth_placeholder_inflation": "인플레이션 {{pct}}",
       "growth_placeholder_fixed": "고정 0.0",
       "add_income": "은퇴 소득 추가",
-      "add_pension_fund": "연금 펀드 추가"
+      "add_pension_fund": "연금 펀드 추가",
+      "fund_return_hint": "펀드 자체 수수료 차감 후의 연평균 복리 수익률입니다. 플랜의 투자 수수료는 차감되지 않습니다."
     },
     "assumptions": {
       "kicker": "가정",
@@ -595,7 +598,9 @@
       "taxable": "과세",
       "tax_deferred": "과세 이연",
       "tax_free": "비과세"
-    }
+    },
+    "retirement_share_note": "은퇴 목표는 각 계좌에서 이 비중까지 반영합니다. 활성 저축 목표가 예약한 비중은 제외됩니다.",
+    "counting": "{{percent}}% 반영"
   },
   "value_mode": {
     "todays_value": "현재 가치",
@@ -628,7 +633,14 @@
     "event_retirement": "은퇴",
     "fi_reference": "경제적 자유 · {{age}}세",
     "series_required": "필요",
-    "series_projected": "예상"
+    "series_projected": "예상",
+    "goal_milestones": "저축 목표",
+    "goal_milestones_tip": "활성 저축 목표는 각각 목표 날짜에 표시되며 상태에 따라 색이 다릅니다. 저축 목표의 돈은 따로 보관되며 이 예측에는 포함되지 않습니다.",
+    "goal_milestones_toggle": "클릭하여 표시하거나 숨깁니다.",
+    "goal_milestone_target": "{{date}}까지 {{amount}}",
+    "goal_milestone_aria": "{{name}}, {{target}}, {{status}}",
+    "goal_milestone_aria_no_status": "{{name}}, {{target}}",
+    "goal_milestone_not_projected": "이 예측에 포함되지 않음"
   },
   "snapshot": {
     "table": "표",
@@ -715,7 +727,8 @@
     "needed": "필요",
     "finish": "완료",
     "not_reached": "달성 못함",
-    "edit_aria": "{{title}} 수정"
+    "edit_aria": "{{title}} 수정",
+    "highReturnWarning": "높은 수익률 가정입니다. 광범위한 시장 수익률을 지속적으로 초과한다고 가정합니다."
   },
   "projection": {
     "kicker": "예측",

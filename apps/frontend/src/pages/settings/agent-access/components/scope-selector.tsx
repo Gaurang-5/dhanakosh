@@ -87,7 +87,7 @@ export function ScopeSelector({
   return (
     <>
       <div className="space-y-2">
-        <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+        <p className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
           {t("settings:agentAccess.dialog_presets")}
         </p>
         <div className="flex flex-wrap gap-2">
@@ -108,7 +108,7 @@ export function ScopeSelector({
       </div>
       {(["read", "write"] as const).map((group) => (
         <div key={group} className="space-y-2">
-          <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
             {t(
               group === "read"
                 ? "settings:agentAccess.dialog_read_access"

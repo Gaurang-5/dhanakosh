@@ -75,6 +75,7 @@ const mocks = vi.hoisted(() => {
 });
 
 vi.mock("@/adapters", () => ({
+  isWeb: false,
   createActivity: mocks.createActivity,
   saveActivities: mocks.saveActivities,
   deleteActivity: vi.fn(),
@@ -114,7 +115,10 @@ vi.mock("@tanstack/react-virtual", () => ({
 vi.mock("@/hooks/use-accounts", () => ({
   useAccounts: () => ({ accounts: mocks.accounts, isLoading: false }),
 }));
-vi.mock("@/hooks/use-platform", () => ({ useIsMobileViewport: () => false }));
+vi.mock("@/hooks/use-platform", () => ({
+  useIsCompactTableViewport: () => false,
+  useIsMobileViewport: () => false,
+}));
 vi.mock("@/hooks/use-virtual-scroll-container", () => ({
   observeCurrentScrollOffset: vi.fn(),
   useVirtualScrollContainer: () => ({
@@ -130,6 +134,18 @@ vi.mock("@/lib/settings-provider", () => ({
 }));
 
 vi.mock("../hooks/use-cash-activity-search", () => ({
+  useCashActivityPage: () => ({
+    items: [mocks.transferOut],
+    totalCount: 1,
+    pageCount: 1,
+    net: [],
+    baseCurrency: "EUR",
+    isLoading: false,
+    isFetching: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  }),
   useCashActivitySearch: () => ({
     items: [mocks.transferOut],
     totalCount: 1,

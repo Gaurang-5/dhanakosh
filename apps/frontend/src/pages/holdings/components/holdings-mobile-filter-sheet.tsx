@@ -47,7 +47,6 @@ interface HoldingsMobileFilterSheetProps {
   showClosedPositions?: boolean;
 }
 
-
 export const HoldingsMobileFilterSheet = ({
   open,
   onOpenChange,

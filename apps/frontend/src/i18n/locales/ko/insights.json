@@ -51,7 +51,10 @@
       "no_target_yet": "아직 목표 배분이 없습니다",
       "compare_weights": "현재 비중을 원하는 포트폴리오와 비교하세요.",
       "set_target_allocation": "목표 배분 설정",
-      "outside_range_other": "{{count}}개 범위 벗어남 · 최대 격차 {{gap}}"
+      "outside_range_other": "{{count}}개 범위 벗어남 · 최대 격차 {{gap}}",
+      "target_differences": "목표와의 차이",
+      "below_target_by": "목표보다 {{amount}} 낮음",
+      "above_target_by": "목표보다 {{amount}} 높음"
     },
     "value_strip": {
       "portfolio_value": "포트폴리오 가치",

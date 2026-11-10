@@ -2,7 +2,8 @@ import { getAccounts, getImportRuns, undoActivityImport } from "@/adapters";
 import { usePortfolios } from "@/hooks/use-portfolios";
 import { accountLabel } from "@/lib/account-label";
 import { QueryKeys } from "@/lib/query-keys";
-import type { Account, ImportRun, ImportRunStatus } from "@/lib/types";
+import type { Account } from "@/lib/types";
+import type { ImportRun, ImportRunStatus } from "@/features/wealthfolio-connect/types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useDateFormatting, Spinner } from "@wealthfolio/ui";
 import {
@@ -77,7 +78,7 @@ export function PastImportsCard({ open, onOpenChange }: PastImportsCardProps = {
   const setOpen = onOpenChange ?? setUncontrolledOpen;
   const { data: accounts = [] } = useQuery<Account[], Error>({
     queryKey: [QueryKeys.ACCOUNTS],
-    queryFn: getAccounts,
+    queryFn: () => getAccounts(),
   });
   const { data: portfolios = [] } = usePortfolios();
   const runsQuery = useQuery({

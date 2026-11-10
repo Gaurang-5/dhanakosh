@@ -655,9 +655,19 @@ impl Scenario {
                 updated_at: stamp,
                 platform_id: None,
                 account_number: None,
-                meta: spec.cost_basis_method.as_ref().map(|method| {
-                    json!({ "accounting": { "costBasisMethod": method } }).to_string()
-                }),
+                // Engine scenarios model a fully funded ledger unless they
+                // explicitly exercise separate-cash behavior in engine tests.
+                // Keep the core parity adapter faithful to that contract even
+                // though real securities accounts default to manual cash.
+                meta: Some(
+                    json!({
+                        "accounting": {
+                            "costBasisMethod": spec.cost_basis_method,
+                            "settingsJson": "{\"tradeSettlements\":true}"
+                        }
+                    })
+                    .to_string(),
+                ),
                 provider: None,
                 provider_account_id: None,
                 is_archived: spec.is_archived,

@@ -270,7 +270,9 @@
       "return_before_hint": "儲蓄期間的假設年報酬率，未扣除投資費用。",
       "return_during_hint": "開始提領後的假設年報酬率，未扣除投資費用。",
       "annual_fee_hint": "預估的年度投資費用。",
-      "inflation_hint": "假設的年度物價漲幅。"
+      "inflation_hint": "假設的年度物價漲幅。",
+      "savings_goals_contribution": "儲蓄目標另計畫每月 {{amount}}",
+      "savings_goals_contribution_hint": "你的儲蓄目標另計畫每月 {{amount}}。這裡只填寫用於退休的金額。"
     },
     "spending": {
       "kicker": "支出",
@@ -348,7 +350,8 @@
       "growth_placeholder_inflation": "通膨 {{pct}}",
       "growth_placeholder_fixed": "固定 0.0",
       "add_income": "新增退休收入",
-      "add_pension_fund": "新增退休基金"
+      "add_pension_fund": "新增退休基金",
+      "fund_return_hint": "扣除基金本身費用後的年複合成長率。不會扣除計畫的投資費用。"
     },
     "assumptions": {
       "kicker": "假設",
@@ -595,7 +598,9 @@
       "taxable": "應稅",
       "tax_deferred": "遞延稅",
       "tax_free": "免稅"
-    }
+    },
+    "retirement_share_note": "退休最多計入每個帳戶的此占比。進行中的儲蓄目標所保留的占比不會計入。",
+    "counting": "計入 {{percent}}%"
   },
   "value_mode": {
     "todays_value": "現值",
@@ -628,7 +633,14 @@
     "event_retirement": "退休",
     "fi_reference": "FI · {{age}}",
     "series_required": "所需",
-    "series_projected": "預計"
+    "series_projected": "預計",
+    "goal_milestones": "儲蓄目標",
+    "goal_milestones_tip": "每個進行中的儲蓄目標會顯示在其目標日期，並依狀態著色。儲蓄目標保有自己的資金，此預測不包含這筆錢。",
+    "goal_milestones_toggle": "點擊以顯示或隱藏。",
+    "goal_milestone_target": "{{date}}前達到{{amount}}",
+    "goal_milestone_aria": "{{name}}，{{target}}，{{status}}",
+    "goal_milestone_aria_no_status": "{{name}}，{{target}}",
+    "goal_milestone_not_projected": "未計入此預測"
   },
   "snapshot": {
     "table": "表格",
@@ -715,7 +727,8 @@
     "needed": "所需",
     "finish": "完成",
     "not_reached": "未達成",
-    "edit_aria": "編輯 {{title}}"
+    "edit_aria": "編輯 {{title}}",
+    "highReturnWarning": "報酬率假設偏高，這意味著持續超越大盤報酬。"
   },
   "projection": {
     "kicker": "預測",

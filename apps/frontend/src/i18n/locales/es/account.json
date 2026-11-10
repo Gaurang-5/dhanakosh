@@ -172,5 +172,8 @@
   "ppf_interest": "Record credited interest",
   "ppf_withdrawal": "Record withdrawal",
   "ppf_transfer_in": "Transfer from another account",
-  "ppf_opening_balance": "Starting midway? Record your statement opening balance as a deposit on the starting date, then add only later transactions. For money already tracked in another account, use a transfer to avoid counting the contribution twice."
+  "ppf_opening_balance": "Starting midway? Record your statement opening balance as a deposit on the starting date, then add only later transactions. For money already tracked in another account, use a transfer to avoid counting the contribution twice.",
+  "copy_account_number": "Copiar número de cuenta",
+  "account_number_copied": "Número de cuenta copiado",
+  "account_number_copy_failed": "No se pudo copiar el número de cuenta"
 }

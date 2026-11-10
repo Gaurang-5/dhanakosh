@@ -1801,6 +1801,21 @@ fn priced_events(
                 security: pair.security,
                 contribution_neutral: pair.contribution_neutral,
             })
+            .chain(
+                facts
+                    .conversions
+                    .iter()
+                    .filter(|pair| !rejected.contains(&pair.out_activity))
+                    .map(|pair| PairEffect {
+                        group: pair.group_id.clone(),
+                        transfer_in: pair.in_activity.clone(),
+                        transfer_out: pair.out_activity.clone(),
+                        in_account: pair.account.clone(),
+                        out_account: pair.account.clone(),
+                        security: true,
+                        contribution_neutral: false,
+                    }),
+            )
             .collect(),
     };
     (effects, diagnostics)

@@ -51,7 +51,10 @@
       "no_target_yet": "目標資産配分が未設定です",
       "compare_weights": "現在の比率と目指すポートフォリオを比較できます。",
       "set_target_allocation": "目標資産配分を設定",
-      "outside_range_other": "{{count}}件が範囲外 · 最大乖離 {{gap}}"
+      "outside_range_other": "{{count}}件が範囲外 · 最大乖離 {{gap}}",
+      "target_differences": "目標との差",
+      "below_target_by": "目標を{{amount}}下回る",
+      "above_target_by": "目標を{{amount}}上回る"
     },
     "value_strip": {
       "portfolio_value": "ポートフォリオ評価額",

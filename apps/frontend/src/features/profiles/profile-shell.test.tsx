@@ -1,10 +1,10 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useState } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { profileChangesChannel } from "./api";
 import { ProfileShell } from "./profile-shell";
-import { ProfileMenu } from "./profile-menu";
-import { MobileProfileMenu } from "./mobile-profile-menu";
+import { useProfile } from "./profile-context";
 const mocks = vi.hoisted(() => ({
   isWeb: true,
   changed: () => {},
@@ -48,11 +48,80 @@ const unlocked = {
   session: { profileId: "a", scopeId: "scope" },
   starting: false,
 };
+
+function TestProfileMenu() {
+  const context = useProfile();
+  const [open, setOpen] = useState(false);
+  if (!context?.profile) return null;
+  const { profile, profileCount, addProfile, manageProfile, lockProfile, switchProfile } = context;
+  return (
+    <>
+      <button type="button" onClick={() => setOpen((value) => !value)}>
+        {`Profile menu for ${profile.name}`}
+      </button>
+      {open && (
+        <div role="menu">
+          <button type="button" role="menuitem" onClick={manageProfile}>
+            Profile settings
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={profileCount === 1 ? addProfile : switchProfile}
+          >
+            {profileCount === 1 ? "Add profile" : "Switch family member"}
+          </button>
+          {profile.lockEnabled && (
+            <button type="button" role="menuitem" onClick={lockProfile}>
+              Lock Dhanakosh
+            </button>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
+
+function TestMobileProfileMenu({ onAction }: { onAction: () => void }) {
+  const context = useProfile();
+  if (!context?.profile) return null;
+  const run = (action: () => void) => {
+    onAction();
+    action();
+  };
+  return (
+    <>
+      {context.profiles.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          onClick={() =>
+            item.id !== context.profile?.id && run(() => context.selectProfile(item.id))
+          }
+        >
+          {item.name}
+        </button>
+      ))}
+      <button type="button" onClick={() => run(context.manageProfile)}>
+        Profile settings
+      </button>
+      <button type="button" onClick={() => run(context.addProfile)}>
+        Add profile
+      </button>
+      {context.profile.lockEnabled && (
+        <button type="button" onClick={() => run(context.lockProfile)}>
+          Lock Dhanakosh
+        </button>
+      )}
+    </>
+  );
+}
+
 const mount = () =>
   render(
     <QueryClientProvider client={new QueryClient()}>
       <ProfileShell>
-        <ProfileMenu collapsed />
+        <TestProfileMenu />
         <div>Private portfolio</div>
       </ProfileShell>
     </QueryClientProvider>,
@@ -1195,7 +1264,7 @@ it.each([true, false])(
     render(
       <QueryClientProvider client={new QueryClient()}>
         <ProfileShell>
-          <MobileProfileMenu onAction={() => {}} />
+          <TestMobileProfileMenu onAction={() => {}} />
           <div>Private portfolio</div>
         </ProfileShell>
       </QueryClientProvider>,

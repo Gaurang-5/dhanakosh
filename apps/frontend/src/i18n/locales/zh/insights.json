@@ -51,7 +51,10 @@
       "no_target_yet": "尚无目标配置",
       "compare_weights": "将当前权重与您预期的投资组合进行比较。",
       "set_target_allocation": "设置目标配置",
-      "outside_range_other": "{{count}} 项超出区间 · 最大偏差 {{gap}}"
+      "outside_range_other": "{{count}} 项超出区间 · 最大偏差 {{gap}}",
+      "target_differences": "与目标的差异",
+      "below_target_by": "低于目标 {{amount}}",
+      "above_target_by": "高于目标 {{amount}}"
     },
     "value_strip": {
       "portfolio_value": "投资组合价值",

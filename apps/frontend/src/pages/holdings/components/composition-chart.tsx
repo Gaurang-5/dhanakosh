@@ -282,7 +282,7 @@ const CustomizedContent: FC<CustomizedContentProps> = ({
         ? ""
         : exposureMode
           ? formatting.formatPercent(weight)
-          : quotedGain > 0
+          : quotedGain != null && quotedGain > 0
             ? "+" + formatting.formatPercent(quotedGain)
             : formatting.formatPercent(quotedGain ?? 0);
     const showPercent = tile.showPercent && percentText.length > 0;
@@ -674,7 +674,7 @@ export function PortfolioComposition({
         const marketValue = Number(holding.marketValue?.base) || 0;
 
         // Basic validation
-        if (isNaN(gain) || isNaN(marketValue) || marketValue <= 0) return null;
+        if (gain == null || isNaN(gain) || isNaN(marketValue) || marketValue <= 0) return null;
 
         return {
           id: holding.instrument?.id, // Asset ID for navigation

@@ -150,8 +150,10 @@ function SecurityCell({ row }: { row: TotalExposureRow }) {
 
 function FundLineAvatar({ fund }: { fund: ExposureFundLine }) {
   const identity = getInstrumentAvatarIdentity({
+    symbol: "",
     name: fund.name,
     instrumentType: "MUTUAL_FUND",
+    exchangeMic: null,
   });
   return (
     <TickerAvatar

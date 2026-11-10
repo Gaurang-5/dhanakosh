@@ -16,6 +16,7 @@ export interface ActivityDeleteModalProps {
   isOpen?: boolean;
   isDeleting?: boolean;
   linkedTransfer?: boolean;
+  conversion?: boolean;
   onConfirm: () => void;
   onCancel?: () => void;
 }
@@ -24,6 +25,7 @@ export function ActivityDeleteModal({
   isOpen,
   isDeleting,
   linkedTransfer,
+  conversion,
   onConfirm,
   onCancel,
 }: ActivityDeleteModalProps) {
@@ -39,9 +41,11 @@ export function ActivityDeleteModal({
             {t("activity:delete_modal.title")}
           </AlertDialogTitle>
           <AlertDialogDescription className="max-sm:text-base">
-            {linkedTransfer
-              ? t("activity:delete_modal.linked_transfer_desc")
-              : t("activity:delete_modal.description")}
+            {conversion
+              ? t("activity:delete_modal.linked_conversion_desc")
+              : linkedTransfer
+                ? t("activity:delete_modal.linked_transfer_desc")
+                : t("activity:delete_modal.description")}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

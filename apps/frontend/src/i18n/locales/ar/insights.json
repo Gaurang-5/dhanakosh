@@ -80,7 +80,10 @@
       "target": "الهدف",
       "target_allocation": "التوزيع المستهدف",
       "tolerance": "هامش التفاوت {{tolerance}}",
-      "trim": "تقليص"
+      "trim": "تقليص",
+      "above_target_by": "أعلى من الهدف بمقدار {{amount}}",
+      "below_target_by": "أدنى من الهدف بمقدار {{amount}}",
+      "target_differences": "الفروق عن الهدف"
     },
     "rebalance": "إعادة التوازن",
     "set_target_allocation": "تحديد التوزيع المستهدف",

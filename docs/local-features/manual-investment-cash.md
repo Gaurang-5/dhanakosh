@@ -2,16 +2,17 @@
 
 Securities and crypto investment accounts keep available cash separate from
 investment settlement. Purchases and sales still create and dispose lots with
-unchanged quantities, prices, fees and cost basis, but do not debit or credit the
-available cash balance. Investment-specific income and charges likewise do not
-become available cash automatically. Reinvestment composite legs retain their
-paired settlement so the reinvestment is not counted as new external funding.
+unchanged quantities, prices, fees and cost basis, but do not debit or credit
+the available cash balance. Investment-specific income and charges likewise do
+not become available cash automatically. Reinvestment composite legs retain
+their paired settlement so the reinvestment is not counted as new external
+funding.
 
-Record cash explicitly with cash-only deposits, withdrawals, transfers or balance
-adjustments. Cash remains part of account/portfolio total wealth. If a sale is
-followed by an explicit cash deposit, the sale's external withdrawal and the
-cash deposit offset in whole-portfolio contributions. No synthetic deposits are
-created. Bank and credit-card account rules are unchanged. Observed holdings
+Record cash explicitly with cash-only deposits, withdrawals, transfers or
+balance adjustments. Cash remains part of account/portfolio total wealth. If a
+sale is followed by an explicit cash deposit, the sale's external withdrawal and
+the cash deposit offset in whole-portfolio contributions. No synthetic deposits
+are created. Bank and credit-card account rules are unchanged. Observed holdings
 snapshots remain observations, not reconstructed trade-ledger cash.
 
 The Investments dashboard headline, history and account rows use investment
@@ -38,8 +39,9 @@ change. Keep original activities and manually entered holdings snapshots.
 ## Validation
 
 The engine regression covers a purchase, sale with fees, explicit cash deposit,
-external sale flow, investment income, and unchanged normal cash-ledger behavior.
-The core regression checks investment versus bank/credit-card classification.
-The browser regression uses a disposable installation, creates a manual cash
-deposit, checks investment-only dashboard/account values and total wealth,
-fully exits a position, finds it in global search, and checks RTL mobile cash.
+external sale flow, investment income, and unchanged normal cash-ledger
+behavior. The core regression checks investment versus bank/credit-card
+classification. The browser regression uses a disposable installation, creates a
+manual cash deposit, checks investment-only dashboard/account values and total
+wealth, fully exits a position, finds it in global search, and checks RTL mobile
+cash.

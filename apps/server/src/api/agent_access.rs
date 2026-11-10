@@ -180,6 +180,26 @@ async fn delete_token(
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct UpdateTokenScopesRequest {
+    scopes: Vec<String>,
+}
+
+async fn update_token_scopes(
+    axum::Extension(state): axum::Extension<Arc<AppState>>,
+    Path(id): Path<String>,
+    Json(payload): Json<UpdateTokenScopesRequest>,
+) -> ApiResult<Json<TokenInfo>> {
+    let scopes = validate_requested_scopes(&payload.scopes)?;
+    let row = state
+        .pat_repository
+        .update_scopes(&id, scopes)
+        .await?
+        .ok_or(ApiError::NotFound)?;
+    Ok(Json(row.into()))
+}
+
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct AuditQuery {
     page: Option<i64>,
@@ -292,7 +312,10 @@ pub fn router<S: Clone + Send + Sync + 'static>() -> Router<S> {
     Router::new()
         .route("/agent-access/status", get(status))
         .route("/agent-access/tokens", get(list_tokens).post(create_token))
-        .route("/agent-access/tokens/{id}", delete(delete_token))
+        .route(
+            "/agent-access/tokens/{id}",
+            delete(delete_token).patch(update_token_scopes),
+        )
         .route("/agent-access/audit", get(list_audit))
         .route("/agent-access/audit/purge", post(purge_audit))
 }

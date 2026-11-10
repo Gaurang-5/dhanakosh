@@ -19,6 +19,7 @@ import { MappingStepUnified } from "./mapping-step-unified";
 
 vi.mock("@/adapters", () => ({
   getAccounts: vi.fn(),
+  getPortfolios: vi.fn().mockResolvedValue([]),
   listImportTemplates: vi.fn(),
   saveImportTemplate: vi.fn(),
   saveAccountImportMapping: vi.fn(),

@@ -53,7 +53,10 @@
       "set_target_allocation": "Establecer asignación objetivo",
       "outside_range_one": "{{count}} fuera de rango · mayor diferencia {{gap}}",
       "outside_range_other": "{{count}} fuera de rango · mayor diferencia {{gap}}",
-      "outside_range_many": "{{count}} fuera de rango · mayor diferencia {{gap}}"
+      "outside_range_many": "{{count}} fuera de rango · mayor diferencia {{gap}}",
+      "target_differences": "Diferencias con el objetivo",
+      "below_target_by": "{{amount}} por debajo del objetivo",
+      "above_target_by": "{{amount}} por encima del objetivo"
     },
     "value_strip": {
       "portfolio_value": "Valor de la cartera",

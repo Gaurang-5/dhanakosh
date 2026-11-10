@@ -195,6 +195,26 @@ impl BudgetRepository {
             .exec_tx(move |tx| {
                 let mut out = Vec::with_capacity(assignments.len());
                 for assignment in assignments {
+                    // A user may delete an unused seeded category. Re-seeding
+                    // budget defaults must not recreate a dangling link to it.
+                    if is_system == 1 {
+                        let exists = diesel::select(diesel::dsl::exists(
+                            crate::schema::taxonomy_categories::table
+                                .filter(
+                                    crate::schema::taxonomy_categories::taxonomy_id
+                                        .eq(&assignment.taxonomy_id),
+                                )
+                                .filter(
+                                    crate::schema::taxonomy_categories::id
+                                        .eq(&assignment.category_id),
+                                ),
+                        ))
+                        .get_result::<bool>(tx.conn())
+                        .map_err(StorageError::from)?;
+                        if !exists {
+                            continue;
+                        }
+                    }
                     let NewBudgetGroupAssignment {
                         id,
                         group_id,

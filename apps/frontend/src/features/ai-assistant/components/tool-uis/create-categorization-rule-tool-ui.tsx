@@ -4,7 +4,7 @@ import type { ToolCallMessagePartProps } from "@assistant-ui/react";
 import { makeAssistantToolUI } from "@assistant-ui/react";
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Spinner } from "@wealthfolio/ui";
 import { Icons } from "@wealthfolio/ui/components/ui/icons";
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useRuntimeContext } from "../../hooks/use-runtime-context";
 import type { CreateCategorizationRuleArgs, CreateCategorizationRuleOutput } from "../../types";
@@ -13,6 +13,17 @@ type CreateCategorizationRuleToolUIContentProps = ToolCallMessagePartProps<
   CreateCategorizationRuleArgs,
   CreateCategorizationRuleOutput
 >;
+
+interface CreateCategorizationRuleContentProps {
+  result?:
+    | CreateCategorizationRuleOutput
+    | {
+        data: CreateCategorizationRuleOutput;
+        meta?: Partial<CreateCategorizationRuleOutput>;
+      };
+  status?: CreateCategorizationRuleToolUIContentProps["status"];
+  toolCallId: string;
+}
 
 function formatMatchType(value?: string): string {
   return (value ?? "contains").replace(/_/g, " ");
@@ -85,11 +96,18 @@ function CreateCategorizationRuleLegacyState({
   );
 }
 
-function CreateCategorizationRuleToolUIContentImpl({
-  result,
+export function CreateCategorizationRuleToolUIContentImpl({
+  result: persistedResult,
   status,
   toolCallId,
-}: CreateCategorizationRuleToolUIContentProps) {
+}: CreateCategorizationRuleContentProps) {
+  const result = useMemo(
+    () =>
+      persistedResult && "data" in persistedResult
+        ? { ...persistedResult.data, ...persistedResult.meta }
+        : persistedResult,
+    [persistedResult],
+  );
   const { t } = useTranslation();
   const runtime = useRuntimeContext();
   const threadId = runtime.currentThreadId;

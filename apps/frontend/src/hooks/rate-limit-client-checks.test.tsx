@@ -37,9 +37,10 @@ afterEach(() => {
 function wrapper() {
   const client = new QueryClient({ defaultOptions: { queries: { retryDelay: 0 } } });
   clients.push(client);
-  return ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={client}>{children}</QueryClientProvider>
-  );
+  function QueryWrapper({ children }: { children: ReactNode }) {
+    return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  }
+  return QueryWrapper;
 }
 
 it.each([

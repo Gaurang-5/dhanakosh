@@ -1812,6 +1812,46 @@ pub(crate) fn offline_database(
     Ok((path, key, Some(registry)))
 }
 
+async fn household_exposure(
+    State(root): State<Arc<WebProfiles>>,
+    axum::extract::Query(query): axum::extract::Query<HouseholdOverviewQuery>,
+) -> Result<Json<Vec<Value>>> {
+    let ids = query
+        .member_ids
+        .split(',')
+        .map(Uuid::parse_str)
+        .collect::<std::result::Result<std::collections::HashSet<_>, _>>()
+        .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid member IDs".into()))?;
+    let profiles = root.registry.list().map_err(failure)?;
+    if ids
+        .iter()
+        .any(|id| !profiles.iter().any(|p| p.id == *id && !p.lock_enabled))
+    {
+        return Err((StatusCode::BAD_REQUEST, "Member is unavailable".into()));
+    }
+    let mut reports = vec![];
+    for profile in profiles.into_iter().filter(|p| ids.contains(&p.id)) {
+        let runtime = root.runtime(profile.id).await?;
+        let view = wealthfolio_core::fund_exposure::read(
+            runtime.settings_service.as_ref(),
+            runtime.account_service.as_ref(),
+            runtime.asset_service.as_ref(),
+            runtime.holdings_service.as_ref(),
+            &query.currency,
+            None,
+        )
+        .await
+        .map_err(|_| {
+            (
+                StatusCode::SERVICE_UNAVAILABLE,
+                "Fund exposure is unavailable".into(),
+            )
+        })?;
+        reports.push(json!({"memberId":profile.id,"memberName":profile.name,"view":view}));
+    }
+    Ok(Json(reports))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1933,44 +1973,4 @@ mod tests {
         headers.insert("sec-fetch-site", "same-site".parse().unwrap());
         assert!(!allowed_profile_origin(&headers, &[]));
     }
-}
-
-async fn household_exposure(
-    State(root): State<Arc<WebProfiles>>,
-    axum::extract::Query(query): axum::extract::Query<HouseholdOverviewQuery>,
-) -> Result<Json<Vec<Value>>> {
-    let ids = query
-        .member_ids
-        .split(',')
-        .map(Uuid::parse_str)
-        .collect::<std::result::Result<std::collections::HashSet<_>, _>>()
-        .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid member IDs".into()))?;
-    let profiles = root.registry.list().map_err(failure)?;
-    if ids
-        .iter()
-        .any(|id| !profiles.iter().any(|p| p.id == *id && !p.lock_enabled))
-    {
-        return Err((StatusCode::BAD_REQUEST, "Member is unavailable".into()));
-    }
-    let mut reports = vec![];
-    for profile in profiles.into_iter().filter(|p| ids.contains(&p.id)) {
-        let runtime = root.runtime(profile.id).await?;
-        let view = wealthfolio_core::fund_exposure::read(
-            runtime.settings_service.as_ref(),
-            runtime.account_service.as_ref(),
-            runtime.asset_service.as_ref(),
-            runtime.holdings_service.as_ref(),
-            &query.currency,
-            None,
-        )
-        .await
-        .map_err(|_| {
-            (
-                StatusCode::SERVICE_UNAVAILABLE,
-                "Fund exposure is unavailable".into(),
-            )
-        })?;
-        reports.push(json!({"memberId":profile.id,"memberName":profile.name,"view":view}));
-    }
-    Ok(Json(reports))
 }

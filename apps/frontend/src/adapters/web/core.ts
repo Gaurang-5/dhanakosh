@@ -104,6 +104,11 @@ export const COMMANDS: CommandMap = {
   // Activities
   search_activities: { method: "POST", path: "/activities/search" },
   create_activity: { method: "POST", path: "/activities" },
+  review_activity_split_effects: { method: "POST", path: "/activities/split-effects" },
+  review_internal_transfer_pair_split_effects: {
+    method: "POST",
+    path: "/activities/transfer-pair/split-effects",
+  },
   update_activity: { method: "PUT", path: "/activities" },
   save_activities: { method: "POST", path: "/activities/bulk" },
   delete_activity: { method: "DELETE", path: "/activities" },
@@ -403,6 +408,14 @@ export const COMMANDS: CommandMap = {
   list_target_constraints: { method: "GET", path: "/allocation-targets" },
   save_target_constraints: { method: "POST", path: "/allocation-targets" },
   calculate_rebalance_plan: { method: "POST", path: "/allocation-targets/rebalance/calculate" },
+  generate_calculated_adjustments: {
+    method: "POST",
+    path: "/allocation-targets/worksheet/generate",
+  },
+  calculate_allocation_worksheet: {
+    method: "POST",
+    path: "/allocation-targets/worksheet/calculate",
+  },
   // Alternative Assets
   create_alternative_asset: { method: "POST", path: "/alternative-assets" },
   update_alternative_asset_valuation: { method: "PUT", path: "/alternative-assets" },
@@ -421,6 +434,7 @@ export const COMMANDS: CommandMap = {
   get_agent_access_status: { method: "GET", path: "/agent-access/status" },
   list_agent_access_tokens: { method: "GET", path: "/agent-access/tokens" },
   create_agent_access_token: { method: "POST", path: "/agent-access/tokens" },
+  update_agent_access_token_scopes: { method: "PATCH", path: "/agent-access/tokens" },
   delete_agent_access_token: { method: "DELETE", path: "/agent-access/tokens" },
   list_agent_audit_log: { method: "GET", path: "/agent-access/audit" },
   purge_agent_audit_log: { method: "POST", path: "/agent-access/audit/purge" },
@@ -872,6 +886,11 @@ export const invoke = async <T>(command: string, payload?: Record<string, unknow
       body = JSON.stringify(activity);
       break;
     }
+    case "review_activity_split_effects": {
+      const { activities } = payload as { activities: Record<string, unknown>[] };
+      body = JSON.stringify(activities);
+      break;
+    }
     case "update_activity": {
       const { activity } = payload as { activity: Record<string, unknown> };
       body = JSON.stringify(activity);
@@ -897,6 +916,7 @@ export const invoke = async <T>(command: string, payload?: Record<string, unknow
       body = JSON.stringify(request);
       break;
     }
+    case "review_internal_transfer_pair_split_effects":
     case "save_internal_transfer_pair": {
       const { request } = payload as { request: Record<string, unknown> };
       body = JSON.stringify(request);
@@ -2041,6 +2061,38 @@ export const invoke = async <T>(command: string, payload?: Record<string, unknow
       body = JSON.stringify(constraints);
       break;
     }
+    case "generate_calculated_adjustments": {
+      const {
+        targetId,
+        mode,
+        rule,
+        cash,
+        selectedAccountIds,
+        filter,
+        eligibleAssetIds,
+        sellableAssetIds,
+      } = payload as {
+        targetId: string;
+        mode: string;
+        rule: string;
+        cash: unknown;
+        selectedAccountIds: string[];
+        filter: unknown;
+        eligibleAssetIds?: string[];
+        sellableAssetIds?: string[];
+      };
+      body = JSON.stringify({
+        targetId,
+        mode,
+        rule,
+        cash,
+        selectedAccountIds,
+        filter,
+        ...(eligibleAssetIds === undefined ? {} : { eligibleAssetIds }),
+        ...(sellableAssetIds === undefined ? {} : { sellableAssetIds }),
+      });
+      break;
+    }
     case "calculate_rebalance_plan": {
       const { targetId, availableCash, filter, scenarioMode, eligibleAssetIds } = payload as {
         targetId: string;
@@ -2056,6 +2108,17 @@ export const invoke = async <T>(command: string, payload?: Record<string, unknow
         scenarioMode,
         ...(eligibleAssetIds === undefined ? {} : { eligibleAssetIds }),
       });
+      break;
+    }
+    case "calculate_allocation_worksheet": {
+      const { targetId, cash, lines, selectedAccountIds, filter } = payload as {
+        targetId: string;
+        cash: unknown;
+        lines: unknown[];
+        selectedAccountIds: string[];
+        filter: unknown;
+      };
+      body = JSON.stringify({ targetId, cash, lines, selectedAccountIds, filter });
       break;
     }
     // AI Providers
@@ -2149,6 +2212,12 @@ export const invoke = async <T>(command: string, payload?: Record<string, unknow
         scopes: string[];
       };
       body = JSON.stringify({ name, expiresAt, scopes });
+      break;
+    }
+    case "update_agent_access_token_scopes": {
+      const { id, scopes } = payload as { id: string; scopes: string[] };
+      url += `/${encodeURIComponent(id)}`;
+      body = JSON.stringify({ scopes });
       break;
     }
     case "delete_agent_access_token": {

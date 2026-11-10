@@ -424,7 +424,7 @@ function buildPositions(
 
 function Eyebrow({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-muted-foreground text-2xs font-mono tracking-[0.16em] uppercase">
+    <p className="text-muted-foreground text-2xs font-mono uppercase tracking-[0.16em]">
       {children}
     </p>
   );
@@ -475,7 +475,7 @@ function FundingSummary({
         </p>
       ) : (
         <>
-          <p className="mt-2 font-mono text-xl leading-tight font-semibold">{amountOf(left)}</p>
+          <p className="mt-2 font-mono text-xl font-semibold leading-tight">{amountOf(left)}</p>
           <p className="text-muted-foreground mt-1 text-xs">
             {t(
               isEstimate
@@ -2383,7 +2383,7 @@ export function AllocationWorksheetTab({
           </div>
         )}
         <div className="@container/worksheet-heading min-w-0 flex-1">
-          <div className="grid min-w-0 grid-cols-1 gap-x-6 gap-y-2 @[36rem]/worksheet-heading:grid-cols-[auto_minmax(0,1fr)]">
+          <div className="@[36rem]/worksheet-heading:grid-cols-[auto_minmax(0,1fr)] grid min-w-0 grid-cols-1 gap-x-6 gap-y-2">
             {heading && <div className="flex min-h-10 min-w-0 items-center">{heading}</div>}
             <WorksheetStepper
               panel={panel}
@@ -2760,7 +2760,7 @@ function WorksheetStepper({ panel, onSelect, setupChanged }: WorksheetStepperPro
   return (
     <nav
       aria-label={t("allocation:worksheet.title")}
-      className="border-border bg-muted/20 row-start-2 inline-flex max-w-full flex-wrap justify-self-start rounded-full border p-1 @[36rem]/worksheet-heading:col-start-2 @[36rem]/worksheet-heading:row-start-1"
+      className="border-border bg-muted/20 @[36rem]/worksheet-heading:col-start-2 @[36rem]/worksheet-heading:row-start-1 row-start-2 inline-flex max-w-full flex-wrap justify-self-start rounded-full border p-1"
     >
       {steps.map((step, index) => (
         <button

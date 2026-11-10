@@ -75,8 +75,7 @@ export function pdfTextItemsToLines(items: PdfTextItem[]): string[] {
     items.filter((item) => Math.abs(item.transform[1] ?? 0) > Math.abs(item.transform[0] ?? 0))
       .length >
     items.length / 2;
-  const rows: Array<{ coordinate: number; cells: Array<{ coordinate: number; text: string }> }> =
-    [];
+  const rows: { coordinate: number; cells: { coordinate: number; text: string }[] }[] = [];
   for (const item of items) {
     const text = item.str.trim();
     if (!text) continue;

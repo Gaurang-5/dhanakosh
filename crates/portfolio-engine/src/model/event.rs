@@ -160,6 +160,16 @@ pub enum Action {
         #[serde(with = "crate::model::decimal_serde")]
         amount: Decimal,
     },
+    /// Relieves one asset at cost and opens the arriving asset with that cost.
+    Conversion {
+        from_asset: AssetId,
+        #[serde(with = "crate::model::decimal_serde")]
+        from_quantity: Decimal,
+        to_asset: AssetId,
+        #[serde(with = "crate::model::decimal_serde")]
+        to_quantity: Decimal,
+        arriving: ActivityId,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

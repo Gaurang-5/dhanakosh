@@ -48,7 +48,10 @@
     "deleteUndoNote": "此操作無法復原。",
     "searchCategories": "搜尋類別……",
     "noCategoriesFound": "找不到類別。",
-    "clearCategory": "清除類別"
+    "clearCategory": "清除類別",
+    "parent": "父類別",
+    "topLevel": "無（頂層）",
+    "parentLockedByBudget": "移動前請先刪除此類別的預算目標。預算僅適用於頂層類別。"
   },
   "activityTypes": {
     "balanceTransferCashAdvance": "餘額轉移／預借現金",
@@ -132,7 +135,13 @@
     "amountChipGte": "金額不低於 {{value}}",
     "amountChipLt": "金額小於 {{value}}",
     "amountChipLte": "金額不超過 {{value}}",
-    "amountChipBetween": "金額介於 {{value}} 與 {{value2}} 之間"
+    "amountChipBetween": "金額介於 {{value}} 與 {{value2}} 之間",
+    "categoryCompatibilityHint": "分類依據交易的現金流類型。儲蓄分類僅適用於已連結且轉出支出追蹤帳戶範圍的轉帳。",
+    "runIncompatible": "不相容的分類：{{count}}。分類依據交易的現金流類型。儲蓄分類僅適用於已連結且轉出支出追蹤帳戶範圍的轉帳。",
+    "runProtected": "保留現有分類或分攤：{{count}}。",
+    "runUnchanged": "已依要求分類：{{count}}。",
+    "runWithoutTarget": "無目標分類的符合項目：{{count}}。",
+    "priorityInvalid": "優先順序必須是大於或等於 0 的整數"
   },
   "transactions": {
     "deleteTitle_one": "刪除交易",
@@ -168,7 +177,8 @@
     "income": "收入",
     "spending": "支出",
     "saving": "儲蓄",
-    "net": "淨額"
+    "net": "淨額",
+    "netSaved": "淨儲蓄"
   },
   "insights": {
     "stageWhere": "我的現狀",
@@ -424,7 +434,12 @@
     "removeLine": "移除拆分行 {{number}}",
     "addLine": "新增行",
     "distributeEvenly": "平均分配",
-    "clearSplit": "清除拆分"
+    "clearSplit": "清除拆分",
+    "staleTaxonomy": "這些拆分使用先前的類別類型，已不再適用於此交易。",
+    "replaceWithCategory": "將拆分取代為一個類別",
+    "replaceDescription_one": "將 {{count}} 個拆分分配取代為 {{category}}？這將刪除現有拆分。",
+    "replaceDescription_other": "將 {{count}} 個拆分分配取代為 {{category}}？這將刪除現有拆分。",
+    "categoryProtected": "拆分分配受到保護。請在拆分編輯器中編輯或明確取代。"
   },
   "hierarchy": {
     "noCategorizedSpending": "此週期內沒有已歸類的支出。",
@@ -765,7 +780,9 @@
       "refunds": "淨退款",
       "surplus": "剩餘",
       "uncategorizedIncome": "未歸類收入",
-      "netSpending": "淨支出"
+      "netSpending": "淨支出",
+      "fromSavings": "來自儲蓄",
+      "toSavings": "轉入儲蓄"
     },
     "hint": {
       "total": "流入加上淨退款和任何缺口，始終等於流出。",
@@ -776,7 +793,8 @@
       "surplus": "已流入但未支出或預留的資金。",
       "uncategorized": "尚未歸類的支出。",
       "net": "扣除退款後該類別的花費。",
-      "direct": "直接歸入該類別本身，而非子類別。"
+      "direct": "直接歸入該類別本身，而非子類別。",
+      "fromSavings": "從儲蓄和投資帳戶轉回的資金。"
     },
     "groupRefunds": "未扣除 {{amount}} 淨退款。",
     "categoryRefunds": "未扣除 {{refunds}} 淨退款。淨支出：{{net}}。"
@@ -1033,5 +1051,41 @@
     "addSource_one": "新增來源（{{count}} 個可用）",
     "overridesTitle_one": "覆寫 · {{count}}",
     "sourceMonth": "來源月份"
+  },
+  "budgetGroupNames": {
+    "032ecb02-5912-42e8-9724-2cd566fc08d5": "必要支出",
+    "a409e0d6-9152-49c8-a5b4-a147a8ac636e": "非必要支出",
+    "1fb6f2a3-3245-4702-83e8-ab116458d13e": "儲蓄",
+    "8cbd26c8-e3b2-4176-8c61-e5c11e10b808": "捐贈",
+    "3ff71753-5dd5-4372-9ca2-63d8d9a04851": "個人",
+    "6e25d097-0c73-4521-9407-d47e8dfb73e2": "其他"
+  },
+  "eventTypeNames": {
+    "255600dc-c2a3-47e0-979d-a602c21fc337": "旅行",
+    "51e3eedb-5484-45ba-a525-6b88209c46ed": "假期",
+    "d9871ccb-5396-4c70-ac08-5b07ed90e64a": "商務",
+    "22442173-c794-45bf-97ee-9b3f9a7c8ba3": "教育",
+    "94fc13ed-ac40-466b-8071-64f1e3c72204": "醫療",
+    "1aaab8fb-8fd9-4543-bd46-d9ee4a5a8564": "特殊場合",
+    "fa4812ee-e06e-4117-a819-e4d88b7acbaf": "其他"
+  },
+  "splitEditReview": {
+    "title": "確認刪除拆分",
+    "hiddenCategory": "現有分類配置會保留，刪除拆分後可能會套用。",
+    "confirm": "儲存並刪除拆分",
+    "removed_one": "此變更將刪除 {{count}} 個拆分配置。",
+    "removed_other": "此變更將刪除 {{count}} 個拆分配置。"
+  },
+  "budgetErrors": {
+    "deleteGroup": "刪除預算群組失敗。",
+    "copyPlan": "複製計畫失敗。"
+  },
+  "grid": {
+    "transferInForm": "請透過「編輯」在轉帳表單中修改轉帳類型。",
+    "noCategory": "此活動既不屬於支出、收入，也不屬於儲蓄，因此沒有類別。",
+    "saveTypeFirst": "請先儲存新的類型或帳戶，再選擇類別。",
+    "saveCategoryFirst": "請先儲存類別，再修改類型或帳戶。",
+    "typeNotForAccount": "此帳戶不支援該類型。",
+    "amountRequired": "金額為必填欄位。"
   }
 }

@@ -9,9 +9,9 @@ Numeric cells retain stored precision. Excel date cells are formatted as ISO
 dates. The reader does not calculate formulas, execute macros, merge sheets or
 automatically post transactions. Report headers, totals and missing values still
 need review. For Value Research reports, use the parsing settings to select the
-transaction header and exclude totals, or use the prepared transaction CSVs.
-The original uploaded file is unchanged. Files over 10 MB and worksheet ranges
-over one million cells are rejected.
+transaction header and exclude totals, or use the prepared transaction CSVs. The
+original uploaded file is unchanged. Files over 10 MB and worksheet ranges over
+one million cells are rejected.
 
 Unskip on a row already flagged as a duplicate now sets the existing
 `forceImport` flag, preserving duplicate status and warnings through submission.

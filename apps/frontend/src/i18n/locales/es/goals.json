@@ -275,7 +275,9 @@
       "return_before_hint": "Rentabilidad anual supuesta durante el ahorro, antes de comisiones.",
       "return_during_hint": "Rentabilidad anual supuesta tras comenzar los retiros, antes de comisiones.",
       "annual_fee_hint": "Comisiones anuales estimadas de la cartera.",
-      "inflation_hint": "Aumento anual supuesto de los precios."
+      "inflation_hint": "Aumento anual supuesto de los precios.",
+      "savings_goals_contribution": "Los objetivos de ahorro también prevén {{amount}}/mes",
+      "savings_goals_contribution_hint": "Tus objetivos de ahorro también prevén {{amount}}/mes. Introduce solo lo que va a la jubilación."
     },
     "spending": {
       "kicker": "Gasto",
@@ -353,7 +355,8 @@
       "growth_placeholder_inflation": "Inflación {{pct}}",
       "growth_placeholder_fixed": "Fijo 0,0",
       "add_income": "Añadir ingreso de jubilación",
-      "add_pension_fund": "Añadir fondo de pensiones"
+      "add_pension_fund": "Añadir fondo de pensiones",
+      "fund_return_hint": "Rentabilidad anual compuesta después de las comisiones del propio fondo. No se descuenta la comisión de inversión del plan."
     },
     "assumptions": {
       "kicker": "Suposiciones",
@@ -601,7 +604,9 @@
       "taxable": "Imponible",
       "tax_deferred": "Con impuestos diferidos",
       "tax_free": "Libre de impuestos"
-    }
+    },
+    "retirement_share_note": "La jubilación contabiliza hasta esta participación de cada cuenta. Las participaciones que reservan los objetivos de ahorro activos quedan fuera.",
+    "counting": "Contabiliza {{percent}}%"
   },
   "value_mode": {
     "todays_value": "Valor actual",
@@ -634,7 +639,14 @@
     "event_retirement": "Jubilación",
     "fi_reference": "IF · {{age}}",
     "series_required": "Requerido",
-    "series_projected": "Proyectado"
+    "series_projected": "Proyectado",
+    "goal_milestones": "Objetivos de ahorro",
+    "goal_milestones_tip": "Cada objetivo de ahorro activo aparece en su fecha objetivo, coloreado según su estado. Los objetivos de ahorro conservan su propio dinero; la proyección lo deja fuera.",
+    "goal_milestones_toggle": "Haz clic para mostrarlos u ocultarlos.",
+    "goal_milestone_target": "{{amount}} para {{date}}",
+    "goal_milestone_aria": "{{name}}, {{target}}, {{status}}",
+    "goal_milestone_aria_no_status": "{{name}}, {{target}}",
+    "goal_milestone_not_projected": "Fuera de esta proyección"
   },
   "snapshot": {
     "table": "Tabla",
@@ -721,7 +733,8 @@
     "needed": "Necesario",
     "finish": "Finalizar",
     "not_reached": "No alcanzado",
-    "edit_aria": "Editar {{title}}"
+    "edit_aria": "Editar {{title}}",
+    "highReturnWarning": "Hipótesis de rentabilidad elevada. Supone superar de forma constante la rentabilidad del mercado en general."
   },
   "projection": {
     "kicker": "Proyección",

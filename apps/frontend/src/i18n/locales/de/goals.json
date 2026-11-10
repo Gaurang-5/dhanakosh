@@ -270,7 +270,9 @@
       "return_before_hint": "Angenommene jährliche Rendite während des Sparens, vor Anlagegebühren.",
       "return_during_hint": "Angenommene jährliche Rendite nach Beginn der Entnahmen, vor Anlagegebühren.",
       "annual_fee_hint": "Geschätzte jährliche Portfoliogebühren.",
-      "inflation_hint": "Angenommener jährlicher Preisanstieg."
+      "inflation_hint": "Angenommener jährlicher Preisanstieg.",
+      "savings_goals_contribution": "Sparziele planen zusätzlich {{amount}}/Monat",
+      "savings_goals_contribution_hint": "Ihre Sparziele planen zusätzlich {{amount}}/Monat. Geben Sie nur ein, was in den Ruhestand fließt."
     },
     "spending": {
       "kicker": "Ausgaben",
@@ -348,7 +350,8 @@
       "growth_placeholder_inflation": "Inflation {{pct}}",
       "growth_placeholder_fixed": "Fest 0,0",
       "add_income": "Ruhestandseinkommen hinzufügen",
-      "add_pension_fund": "Pensionsfonds hinzufügen"
+      "add_pension_fund": "Pensionsfonds hinzufügen",
+      "fund_return_hint": "Jährliche Wachstumsrate (CAGR) nach den eigenen Gebühren des Fonds. Die Anlagegebühr des Plans wird nicht abgezogen."
     },
     "assumptions": {
       "kicker": "Annahmen",
@@ -595,7 +598,9 @@
       "taxable": "Steuerpflichtig",
       "tax_deferred": "Steuergestundet",
       "tax_free": "Steuerfrei"
-    }
+    },
+    "retirement_share_note": "Der Ruhestand zählt bis zu diesem Anteil jedes Kontos. Anteile, die aktive Sparziele reservieren, bleiben außen vor.",
+    "counting": "Zählt {{percent}} %"
   },
   "value_mode": {
     "todays_value": "Heutiger Wert",
@@ -628,7 +633,14 @@
     "event_retirement": "Ruhestand",
     "fi_reference": "FU · {{age}}",
     "series_required": "Erforderlich",
-    "series_projected": "Prognostiziert"
+    "series_projected": "Prognostiziert",
+    "goal_milestones": "Sparziele",
+    "goal_milestones_tip": "Jedes aktive Sparziel steht an seinem Zieldatum, gefärbt nach seinem Status. Sparziele behalten ihr eigenes Geld; die Prognose lässt es außen vor.",
+    "goal_milestones_toggle": "Zum Ein- oder Ausblenden klicken.",
+    "goal_milestone_target": "{{amount}} bis {{date}}",
+    "goal_milestone_aria": "{{name}}, {{target}}, {{status}}",
+    "goal_milestone_aria_no_status": "{{name}}, {{target}}",
+    "goal_milestone_not_projected": "Von dieser Prognose ausgenommen"
   },
   "snapshot": {
     "table": "Tabelle",
@@ -715,7 +727,8 @@
     "needed": "Benötigt",
     "finish": "Ende",
     "not_reached": "Nicht erreicht",
-    "edit_aria": "{{title}} bearbeiten"
+    "edit_aria": "{{title}} bearbeiten",
+    "highReturnWarning": "Hohe Renditeannahme. Dies setzt voraus, dass die breiten Marktrenditen dauerhaft übertroffen werden."
   },
   "projection": {
     "kicker": "Projektion",

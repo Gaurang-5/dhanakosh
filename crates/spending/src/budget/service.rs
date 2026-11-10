@@ -1157,7 +1157,7 @@ fn compute_rollover_for_month(
     )
 }
 
-fn default_group_inputs() -> Vec<NewBudgetGroup> {
+pub fn default_group_inputs() -> Vec<NewBudgetGroup> {
     DEFAULT_GROUPS
         .iter()
         .map(|g| NewBudgetGroup {
@@ -1172,7 +1172,7 @@ fn default_group_inputs() -> Vec<NewBudgetGroup> {
         .collect()
 }
 
-fn default_assignment_inputs(
+pub fn default_assignment_inputs(
     group_by_key: &HashMap<String, String>,
 ) -> Vec<NewBudgetGroupAssignment> {
     DEFAULT_ASSIGNMENTS

@@ -49,7 +49,10 @@
     "deleteUndoNote": "Esta ação não pode ser desfeita.",
     "searchCategories": "Buscar categorias...",
     "noCategoriesFound": "Nenhuma categoria encontrada.",
-    "clearCategory": "Remover categoria"
+    "clearCategory": "Remover categoria",
+    "parent": "Categoria principal",
+    "topLevel": "Nenhuma (nível superior)",
+    "parentLockedByBudget": "Remova primeiro as metas de orçamento desta categoria. Os orçamentos só se aplicam a categorias de nível superior."
   },
   "activityTypes": {
     "balanceTransferCashAdvance": "Transferência de saldo / Saque",
@@ -133,7 +136,13 @@
     "amountChipGte": "Valor {{value}} ou mais",
     "amountChipLt": "Valor menor que {{value}}",
     "amountChipLte": "Valor {{value}} ou menos",
-    "amountChipBetween": "Valor entre {{value}} e {{value2}}"
+    "amountChipBetween": "Valor entre {{value}} e {{value2}}",
+    "categoryCompatibilityHint": "As categorias seguem o fluxo de caixa da transação. As categorias de poupança aplicam-se apenas a transferências vinculadas para fora das suas contas de despesas acompanhadas.",
+    "runIncompatible": "Categorias incompatíveis: {{count}}. As categorias seguem o fluxo de caixa da transação. As categorias de poupança aplicam-se apenas a transferências vinculadas para fora das suas contas de despesas acompanhadas.",
+    "runProtected": "Categorias ou divisões existentes mantidas: {{count}}.",
+    "runUnchanged": "Já categorizadas conforme solicitado: {{count}}.",
+    "runWithoutTarget": "Correspondências sem categoria de destino: {{count}}.",
+    "priorityInvalid": "A prioridade deve ser um número inteiro maior ou igual a 0"
   },
   "transactions": {
     "deleteTitle_one": "Excluir transação",
@@ -173,7 +182,8 @@
     "income": "Receitas",
     "spending": "Gastos",
     "saving": "Poupança",
-    "net": "Líquido"
+    "net": "Líquido",
+    "netSaved": "Poupança líquida"
   },
   "insights": {
     "stageWhere": "Onde estou",
@@ -443,7 +453,13 @@
     "removeLine": "Remover linha dividida {{number}}",
     "addLine": "Adicionar linha",
     "distributeEvenly": "Distribuir uniformemente",
-    "clearSplit": "Limpar divisão"
+    "clearSplit": "Limpar divisão",
+    "staleTaxonomy": "Estas divisões usam um tipo de categoria anterior. Já não se aplicam a esta transação.",
+    "replaceWithCategory": "Substituir divisões por uma categoria",
+    "replaceDescription_one": "Substituir {{count}} divisão por {{category}}? As divisões existentes serão removidas.",
+    "replaceDescription_other": "Substituir {{count}} divisões por {{category}}? As divisões existentes serão removidas.",
+    "replaceDescription_many": "Substituir {{count}} divisões por {{category}}? As divisões existentes serão removidas.",
+    "categoryProtected": "As divisões estão protegidas. Edite-as ou substitua-as explicitamente no editor de divisões."
   },
   "hierarchy": {
     "noCategorizedSpending": "Não há gastos categorizados neste período.",
@@ -807,7 +823,9 @@
       "refunds": "Reembolsos líquidos",
       "surplus": "Sobrado",
       "uncategorizedIncome": "Receitas sem categoria",
-      "netSpending": "Gasto líquido"
+      "netSpending": "Gasto líquido",
+      "fromSavings": "Da poupança",
+      "toSavings": "Para a poupança"
     },
     "hint": {
       "total": "Dinheiro entrando mais reembolsos líquidos e qualquer déficit. Sempre igual ao dinheiro saindo.",
@@ -818,7 +836,8 @@
       "surplus": "Entrou, mas não foi gasto nem reservado.",
       "uncategorized": "Gastos que ainda não têm categoria.",
       "net": "O que esta categoria custou depois dos reembolsos.",
-      "direct": "Atribuído à própria categoria, não a uma subcategoria."
+      "direct": "Atribuído à própria categoria, não a uma subcategoria.",
+      "fromSavings": "Retirado de contas de poupança e investimento."
     },
     "groupRefunds": "Antes de subtrair {{amount}} em reembolsos líquidos.",
     "categoryRefunds": "Antes de subtrair {{refunds}} em reembolsos líquidos. Gasto líquido: {{net}}."
@@ -1090,5 +1109,42 @@
     "overridesTitle_other": "Exceções · {{count}}",
     "overridesTitle_many": "Exceções · {{count}}",
     "sourceMonth": "Mês de origem"
+  },
+  "budgetGroupNames": {
+    "032ecb02-5912-42e8-9724-2cd566fc08d5": "Necessidades",
+    "a409e0d6-9152-49c8-a5b4-a147a8ac636e": "Desejos",
+    "1fb6f2a3-3245-4702-83e8-ab116458d13e": "Poupança",
+    "8cbd26c8-e3b2-4176-8c61-e5c11e10b808": "Doações",
+    "3ff71753-5dd5-4372-9ca2-63d8d9a04851": "Pessoal",
+    "6e25d097-0c73-4521-9407-d47e8dfb73e2": "Outros"
+  },
+  "eventTypeNames": {
+    "255600dc-c2a3-47e0-979d-a602c21fc337": "Viagem",
+    "51e3eedb-5484-45ba-a525-6b88209c46ed": "Férias",
+    "d9871ccb-5396-4c70-ac08-5b07ed90e64a": "Negócios",
+    "22442173-c794-45bf-97ee-9b3f9a7c8ba3": "Educação",
+    "94fc13ed-ac40-466b-8071-64f1e3c72204": "Saúde",
+    "1aaab8fb-8fd9-4543-bd46-d9ee4a5a8564": "Ocasião especial",
+    "fa4812ee-e06e-4117-a819-e4d88b7acbaf": "Outros"
+  },
+  "splitEditReview": {
+    "title": "Rever a remoção das divisões",
+    "hiddenCategory": "As categorias existentes são mantidas e podem aplicar-se após remover as divisões.",
+    "confirm": "Guardar e remover divisões",
+    "removed_one": "Esta alteração removerá {{count}} divisão.",
+    "removed_many": "Esta alteração removerá {{count}} divisões.",
+    "removed_other": "Esta alteração removerá {{count}} divisões."
+  },
+  "budgetErrors": {
+    "deleteGroup": "Falha ao excluir o grupo de orçamento.",
+    "copyPlan": "Falha ao copiar o plano."
+  },
+  "grid": {
+    "transferInForm": "Altere o tipo de uma transferência no formulário de transferência, com Editar.",
+    "noCategory": "Esta atividade não é gasto, receita nem poupança, por isso não tem categoria.",
+    "saveTypeFirst": "Salve primeiro o novo tipo ou a nova conta e depois escolha uma categoria.",
+    "saveCategoryFirst": "Salve primeiro a categoria e depois altere o tipo ou a conta.",
+    "typeNotForAccount": "Este tipo não está disponível para esta conta.",
+    "amountRequired": "O valor é obrigatório."
   }
 }

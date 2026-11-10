@@ -80,6 +80,7 @@ pub struct NewTaxonomyDB {
 )]
 #[diesel(table_name = crate::schema::taxonomy_categories)]
 #[diesel(primary_key(taxonomy_id, id))]
+#[diesel(treat_none_as_null = true)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 #[serde(rename_all = "camelCase")]
 pub struct CategoryDB {

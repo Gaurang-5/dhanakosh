@@ -382,27 +382,54 @@ async function seedIncome(profile) {
   if (accounts.some((account) => !account.meta?.includes('"demo":true'))) {
     throw new Error("Refusing to add sample income to non-demo accounts");
   }
-  const existing = await request("/activities/search", { method: "POST", scope, body: { page: 0, pageSize: 1000 } });
-  if (existing.meta.totalRowCount > existing.data.length) throw new Error("Demo contains more activities than expected");
+  const existing = await request("/activities/search", {
+    method: "POST",
+    scope,
+    body: { page: 0, pageSize: 1000 },
+  });
+  if (existing.meta.totalRowCount > existing.data.length)
+    throw new Error("Demo contains more activities than expected");
   const creates = [];
   for (const currency of ["INR", "USD"]) {
-    const holding = existing.data.find((row) => row.activityType === "BUY" && row.currency === currency);
+    const holding = existing.data.find(
+      (row) => row.activityType === "BUY" && row.currency === currency,
+    );
     if (!holding) continue;
-    for (const [date, amount] of [["2025-09-15", currency === "INR" ? 1200 : 40], ["2026-03-15", currency === "INR" ? 1600 : 55], ["2026-09-15", currency === "INR" ? 1800 : 60]]) {
+    for (const [date, amount] of [
+      ["2025-09-15", currency === "INR" ? 1200 : 40],
+      ["2026-03-15", currency === "INR" ? 1600 : 55],
+      ["2026-09-15", currency === "INR" ? 1800 : 60],
+    ]) {
       const sourceRecordId = `${profile.name}:income:${currency}:${date}`;
       if (existing.data.some((row) => row.sourceRecordId === sourceRecordId)) continue;
-      creates.push(activity(holding.accountId, holding.assetId, "DIVIDEND", date, currency, { amount, sourceRecordId }));
+      creates.push(
+        activity(holding.accountId, holding.assetId, "DIVIDEND", date, currency, {
+          amount,
+          sourceRecordId,
+        }),
+      );
     }
   }
-  const bond = existing.data.find((row) => row.activityType === "BUY" && row.assetSymbol.startsWith("SGB"));
+  const bond = existing.data.find(
+    (row) => row.activityType === "BUY" && row.assetSymbol.startsWith("SGB"),
+  );
   if (bond) {
     const sourceRecordId = `${profile.name}:income:sgb:2026-06-30`;
     if (!existing.data.some((row) => row.sourceRecordId === sourceRecordId)) {
-      creates.push(activity(bond.accountId, bond.assetId, "INTEREST", "2026-06-30", "INR", { amount: 1500, sourceRecordId }));
+      creates.push(
+        activity(bond.accountId, bond.assetId, "INTEREST", "2026-06-30", "INR", {
+          amount: 1500,
+          sourceRecordId,
+        }),
+      );
     }
   }
   if (creates.length) {
-    const result = await request("/activities/bulk", { method: "POST", scope, body: { creates, updates: [], deleteIds: [] } });
+    const result = await request("/activities/bulk", {
+      method: "POST",
+      scope,
+      body: { creates, updates: [], deleteIds: [] },
+    });
     if (result.errors.length) throw new Error("Sample income could not be fully added");
   }
   console.log(`Sample income ready for ${profile.name}.`);
@@ -428,9 +455,18 @@ async function seedPlans(profile) {
     const asset = assets.find((asset) => asset.displayCode === item.symbol);
     const account = accounts.find((account) => account.currency === item.currency);
     if (!asset || !account) throw new Error("Seed the demonstration investments first");
-    plans.push({ id, name: `${item.name} · Demo SIP`, accountId: account.id, assetId: asset.id,
-      amount: String(item.sip.amount), currency: item.currency, startDate: "2026-01-01",
-      endDate: null, dayOfMonth: 5, paused: false });
+    plans.push({
+      id,
+      name: `${item.name} · Demo SIP`,
+      accountId: account.id,
+      assetId: asset.id,
+      amount: String(item.sip.amount),
+      currency: item.currency,
+      startDate: "2026-01-01",
+      endDate: null,
+      dayOfMonth: 5,
+      paused: false,
+    });
     changed = true;
   }
   if (changed) await request("/investment-plans", { method: "PUT", scope, body: plans });

@@ -547,7 +547,11 @@
     "mode_switch_keep_holdings": "Bestände behalten",
     "mode_switch_confirm": "Zu Transaktionen wechseln",
     "ppf_preset": "Set up a PPF account",
-    "ppf_description": "Public Provident Fund · INR · Transaction tracking. Record contributions and statement interest in this member’s account. The balance is included in the family portfolio."
+    "ppf_description": "Public Provident Fund · INR · Transaction tracking. Record contributions and statement interest in this member’s account. The balance is included in the family portfolio.",
+    "form_account_number_label": "Kontonummer",
+    "form_account_number_hint": "Eine IBAN oder Kontonummer. Bei einer Karte nur die letzten 4 Ziffern.",
+    "form_account_number_synced": "Wird von Ihrem Broker synchronisiert und kann hier nicht geändert werden.",
+    "form_optional": "(optional)"
   },
   "limits": {
     "day_left": "Noch {{days}} T"
@@ -943,7 +947,64 @@
     "failed_count_one": "{{count}} fehlgeschlagen",
     "failed_count_other": "{{count}} fehlgeschlagen",
     "priority_decrease": "Prioritätszahl verringern",
-    "priority_increase": "Prioritätszahl erhöhen"
+    "priority_increase": "Prioritätszahl erhöhen",
+    "sources_description": "Wenn mehrere Anbieter einen Wert abdecken, wird der obere zuerst abgefragt.",
+    "sources_empty": "Kein integrierter Anbieter ist aktiv. Fügen Sie einen hinzu, um Preise abzurufen.",
+    "move_up": "{{name}} nach oben verschieben",
+    "move_down": "{{name}} nach unten verschieben",
+    "api_key_saved": "API-Schlüssel gespeichert",
+    "catalog_title": "Anbieter hinzufügen",
+    "catalog_description": "Aktivieren Sie einen integrierten Anbieter.",
+    "catalog_search": "Anbieter suchen",
+    "catalog_add": "Hinzufügen",
+    "catalog_add_named": "{{name}} hinzufügen",
+    "catalog_empty": "Keine weiteren integrierten Anbieter zum Hinzufügen.",
+    "catalog_no_results": "Kein integrierter Anbieter entspricht Ihrer Suche.",
+    "validation_priority_min": "Die Priorität muss eine ganze Zahl ab 1 sein",
+    "feature_dividends": "Dividenden",
+    "providerDescriptions": {
+      "US_TREASURY_CALC": "Berechnet die Kurse von US-Staatsanleihen anhand der vom US-Finanzministerium veröffentlichten Zinskurvendaten.",
+      "BOERSE_FRANKFURT": "Börse Frankfurt stellt Preisdaten für Anleihen und Wertpapiere für europäische Märkte bereit.",
+      "OPENFIGI": "OpenFIGI bietet einen Mapping-Service für Finanzinstrument-Identifikatoren (FIGI, ISIN, CUSIP, Ticker).",
+      "METAL_PRICE_API": "Bietet Echtzeit- und historische Spotpreise für Edelmetalle (Gold, Silber, Platin, Palladium).",
+      "CUSTOM_SCRAPER": "Laufzeit-Dispatch-Provider für benutzerdefinierte benutzerdefinierte Quellen",
+      "MOEX": "Moscow Exchange ISS liefert verzögerte Kurse und Schlusskurse für Aktien, Hinterlegungsscheine und ETFs, die an der MOEX gehandelt werden. Kein API-Schlüssel erforderlich.",
+      "YAHOO": "Yahoo Finance ist ein führender Finanzdatenanbieter für viele Märkte. Es liefert historische und Echtzeit-Bestandsdaten.",
+      "MARKETDATA_APP": "MarketData.app bietet Echtzeit- und historische Daten für US-Aktien, Optionen, ETFs, Investmentfonds und mehr.",
+      "ALPHA_VANTAGE": "Alpha Vantage bietet kostenlose APIs für Echtzeit- und historische Daten zu Aktien, Devisen und Kryptowährungen.",
+      "FINNHUB": "Finnhub bietet weltweite Echtzeitdaten zu Aktien, Devisen und Kryptowährungen. Der kostenlose Tarif umfasst 60 API-Aufrufe pro Minute."
+    },
+    "coverageLabels": {
+      "Global": "Global",
+      "US only": "Nur in den USA",
+      "USD only": "Nur USD",
+      "US Treasury": "US-Finanzministerium",
+      "User-defined": "Benutzerdefiniert"
+    },
+    "feature_no_api_key": "Kein API-Schlüssel",
+    "us_treasury_name": "US-Finanzministerium (berechnet)",
+    "templateDescriptions": {
+      "workplace_fund_prices_fund_code": "Preise für Arbeitsplatzfonds (Fondscode)",
+      "free_crypto_use_coin_id_bitcoin_ethereum": "Kostenlose Krypto (verwenden Sie die Münz-ID: bitcoin, ethereum ...)",
+      "free_currency_rates": "Kostenlose Wechselkurse",
+      "lse_etfs_equities": "LSE-ETFs und -Aktien",
+      "eu_funds_equities_isin_mic": "EU-Fonds & Aktien (ISIN-MIC)",
+      "stocks_crypto_fx_set_api_key_in_headers": "Aktien, Krypto, FX (API-Schlüssel in Headern festlegen)",
+      "italian_bonds_stocks": "Italienische Anleihen und Aktien",
+      "workplace_fund_price_history_fund_code": "Preisverlauf des Arbeitsplatzfonds (Fondscode)",
+      "lse_etfs_equities_html_table": "LSE ETFs und Aktien (HTML-Tabelle)",
+      "daily_crypto_history_use_coin_id_bitcoin_ethereum": "Täglicher Kryptoverlauf (Coin-ID verwenden: bitcoin, ethereum ...)",
+      "canadian_stocks_funds_tsx_symbol_or_fundserv_code": "Kanadische Aktien und Fonds (TSX-Symbol oder Fundserv-Code)",
+      "canadian_stock_fund_history_tsx_symbol_or_fundserv_code": "Historie kanadischer Aktien und Fonds (TSX-Symbol oder Fundserv-Code)"
+    },
+    "instrumentLabels": {
+      "depositary_receipts": "Hinterlegungsscheine",
+      "stocks": "Aktien",
+      "crypto": "Krypto",
+      "etfs": "ETFs",
+      "funds": "Fonds",
+      "bonds": "Anleihen"
+    }
   },
   "addon_permission_none_detected": "Keine Datenzugriffsberechtigungen erkannt. Dieses Add-on scheint minimalen Systemzugriff zu haben.",
   "addon_permission_list_title": "Berechtigungen",
@@ -1131,7 +1192,8 @@
       "tab_income_one": "Einnahmen ({{count}})",
       "tab_income_other": "Einnahmen ({{count}})",
       "tab_savings_one": "Ersparnisse ({{count}})",
-      "tab_savings_other": "Ersparnisse ({{count}})"
+      "tab_savings_other": "Ersparnisse ({{count}})",
+      "duplicate_error": "Eine andere Kategorie verwendet diesen Schlüssel bereits. Verwenden Sie einen anderen Namen."
     },
     "events": {
       "heading": "Ausgabenereignisse",
@@ -1487,18 +1549,41 @@
       "market_data_write": {
         "label": "Marktdaten — schreiben",
         "description": "Geprüfte Kurse für vorhandene Vermögenswerte speichern. Erfordert die Berechtigung Bestände & Wert (Lesen)."
+      },
+      "spending_read": {
+        "label": "Ausgaben ansehen",
+        "description": "Transaktionen in Ausgabenkonten, Kategorien, Aufteilungen, Regeln, Ereignisse, Berichte und Budgets lesen."
+      },
+      "spending_write": {
+        "label": "Ausgaben organisieren",
+        "description": "Ausgabenkategorien, Zuordnungen, Aufteilungen, Regeln und Ereignisse verwalten. Erfordert Ausgaben ansehen."
+      },
+      "budget_write": {
+        "label": "Budgets verwalten",
+        "description": "Standard- und Monatsbudgets, Gruppen, Puffer und Überträge ändern. Erfordert Ausgaben ansehen."
       }
     },
     "preset": {
       "read_only": "Nur Lesen",
       "read_activity_draft": "Lesen + Entwurf",
       "read_activity_write": "Lesen + Schreiben",
-      "read_activity_write_classification_suggest": "Lesen + Schreiben + Klassifizieren"
+      "read_activity_write_classification_suggest": "Lesen + Schreiben + Klassifizieren",
+      "spending_view": "Ausgaben — ansehen",
+      "spending_organize": "Ausgaben — organisieren",
+      "spending_budgets": "Ausgaben — Budgets"
     },
     "copied_generic": "{{label}} in die Zwischenablage kopiert.",
     "hero_aria": "Status des KI-Agenten-Zugriffs",
     "pat_scope_custom_one": "Benutzerdefiniert · {{count}} Berechtigung",
-    "pat_scope_custom_other": "Benutzerdefiniert · {{count}} Berechtigungen"
+    "pat_scope_custom_other": "Benutzerdefiniert · {{count}} Berechtigungen",
+    "scope_locked_classification_title": "Erforderlich für Anlageklassifizierung — anwenden/schreiben",
+    "scope_locked_spending_title": "Für Ausgaben organisieren oder Budgets verwalten erforderlich",
+    "dialog_presets": "Zugriffsvorlagen",
+    "edit_permissions": "Berechtigungen bearbeiten",
+    "edit_title": "Berechtigungen für {{name}}",
+    "edit_description": "Der Schlüssel bleibt unverändert. Berechtigungen gelten für folgende Anfragen. Aktualisieren Sie die Werkzeuge oder verbinden Sie den Client neu, um neue Werkzeuge zu sehen.",
+    "edit_success": "Berechtigungen aktualisiert",
+    "edit_failed": "Berechtigungen konnten nicht aktualisiert werden"
   },
   "tax_add_category": "Kategorie hinzufügen",
   "tax_export": "Exportieren",
@@ -1754,5 +1839,236 @@
   "appearance_gain_colors_description": "Nutzen Sie die an Ihrem Markt üblichen Gewinn- und Verlustfarben.",
   "appearance_gain_colors_green_up": "Grün steigend, rot fallend",
   "appearance_gain_colors_red_up": "Rot steigend, grün fallend",
-  "appearance_gain_colors_red_up_blue_down": "Rot steigend, blau fallend"
+  "appearance_gain_colors_red_up_blue_down": "Rot steigend, blau fallend",
+  "limits_form_group_name_required": "Gruppenname ist erforderlich",
+  "limits_form_limit_amount_number": "Der Höchstbetrag muss eine positive Zahl sein.",
+  "limits_form_limit_amount_non_negative": "Der Höchstbetrag darf nicht negativ sein.",
+  "limits_form_year_invalid": "Ungültiges Jahr",
+  "messages": {
+    "account": {
+      "created": "Konto erfolgreich erstellt.",
+      "creatingFailed": "Dieses Konto konnte nicht erstellt werden.",
+      "updatingFailed": "Dieses Konto konnte nicht aktualisiert werden.",
+      "deletingFailed": "Dieses Konto konnte nicht gelöscht werden."
+    },
+    "contribution": {
+      "added": "Beitragsgrenze erfolgreich hinzugefügt.",
+      "updated": "Beitragsgrenze erfolgreich aktualisiert.",
+      "deleted": "Beitragsgrenze erfolgreich gelöscht.",
+      "addFailed": "Diese Beitragsgrenze konnte nicht hinzugefügt werden.",
+      "updateFailed": "Diese Beitragsgrenze konnte nicht aktualisiert werden.",
+      "deleteFailed": "Diese Beitragsgrenze konnte nicht gelöscht werden."
+    },
+    "exchange": {
+      "updatingFailed": "Problem beim Aktualisieren des Wechselkurses: {{error}}",
+      "addingFailed": "Problem beim Hinzufügen des Wechselkurses: {{error}}",
+      "deletingFailed": "Problem beim Löschen des Wechselkurses: {{error}}"
+    },
+    "export": {
+      "empty": {
+        "accounts": "Derzeit sind keine Konten zum Exportieren verfügbar.",
+        "activities": "Derzeit sind keine Transaktionen zum Exportieren verfügbar.",
+        "holdings": "Derzeit sind keine Bestände zum Exportieren verfügbar.",
+        "goals": "Derzeit sind keine Ziele zum Exportieren verfügbar.",
+        "portfolio-history": "Derzeit ist kein Portfolioverlauf zum Exportieren verfügbar."
+      }
+    },
+    "providerUpdateFailed": "Einstellungen für Anbieter {{provider}} konnten nicht aktualisiert werden",
+    "httpFailed": "HTTP-Anfrage fehlgeschlagen.",
+    "addonDownloadFailed": "Das Add-on konnte nicht heruntergeladen werden.",
+    "addonPackages": "Add-on-Pakete",
+    "addonInstalled": "{{name}} wurde installiert und ist jetzt aktiv.",
+    "addonEnabled": "Add-on aktiviert",
+    "addonDisabled": "Add-on deaktiviert",
+    "addonEnabledDescription": "{{name}} wurde aktiviert.",
+    "addonDisabledDescription": "{{name}} wurde deaktiviert.",
+    "addonRemoved": "{{name}} wurde vollständig entfernt.",
+    "addonNetworkSaved": "Netzwerkhost-Freigaben für {{name}} wurden gespeichert.",
+    "addonCheckFailed": "Updates für Add-on {{addon}} konnten nicht geprüft werden",
+    "auditRemoved_one": "{{count}} Eintrag entfernt.",
+    "auditRemoved_other": "{{count}} Einträge entfernt.",
+    "addonUpdates_one": "Für {{count}} Add-on ist ein Update verfügbar.",
+    "addonUpdates_other": "Für {{count}} Add-ons sind Updates verfügbar.",
+    "addonCriticalUpdates_one": "Für {{count}} Add-on ist ein kritisches Sicherheitsupdate verfügbar.",
+    "addonCriticalUpdates_other": "Für {{count}} Add-ons sind kritische Sicherheitsupdates verfügbar."
+  },
+  "addonPermissions": {
+    "functions": {
+      "accounts_getAll": "Alle Konten anzeigen",
+      "accounts_create": "Neue Konten erstellen",
+      "alternative-assets_getAll": "Alternative Anlagen und Verbindlichkeiten anzeigen",
+      "portfolio_getHoldings": "Ihre Anlagepositionen anzeigen",
+      "portfolio_getHolding": "Details einzelner Positionen anzeigen",
+      "portfolio_update": "Portfolioberechnungen aktualisieren",
+      "portfolio_recalculate": "Gesamtes Portfolio neu berechnen",
+      "portfolio_getIncomeSummary": "Erträge und Dividenden anzeigen",
+      "portfolio_getHistoricalValuations": "Historische Portfoliowerte anzeigen",
+      "portfolio_getLatestValuations": "Aktuelle Portfoliowerte anzeigen",
+      "activities_getAll": "Alle Transaktionen anzeigen",
+      "activities_search": "Transaktionen mit Filtern suchen",
+      "activities_searchCashActivities": "Kategorisierte Ausgabentransaktionen suchen",
+      "activities_assignCategory": "Ausgabentransaktionen kategorisieren",
+      "activities_unassignCategory": "Kategorie einer Transaktion entfernen",
+      "activities_setEvent": "Ereignis-Tags von Transaktionen setzen oder entfernen",
+      "spending_getContext": "Für Ausgaben aktivierte Konten anzeigen",
+      "spending_getBudget": "Budgets und Budgetgruppen anzeigen",
+      "spending_getEvents": "Ausgabenereignisse anzeigen",
+      "spending_getEventTypes": "Ereignistypen anzeigen",
+      "budgets_upsertBudgetTarget": "Standard- und Monatsbudgetziele ändern",
+      "activities_create": "Neue Transaktionen hinzufügen",
+      "activities_update": "Transaktionen ändern",
+      "activities_saveMany": "Mehrere Transaktionen speichern",
+      "activities_import": "Transaktionsdaten importieren",
+      "activities_checkImport": "Importdaten prüfen",
+      "activities_getImportMapping": "Importeinstellungen anzeigen",
+      "activities_saveImportMapping": "Importeinstellungen speichern",
+      "activities_getTransferPair": "Verknüpfte Übertragungspaare anzeigen",
+      "activities_findTransferMatchCandidates": "Mögliche Übereinstimmungen für Übertragungen finden",
+      "activities_saveTransferPair": "Transaktionen zu einer Übertragung verknüpfen",
+      "activities_linkTransfer": "Transaktionen zu einer Übertragung verknüpfen",
+      "activities_unlinkTransfer": "Verknüpfung von Übertragungstransaktionen aufheben",
+      "market_searchTicker": "Nach Aktien oder Fonds suchen",
+      "market_syncHistory": "Kursverlauf herunterladen",
+      "market_sync": "Marktdaten für Symbole synchronisieren",
+      "market_getProviders": "Marktdatenanbieter anzeigen",
+      "market_fetchDividends": "Dividendenverlauf herunterladen",
+      "assets_getProfile": "Details eines Anlageprofils anzeigen",
+      "assets_updateProfile": "Anlageinformationen aktualisieren",
+      "assets_updateDataSource": "Datenanbieter einer Anlage ändern",
+      "assets_updateQuoteMode": "Zwischen Markt- und manuellen Kursen wechseln",
+      "quotes_update": "Aktuelle Kurse aktualisieren",
+      "quotes_getHistory": "Kursverlauf anzeigen",
+      "performance_calculateHistory": "Historische Wertentwicklung berechnen",
+      "performance_calculateSummary": "Zusammenfassung der Wertentwicklung berechnen",
+      "performance_calculateAccountsSimple": "Einfache Wertentwicklung der Konten berechnen",
+      "currency_getAll": "Wechselkurse anzeigen",
+      "currency_update": "Wechselkurse aktualisieren",
+      "currency_add": "Neue Wechselkurse hinzufügen",
+      "currency_getRatesForDates": "Historische Wechselkurse anzeigen",
+      "exchangeRates_getAll": "Wechselkurse anzeigen",
+      "exchangeRates_update": "Wechselkurse aktualisieren",
+      "exchangeRates_add": "Neue Wechselkurse hinzufügen",
+      "exchangeRates_getRatesForDates": "Historische Wechselkurse anzeigen",
+      "spending_isEnabled": "Prüfen, ob die Ausgabenfunktion aktiviert ist",
+      "spending_getCategories": "Ihre Ausgabenkategorien anzeigen",
+      "spending_getReport": "Zusammengefasste Ausgabenberichte anzeigen",
+      "spending_getRules": "Eigene Regeln des Add-ons zur automatischen Kategorisierung anzeigen",
+      "spending_saveRule": "Regeln zur automatischen Kategorisierung erstellen oder aktualisieren",
+      "spending_deleteRule": "Regeln zur automatischen Kategorisierung löschen",
+      "spending_rerunRules": "Kategorisierungsregeln erneut auf Ihre Transaktionen anwenden",
+      "contributionLimits_getAll": "Beitragsgrenzen anzeigen",
+      "contributionLimits_create": "Beitragsgrenzen festlegen",
+      "contributionLimits_update": "Beitragsgrenzen ändern",
+      "contributionLimits_calculateDeposits": "Erforderliche Einzahlungen berechnen",
+      "financial-planning_getAll": "Finanzielle Ziele anzeigen",
+      "financial-planning_create": "Neue Ziele erstellen",
+      "financial-planning_update": "Ziele ändern",
+      "financial-planning_getFunding": "Zielfinanzierung anzeigen",
+      "financial-planning_saveFunding": "Zielfinanzierung aktualisieren",
+      "financial-planning_updateAllocations": "Zielzuweisungen aktualisieren",
+      "financial-planning_getAllocations": "Zielzuweisungen anzeigen",
+      "settings_get": "App-Einstellungen anzeigen",
+      "settings_update": "App-Einstellungen ändern",
+      "settings_backupDatabase": "Datensicherung erstellen",
+      "files_openCsvDialog": "Dateiauswahl für CSV-Dateien öffnen",
+      "files_openSaveDialog": "Dateien auf dem Datenträger speichern",
+      "secrets_get": "Gespeicherte Zugangsdaten abrufen",
+      "secrets_set": "Zugangsdaten sicher speichern",
+      "secrets_use": "Gespeicherte Zugangsdaten für vermittelte Anfragen verwenden",
+      "secrets_delete": "Gespeicherte Zugangsdaten entfernen",
+      "snapshots_getAll": "Positionsmomentaufnahmen anzeigen",
+      "snapshots_getByDate": "Positionen zum Datum einer Momentaufnahme anzeigen",
+      "snapshots_save": "Positionsmomentaufnahmen speichern",
+      "snapshots_checkImport": "Importdaten für Momentaufnahmen prüfen",
+      "snapshots_importSnapshots": "Positionsmomentaufnahmen importieren",
+      "snapshots_delete": "Positionsmomentaufnahmen löschen",
+      "events_onDropHover": "Ziehen und Ablegen von Dateien erkennen",
+      "events_onDrop": "Abgelegte Dateien verarbeiten",
+      "events_onDropCancelled": "Abgebrochene Dateiablagen verarbeiten",
+      "events_onUpdateStart": "Beginn von Portfolioaktualisierungen überwachen",
+      "events_onUpdateComplete": "Abschluss von Portfolioaktualisierungen überwachen",
+      "events_onUpdateError": "Fehler bei Portfolioaktualisierungen überwachen",
+      "events_onSyncStart": "Beginn der Marktdatensynchronisierung überwachen",
+      "events_onSyncComplete": "Abschluss der Marktdatensynchronisierung überwachen",
+      "network_request": "Vermittelte Netzwerkanfragen senden"
+    },
+    "categories": {
+      "accounts": {
+        "name": "Kontoverwaltung",
+        "description": "Zugriff auf Kontoinformationen und -einstellungen"
+      },
+      "alternative-assets": {
+        "name": "Alternative Anlagen",
+        "description": "Schreibgeschützter Zugriff auf alternative Vermögenswerte und Verbindlichkeiten (Immobilien, Fahrzeuge, Sammlerstücke, Edelmetalle und Sonstiges), die außerhalb von Anlagekonten erfasst werden"
+      },
+      "portfolio": {
+        "name": "Portfoliodaten",
+        "description": "Zugriff auf Positionen, Portfoliowertentwicklung und Kontobewertungen"
+      },
+      "activities": {
+        "name": "Transaktionsverlauf",
+        "description": "Zugriff auf Transaktionsaufzeichnungen und deren Verwaltung"
+      },
+      "market-data": {
+        "name": "Marktdaten",
+        "description": "Zugriff auf Marktpreise, Kurse und Finanzdaten"
+      },
+      "assets": {
+        "name": "Anlageverwaltung",
+        "description": "Zugriff auf Anlageprofile und Datenquellen"
+      },
+      "quotes": {
+        "name": "Kursverwaltung",
+        "description": "Zugriff auf Kurse und historische Daten"
+      },
+      "performance": {
+        "name": "Wertentwicklungsanalyse",
+        "description": "Zugriff auf Berechnungen und Kennzahlen zur Wertentwicklung"
+      },
+      "currency": {
+        "name": "Wechselkurse",
+        "description": "Zugriff auf Wechselkurse und Währungsumrechnungsdaten"
+      },
+      "spending": {
+        "name": "Ausgaben",
+        "description": "Zusammengefasste Ausgabenberichte und Kategorien anzeigen sowie Regeln zur automatischen Kategorisierung von Transaktionen verwalten"
+      },
+      "budgets": {
+        "name": "Budgetverwaltung",
+        "description": "Standardbudgetziele und abweichende Monatsziele ändern"
+      },
+      "financial-planning": {
+        "name": "Finanzplanung",
+        "description": "Zugriff auf finanzielle Ziele und Zuweisungen"
+      },
+      "contribution-limits": {
+        "name": "Beitragsgrenzen",
+        "description": "Zugriff auf Beitragsgrenzen und Einzahlungsberechnungen"
+      },
+      "settings": {
+        "name": "Anwendungseinstellungen",
+        "description": "Zugriff auf Anwendungseinstellungen und Konfiguration"
+      },
+      "files": {
+        "name": "Dateioperationen",
+        "description": "Zugriff auf Dateidialoge und Dateisystemoperationen"
+      },
+      "secrets": {
+        "name": "Verwaltung geheimer Daten",
+        "description": "Zugriff auf den sicheren Speicher für geheime Daten von Add-ons"
+      },
+      "snapshots": {
+        "name": "Momentaufnahmenverwaltung",
+        "description": "Zugriff auf Positionsmomentaufnahmen für Konten im Positionsverfolgungsmodus"
+      },
+      "events": {
+        "name": "Ereignisüberwachung",
+        "description": "Zugriff auf Anwendungsereignisse und Benachrichtigungen"
+      },
+      "network": {
+        "name": "Netzwerkzugriff",
+        "description": "Zugriff auf deklarierte externe HTTPS-Hosts über die Netzwerkvermittlung der Host-Anwendung"
+      }
+    }
+  }
 }

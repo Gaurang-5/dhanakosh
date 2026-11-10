@@ -26,9 +26,9 @@ export function OverviewTab({
   const { data: taxonomy } = useTaxonomy(taxonomyId);
   const resolvedReport = resolveDriftReportCategories(report, taxonomy?.categories);
   const taxonomyName = taxonomy?.taxonomy.name;
-  const categoryLabel = categoryNoun(taxonomyId, taxonomyName, report.outOfBandCount);
-  const pluralCategoryLabel = categoryNoun(taxonomyId, taxonomyName, 2);
-  const displayTaxonomy = taxonomyLabel(taxonomyId, taxonomyName);
+  const categoryLabel = categoryNoun(t, taxonomyId, taxonomyName, report.outOfBandCount);
+  const pluralCategoryLabel = categoryNoun(t, taxonomyId, taxonomyName, 2);
+  const displayTaxonomy = taxonomyLabel(t, taxonomyId, taxonomyName);
   const gapStatus =
     report.outOfBandCount === 0
       ? t("allocation:overview.allInsideTarget", { categories: pluralCategoryLabel })
@@ -59,7 +59,7 @@ export function OverviewTab({
         <CurrentVsTargetCard
           report={resolvedReport}
           taxonomyLabel={displayTaxonomy}
-          targetLabel={targetLabel(targetName)}
+          targetLabel={targetLabel(t, targetName)}
         />
         <DriftDriversCard
           report={resolvedReport}

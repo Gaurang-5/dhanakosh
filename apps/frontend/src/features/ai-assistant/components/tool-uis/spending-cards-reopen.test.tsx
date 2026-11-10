@@ -95,7 +95,7 @@ beforeEach(() => {
 it("applies a category then reopens the saved {data,meta} result with its content and applied state", async () => {
   const first = render(<CategorizationProposalsContentImpl {...props} />);
   await screen.findByText("Coffee transaction");
-  expect(screen.getByTestId("picker-expense")).toBeInTheDocument();
+  expect(screen.getByTestId("picker-both")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Apply 1 selected" }));
   await waitFor(() => expect(mocks.update).toHaveBeenCalled());
   const patch = mocks.update.mock.calls[0][0].resultPatch;
