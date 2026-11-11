@@ -141,6 +141,16 @@ impl Coverage {
         }
     }
 
+    /// Moscow Exchange equities only.
+    pub const fn moex() -> Self {
+        Self {
+            equity_mic_allow: Some(&["MISX"]),
+            equity_mic_deny: None,
+            allow_unknown_mic: false,
+            metal_quote_ccy_allow: None,
+        }
+    }
+
     /// Metals only, USD quotes only.
     pub const fn metals_usd_only() -> Self {
         Self {
@@ -207,6 +217,27 @@ mod tests {
             mic: None,
         };
         assert!(!coverage.supports(&inst));
+    }
+
+    #[test]
+    fn test_moex_only_allows_misx() {
+        let coverage = Coverage::moex();
+        let listed = InstrumentId::Equity {
+            ticker: Arc::from("AFLT"),
+            mic: Some(Cow::Borrowed("MISX")),
+        };
+        let unrelated = InstrumentId::Equity {
+            ticker: Arc::from("AAPL"),
+            mic: Some(Cow::Borrowed("XNAS")),
+        };
+        let unknown = InstrumentId::Equity {
+            ticker: Arc::from("AFLT"),
+            mic: None,
+        };
+
+        assert!(coverage.supports(&listed));
+        assert!(!coverage.supports(&unrelated));
+        assert!(!coverage.supports(&unknown));
     }
 
     #[test]
