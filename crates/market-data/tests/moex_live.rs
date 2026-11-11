@@ -1,9 +1,9 @@
 //! Opt-in upstream smoke test; never reads portfolio data or credentials.
 use chrono::{TimeZone, Utc};
 use rust_decimal::Decimal;
+use wealthfolio_market_data::provider::moex::MoexProvider;
 use wealthfolio_market_data::{
-    InstrumentId, MarketDataProvider, MoexProvider, ProviderInstrument, QuoteContext,
-    QuoteIdentifiers,
+    InstrumentId, MarketDataProvider, ProviderInstrument, QuoteContext, QuoteIdentifiers,
 };
 
 fn context(ticker: &str) -> QuoteContext {
