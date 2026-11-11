@@ -71,6 +71,7 @@ impl Drop for Fixture {
 }
 
 #[tokio::test]
+#[ignore = "requires the unshipped spending MCP catalog and scopes"]
 async fn list_categories_without_accounts_or_activity_access() {
     let fixture = Fixture::new();
     let result = fixture
@@ -107,6 +108,7 @@ async fn list_categories_without_accounts_or_activity_access() {
 }
 
 #[tokio::test]
+#[ignore = "requires the unshipped spending MCP catalog and scopes"]
 async fn prepare_then_commit_creates_roots_and_children_in_each_activity_taxonomy() {
     let fixture = Fixture::new();
     for id in [
@@ -161,6 +163,7 @@ async fn prepare_then_commit_creates_roots_and_children_in_each_activity_taxonom
 }
 
 #[tokio::test]
+#[ignore = "requires the unshipped spending MCP catalog and scopes"]
 async fn duplicates_and_replays_are_rejected_in_prepare_and_commit() {
     let fixture = Fixture::new();
     let first = fixture.draft("spending_categories", "legal_custom").await;
@@ -199,6 +202,7 @@ async fn duplicates_and_replays_are_rejected_in_prepare_and_commit() {
 }
 
 #[tokio::test]
+#[ignore = "requires the unshipped spending MCP catalog and scopes"]
 async fn invalid_taxonomies_and_parents_cannot_mutate_asset_taxonomies() {
     let fixture = Fixture::new();
     let assets_before = fixture
@@ -274,6 +278,7 @@ async fn invalid_taxonomies_and_parents_cannot_mutate_asset_taxonomies() {
 }
 
 #[tokio::test]
+#[ignore = "requires the unshipped spending MCP catalog and scopes"]
 async fn commit_revalidates_fields_and_a_deleted_parent() {
     let fixture = Fixture::new();
     let draft = fixture.draft("spending_categories", "legal_custom").await;
@@ -316,6 +321,7 @@ async fn commit_revalidates_fields_and_a_deleted_parent() {
 }
 
 #[tokio::test]
+#[ignore = "requires the unshipped spending MCP catalog and scopes"]
 async fn a_builtin_id_with_asset_scope_is_rejected() {
     let fixture = Fixture::new();
     let draft = fixture.draft("savings_categories", "legal_custom").await;
@@ -445,6 +451,7 @@ async fn rpc(client: &reqwest::Client, url: &str, method: &str, params: Value) -
 }
 
 #[tokio::test]
+#[ignore = "requires the unshipped spending MCP catalog and scopes"]
 async fn mcp_transport_exposes_tools_and_audits_redacted_prepare_and_commit() {
     use axum::{
         body::Body,
@@ -603,6 +610,7 @@ async fn mcp_transport_exposes_tools_and_audits_redacted_prepare_and_commit() {
 }
 
 #[tokio::test]
+#[ignore = "requires the unshipped spending MCP catalog and scopes"]
 async fn reviewed_category_edit_delete_and_stale_replay() {
     let f = Fixture::new();
     let draft = f.draft("spending_categories", "reviewed_change").await;

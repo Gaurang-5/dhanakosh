@@ -1485,8 +1485,8 @@ async fn effective_quote(
 }
 
 /// An EUR account holding two units of a manually priced fund, bought at 10
-/// on 2026-07-27 with deposited cash (the purchase stores its price as a
-/// manual quote), and a session whose token can read holdings and write
+/// on 2026-07-27 (the purchase stores its price as a manual quote), and a
+/// session whose token can read holdings and write
 /// quotes. Returns the account, the fund's asset id, the token and the session
 /// once the valuation carries the purchase price to 2026-08-31.
 async fn fund_holding_session(
@@ -1516,25 +1516,17 @@ async fn fund_holding_session(
     )
     .await;
     let asset_id = asset["id"].as_str().unwrap().to_string();
-    for activity in [
-        serde_json::json!({ "activityType": "DEPOSIT", "amount": "20" }),
+    api_post(
+        server,
+        cookie,
+        "activities",
         serde_json::json!({
-            "activityType": "BUY", "quantity": "2", "unitPrice": "10",
-            "asset": { "id": asset_id }
+            "accountId": account["id"], "activityDate": "2026-07-27T12:00:00Z",
+            "activityType": "BUY", "quantity": "2", "unitPrice": "10", "amount": "20",
+            "currency": "EUR", "asset": { "id": asset_id }
         }),
-    ] {
-        let mut activity = activity;
-        activity.as_object_mut().unwrap().extend(
-            serde_json::json!({
-                "accountId": account["id"], "activityDate": "2026-07-27T12:00:00Z",
-                "currency": "EUR"
-            })
-            .as_object()
-            .unwrap()
-            .clone(),
-        );
-        api_post(server, cookie, "activities", activity).await;
-    }
+    )
+    .await;
 
     let (status, token) = create_pat(
         server,

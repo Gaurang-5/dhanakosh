@@ -6,23 +6,6 @@ pub struct TaxonomyEnv {
 }
 
 impl AgentEnvironment for TaxonomyEnv {
-    fn budget_service(&self) -> Arc<dyn wealthfolio_spending::budget::BudgetServiceTrait> {
-        unimplemented!("TaxonomyEnv")
-    }
-    fn spending_events_service(&self) -> Arc<dyn wealthfolio_spending::events::EventsServiceTrait> {
-        unimplemented!("TaxonomyEnv")
-    }
-    fn spending_analytics_service(
-        &self,
-    ) -> Arc<dyn wealthfolio_spending::analytics::AnalyticsServiceTrait> {
-        unimplemented!("TaxonomyEnv")
-    }
-    fn spending_insight_service(
-        &self,
-    ) -> Arc<dyn wealthfolio_spending::insight::InsightServiceTrait> {
-        unimplemented!("TaxonomyEnv")
-    }
-
     fn base_currency(&self) -> String {
         "USD".to_string()
     }
