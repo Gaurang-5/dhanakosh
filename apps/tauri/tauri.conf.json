@@ -41,7 +41,7 @@
   },
   "productName": "Dhanakosh",
   "mainBinaryName": "Dhanakosh",
-  "version": "3.11.0",
+  "version": "3.11.1",
   "identifier": "com.teymz.wealthfolio",
   "plugins": {
     "updater": {

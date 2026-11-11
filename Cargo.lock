@@ -8912,7 +8912,7 @@ dependencies = [
 
 [[package]]
 name = "wealthfolio-agent-tools"
-version = "3.11.0"
+version = "3.11.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -8930,7 +8930,7 @@ dependencies = [
 
 [[package]]
 name = "wealthfolio-ai"
-version = "3.11.0"
+version = "3.11.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -8963,7 +8963,7 @@ dependencies = [
 
 [[package]]
 name = "wealthfolio-app"
-version = "3.11.0"
+version = "3.11.1"
 dependencies = [
  "android-native-keyring-store",
  "anyhow",
@@ -9032,7 +9032,7 @@ dependencies = [
 
 [[package]]
 name = "wealthfolio-connect"
-version = "3.11.0"
+version = "3.11.1"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -9051,7 +9051,7 @@ dependencies = [
 
 [[package]]
 name = "wealthfolio-core"
-version = "3.11.0"
+version = "3.11.1"
 dependencies = [
  "anyhow",
  "argon2",
@@ -9104,7 +9104,7 @@ dependencies = [
 
 [[package]]
 name = "wealthfolio-device-sync"
-version = "3.11.0"
+version = "3.11.1"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -9131,7 +9131,7 @@ dependencies = [
 
 [[package]]
 name = "wealthfolio-http"
-version = "3.11.0"
+version = "3.11.1"
 dependencies = [
  "rcgen",
  "reqwest 0.13.5",
@@ -9142,7 +9142,7 @@ dependencies = [
 
 [[package]]
 name = "wealthfolio-market-data"
-version = "3.11.0"
+version = "3.11.1"
 dependencies = [
  "async-trait",
  "chrono",
@@ -9165,7 +9165,7 @@ dependencies = [
 
 [[package]]
 name = "wealthfolio-mcp"
-version = "3.11.0"
+version = "3.11.1"
 dependencies = [
  "async-trait",
  "axum",
@@ -9190,7 +9190,7 @@ dependencies = [
 
 [[package]]
 name = "wealthfolio-portfolio-engine"
-version = "3.11.0"
+version = "3.11.1"
 dependencies = [
  "chrono",
  "chrono-tz",
@@ -9206,7 +9206,7 @@ dependencies = [
 
 [[package]]
 name = "wealthfolio-server"
-version = "3.11.0"
+version = "3.11.1"
 dependencies = [
  "anyhow",
  "argon2",
@@ -9260,7 +9260,7 @@ dependencies = [
 
 [[package]]
 name = "wealthfolio-spending"
-version = "3.11.0"
+version = "3.11.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -9280,7 +9280,7 @@ dependencies = [
 
 [[package]]
 name = "wealthfolio-storage-sqlite"
-version = "3.11.0"
+version = "3.11.1"
 dependencies = [
  "anyhow",
  "async-trait",
