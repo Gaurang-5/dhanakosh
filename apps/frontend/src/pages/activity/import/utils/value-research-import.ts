@@ -4,6 +4,7 @@ const CANONICAL_HEADERS = [
   "date",
   "symbol",
   "isin",
+  "exchange",
   "activityType",
   "quantity",
   "unitPrice",
@@ -28,6 +29,7 @@ const ACTIVITY_TYPES = new Map([
 
 const SYMBOL_HEADERS = ["Scheme Name", "Stock/ETF Name", "REIT/InvIT Name", "PPF A/C Name"];
 const REFERENCE_HEADERS = ["Folio Number", "Demat A/c", "PPF A/C Name"];
+const EXCHANGE_HEADERS = ["Exchange", "Stock Exchange", "Exchange Name"];
 
 function cellText(value: ValueResearchCell): string {
   if (value === null || value === undefined) return "";
@@ -141,6 +143,7 @@ export function normalizeValueResearchRows(
   if (!symbolHeader) return null;
   const isPpfSheet = symbolHeader === "PPF A/C Name";
   const referenceHeader = REFERENCE_HEADERS.find((header) => column.has(header));
+  const exchangeHeader = EXCHANGE_HEADERS.find((header) => column.has(header));
   const quantityHeader = column.has("Units") ? "Units" : column.has("Quantity") ? "Quantity" : null;
   const unitPriceHeader = column.has("NAV") ? "NAV" : column.has("Price") ? "Price" : null;
 
@@ -173,6 +176,7 @@ export function normalizeValueResearchRows(
       dateText(value(row, "Transaction Date")),
       isPpfSheet ? "" : cellText(value(row, symbolHeader)),
       cellText(value(row, "ISIN")),
+      cellText(value(row, exchangeHeader)),
       activityType,
       isTrade ? magnitudeText(value(row, quantityHeader)) : "",
       isTrade ? magnitudeText(value(row, unitPriceHeader)) : "",

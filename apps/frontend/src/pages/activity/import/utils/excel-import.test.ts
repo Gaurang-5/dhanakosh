@@ -86,6 +86,7 @@ describe("Excel transaction upload", () => {
         "Balance Units",
         "Market Value",
         "ISIN",
+        "Exchange",
       ],
       [
         "02-Jan-26",
@@ -98,6 +99,7 @@ describe("Excel transaction upload", () => {
         4.125,
         5000,
         "INF000000001",
+        "NSE",
       ],
       [
         "08-Feb-26",
@@ -110,6 +112,7 @@ describe("Excel transaction upload", () => {
         3.125,
         3750,
         "INF000000001",
+        "NSE",
       ],
       ["Grand Total", "", "", "", 6200],
     ]);
@@ -124,18 +127,19 @@ describe("Excel transaction upload", () => {
     const lines = csv.trim().split("\n");
 
     expect(lines[0]).toBe(
-      "date,symbol,isin,activityType,quantity,unitPrice,amount,currency,fee,comment",
+      "date,symbol,isin,exchange,activityType,quantity,unitPrice,amount,currency,fee,comment",
     );
     expect(lines).toHaveLength(3);
     expect(csv).toContain(
-      "2026-01-02,Example Direct Growth,INF000000001,BUY,4.125,1212.1212,5000,INR",
+      "2026-01-02,Example Direct Growth,INF000000001,NSE,BUY,4.125,1212.1212,5000,INR",
     );
-    expect(csv).toContain("2026-02-08,Example Direct Growth,INF000000001,SELL,1,1200,1200,INR");
+    expect(csv).toContain("2026-02-08,Example Direct Growth,INF000000001,NSE,SELL,1,1200,1200,INR");
     expect(csv).not.toContain("Grand Total");
     expect(computeFieldMappings(lines[0].split(","))).toMatchObject({
       date: "date",
       symbol: "symbol",
       isin: "isin",
+      exchange: "exchange",
       activityType: "activityType",
       quantity: "quantity",
       unitPrice: "unitPrice",
@@ -160,8 +164,8 @@ describe("Excel transaction upload", () => {
     const imported = await readExcelImport(file);
     const csv = await imported.toCsvFile("PPF").text();
 
-    expect(csv).toContain("2026-03-31,,,INTEREST,,,1000,INR");
-    expect(csv).toContain("2025-12-31,,,DEPOSIT,,,1000,INR");
+    expect(csv).toContain("2026-03-31,,,,INTEREST,,,1000,INR");
+    expect(csv).toContain("2025-12-31,,,,DEPOSIT,,,1000,INR");
     expect(csv).toContain("Value Research; PPF; row 2; Interest Accrued; PPF A/C Name: SBI PPF");
   });
 
@@ -180,6 +184,6 @@ describe("Excel transaction upload", () => {
     const imported = await readExcelImport(file);
     const csv = await imported.toCsvFile("PPF").text();
 
-    expect(csv).toContain("2026-03-31,,,INTEREST,,,,INR");
+    expect(csv).toContain("2026-03-31,,,,INTEREST,,,,INR");
   });
 });
