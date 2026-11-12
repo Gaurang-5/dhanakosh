@@ -37,6 +37,9 @@ jobs:
     permissions:
       contents: write
     env:
+      # Desktop installers must use the same Dhanakosh household experience as
+      # the self-hosted web build, not the upstream Wealthfolio product mode.
+      VITE_HOUSEHOLD_MODE: "true"
       MACOS_SIGNING_ENABLED:
         ${{ secrets.APPLE_CERTIFICATE != '' && secrets.APPLE_CERTIFICATE_PASSWORD != '' &&
         secrets.APPLE_SIGNING_IDENTITY != '' && secrets.APPLE_API_ISSUER != '' &&
@@ -181,6 +184,10 @@ jobs:
         uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Apple Silicon linkers add a partial ad-hoc signature to Mach-O
+          # binaries. Ask Tauri to replace it with a complete bundle signature
+          # so Gatekeeper does not report the downloaded app as damaged.
+          APPLE_SIGNING_IDENTITY: "-"
         with:
           tagName: ${{ github.event_name == 'push' && github.ref_name || '' }}
           releaseName: ${{ github.event_name == 'push' && 'Dhanakosh v__VERSION__' || '' }}
@@ -221,7 +228,15 @@ jobs:
                 --verbose=4 "$dmg"
             done
           else
-            echo "Unsigned macOS packages were produced; signing checks were skipped."
+            for app in "${app_bundles[@]}"; do
+              codesign --verify --deep --strict --verbose=2 "$app"
+            done
+
+            for dmg in "${disk_images[@]}"; do
+              hdiutil verify "$dmg"
+            done
+
+            echo "Ad-hoc signed macOS packages passed integrity checks."
           fi
 
       - name: Upload validation packages

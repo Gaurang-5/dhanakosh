@@ -4,7 +4,7 @@ import { isWeb } from "@/adapters";
  * Portfolios and accounts share one workspace; this flag does not select owners.
  */
 export function resolveHouseholdMode(webRuntime: boolean, configured?: string): boolean {
-  return webRuntime && configured !== "false";
+  return configured === "true" || (webRuntime && configured !== "false");
 }
 
 export const HOUSEHOLD_MODE = resolveHouseholdMode(

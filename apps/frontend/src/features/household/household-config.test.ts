@@ -6,6 +6,10 @@ describe("household configuration", () => {
     expect(resolveHouseholdMode(true)).toBe(true);
     expect(resolveHouseholdMode(false)).toBe(false);
     expect(resolveHouseholdMode(true, "false")).toBe(false);
-    expect(HOUSEHOLD_NAME).toBe("Bhatia Family");
+    expect(HOUSEHOLD_NAME).toBe("My wealth");
+  });
+
+  it("allows release builds to enable the household experience on desktop", () => {
+    expect(resolveHouseholdMode(false, "true")).toBe(true);
   });
 });

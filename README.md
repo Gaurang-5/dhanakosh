@@ -74,9 +74,11 @@ latest-release page has no installers, check the
 ### Download security
 
 macOS packages are signed and notarized when Apple Developer credentials are
-configured. Community builds made without those credentials are still checked
-for both app and DMG output, but macOS will show an unidentified-developer
-warning when they are opened.
+configured. Without those credentials, the release uses an ad-hoc signature so
+macOS can verify that the app bundle is complete. Gatekeeper may still show an
+unidentified-developer warning, which you can approve by Control-clicking the
+app and choosing **Open**. Version 3.11.1 had an incomplete macOS signature; use
+version 3.11.2 or later instead.
 
 Windows installers are currently community builds, so SmartScreen may appear.
 Maintainer setup and the release checklist are in

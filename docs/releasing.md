@@ -27,10 +27,12 @@ Apple's notary service, and staples the accepted ticket. The workflow verifies
 the app signature, asks Gatekeeper to assess both the app and DMG, and validates
 the stapled ticket. Any verification failure prevents publication.
 
-When the credentials are absent, the workflow produces unsigned community builds
-instead. It verifies that the app and DMG were created, but macOS will show an
-unidentified-developer warning. This mode does not provide Apple notarization or
-remove Gatekeeper prompts.
+When the credentials are absent, the workflow applies a complete ad-hoc
+signature to the community build. This seals the app bundle and prevents a
+partial linker signature from making Gatekeeper report that the app is damaged.
+The workflow verifies the app signature and DMG integrity before publication.
+This mode does not provide Apple notarization or remove the first-launch
+unidentified-developer warning.
 
 ## Publishing a version
 
