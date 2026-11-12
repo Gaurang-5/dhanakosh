@@ -303,6 +303,28 @@ describe("import asset rules", () => {
     expect(draft.providerSymbol).toBe("SHOP.TO");
   });
 
+  it("infers Indian exchange from a selected Yahoo listing when exchange metadata is absent", () => {
+    const draft = buildNewAssetFromSearchResult(
+      {
+        symbol: "MONIFTY500.NS",
+        canonicalSymbol: "MONIFTY500",
+        providerId: "YAHOO",
+        providerSymbol: "MONIFTY500.NS",
+        exchange: "",
+        shortName: "Motilal Oswal Nifty 500 ETF",
+        longName: "Motilal Oswal Nifty 500 ETF",
+        quoteType: "ETF",
+        index: "",
+        score: 1,
+        typeDisplay: "Equity",
+        currency: "INR",
+      },
+      "INR",
+    );
+
+    expect(draft.instrumentExchangeMic).toBe("XNSE");
+  });
+
   it("clears stale provider refs when applying a manual asset resolution", () => {
     const [resolved] = applyAssetResolution(
       [

@@ -200,7 +200,16 @@ export function buildNewAssetFromSearchResult(
   const kind = instrumentType === "FX" ? "FX" : "INVESTMENT";
   const quoteMode = quoteModeFromSearchResult(result);
   const canonicalSymbol = result.canonicalSymbol || result.symbol;
-  const canonicalExchangeMic = result.canonicalExchangeMic || result.exchangeMic;
+  const providerSymbol = result.providerSymbol;
+  const providerExchangeMic =
+    result.providerId?.toUpperCase() === "YAHOO"
+      ? providerSymbol?.endsWith(".NS")
+        ? "XNSE"
+        : providerSymbol?.endsWith(".BO")
+          ? "XBOM"
+          : undefined
+      : undefined;
+  const canonicalExchangeMic = result.canonicalExchangeMic || result.exchangeMic || providerExchangeMic;
 
   return {
     kind,

@@ -126,6 +126,24 @@ function findHeaderIndex(rows: readonly ValueResearchCell[][]): number {
   });
 }
 
+function inferredExchange(
+  symbol: string,
+  isin: string,
+  symbolHeader: string,
+): string {
+  // Value Research's Stocks & ETFs export omits the exchange. An INF ISIN in
+  // this section with an ETF name is a listed Indian ETF; use its standard NSE
+  // listing so it is not treated as an unlisted mutual fund.
+  if (
+    symbolHeader === "Stock/ETF Name" &&
+    /^INF/i.test(isin) &&
+    /\bETF\b/i.test(symbol)
+  ) {
+    return "NSE";
+  }
+  return "";
+}
+
 /**
  * Converts a Value Research transaction-history worksheet into the app's
  * canonical activity CSV shape. Returns null for ordinary Excel worksheets.
@@ -167,6 +185,8 @@ export function normalizeValueResearchRows(
       referenceHeader && reference ? `; ${referenceHeader}: ${reference}` : "";
     const activityType = ACTIVITY_TYPES.get(sourceType.toLowerCase()) ?? sourceType;
     const isTrade = activityType === "BUY" || activityType === "SELL";
+    const symbol = isPpfSheet ? "" : cellText(value(row, symbolHeader));
+    const isin = cellText(value(row, "ISIN"));
     const sourceAmount = magnitudeText(value(row, "Amount"));
     const amount =
       isPpfSheet && activityType === "INTEREST" && !sourceAmount
@@ -174,9 +194,9 @@ export function normalizeValueResearchRows(
         : sourceAmount;
     normalized.push([
       dateText(value(row, "Transaction Date")),
-      isPpfSheet ? "" : cellText(value(row, symbolHeader)),
-      cellText(value(row, "ISIN")),
-      cellText(value(row, exchangeHeader)),
+      symbol,
+      isin,
+      cellText(value(row, exchangeHeader)) || inferredExchange(symbol, isin, symbolHeader),
       activityType,
       isTrade ? magnitudeText(value(row, quantityHeader)) : "",
       isTrade ? magnitudeText(value(row, unitPriceHeader)) : "",

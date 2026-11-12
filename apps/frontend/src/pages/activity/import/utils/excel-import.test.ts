@@ -148,6 +148,55 @@ describe("Excel transaction upload", () => {
     });
   });
 
+  it("uses the NSE listing for a Value Research ETF when its stock export omits exchange", async () => {
+    const book = utils.book_new();
+    utils.book_append_sheet(
+      book,
+      utils.aoa_to_sheet([
+        ["Value Research Transaction History"],
+        [],
+        [
+          "Transaction Date",
+          "Stock/ETF Name",
+          "Demat A/c",
+          "Transaction Type",
+          "Amount",
+          "Quantity",
+          "Price",
+          "Brokerage",
+          "Balance Quantity",
+          "Market Value",
+          "ISIN",
+        ],
+        [
+          "04-Jun-26",
+          "Motilal Oswal Nifty 500 ETF - Growth",
+          "1208160187581886",
+          "Investment in stock",
+          7609.69,
+          331,
+          22.99,
+          "--",
+          892,
+          20507.08,
+          "INF247L01BU1",
+        ],
+      ]),
+      "Stocks & ETFs",
+    );
+    const file = new File(
+      [write(book, { type: "array", bookType: "biff8" }) as ArrayBuffer],
+      "value-research.xls",
+    );
+
+    const imported = await readExcelImport(file);
+    const csv = await imported.toCsvFile("Stocks & ETFs").text();
+
+    expect(csv).toContain(
+      "2026-06-04,Motilal Oswal Nifty 500 ETF - Growth,INF247L01BU1,NSE,BUY,331,22.99,7609.69,INR",
+    );
+  });
+
   it("imports Value Research PPF rows as account activities and derives statement interest", async () => {
     const book = utils.book_new();
     const sheet = utils.aoa_to_sheet([
