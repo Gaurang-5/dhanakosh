@@ -28,7 +28,10 @@ export function applyAssetResolution(
       ...row,
       symbol: draft.instrumentSymbol || draft.displayCode || row.symbol,
       symbolName: draft.name || row.symbolName,
-      exchangeMic: draft.instrumentExchangeMic || undefined,
+      // A search provider does not always return a canonical exchange. Keep the
+      // importer-provided exchange in that case: it can distinguish a listed
+      // ETF from an unlisted Indian mutual fund with an INF ISIN.
+      exchangeMic: draft.instrumentExchangeMic || row.exchangeMic,
       quoteCcy: draft.quoteCcy || row.quoteCcy,
       currency: resolvedCurrency,
       currencySource: resolvedDefaultCurrency ? "resolved" : row.currencySource,

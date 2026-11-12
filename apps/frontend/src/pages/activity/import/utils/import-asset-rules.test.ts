@@ -403,6 +403,47 @@ describe("import asset rules", () => {
     expect(validation.errors.symbol).toBeUndefined();
   });
 
+  it("keeps a Zerodha ETF's exchange when its selected search result has none", () => {
+    const key = buildImportAssetCandidateKey({
+      accountId: "acc-1",
+      symbol: "MONIFTY500",
+      instrumentType: "EQUITY",
+      quoteCcy: "INR",
+      exchangeMic: "XNSE",
+      isin: "INF247L01BU1",
+    });
+    const [resolved] = applyAssetResolution(
+      [
+        createDraft({
+          currency: "INR",
+          symbol: "MONIFTY500",
+          isin: "INF247L01BU1",
+          instrumentType: "EQUITY",
+          quoteCcy: "INR",
+          exchangeMic: "XNSE",
+          assetCandidateKey: key,
+        }),
+      ],
+      key,
+      {
+        kind: "INVESTMENT",
+        name: "Motilal Oswal Nifty 500 ETF",
+        displayCode: "MONIFTY500",
+        isActive: true,
+        quoteMode: "MARKET",
+        quoteCcy: "INR",
+        instrumentType: "EQUITY",
+        instrumentSymbol: "MONIFTY500",
+        providerId: "YAHOO",
+        providerSymbol: "MONIFTY500.NS",
+      },
+      { importAssetKey: key },
+    );
+
+    expect(resolved.exchangeMic).toBe("XNSE");
+    expect(validateDraft(resolved).errors.symbol).toBeUndefined();
+  });
+
   it("requires an AMFI scheme code for an Indian fund ISIN", () => {
     const validation = validateDraft(
       createDraft({

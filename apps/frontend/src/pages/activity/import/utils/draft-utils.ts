@@ -450,6 +450,21 @@ export function mapSymbol(
   };
 }
 
+function mapImportedExchangeMic(exchange: string | undefined): string | undefined {
+  const normalized = exchange?.trim().toUpperCase();
+  if (!normalized) return undefined;
+
+  switch (normalized) {
+    case "NSE":
+      return "XNSE";
+    case "BSE":
+      return "XBOM";
+    default:
+      // Preserve an exchange that is already an ISO 10383 operating MIC.
+      return /^X[A-Z0-9]{3}$/.test(normalized) ? normalized : undefined;
+  }
+}
+
 /**
  * Validate a draft activity and return errors/warnings
  */
@@ -782,6 +797,21 @@ export function createDraftActivities(
         undefined)
       : undefined;
 
+  // A Zerodha tradebook may contain fills for one ISIN on both BSE and NSE.
+  // The NSE listing is the canonical quote when it is present, so resolve every
+  // fill for that instrument to it before creating separate asset candidates.
+  const preferredExchangeMicByIsin = new Map<string, string>();
+  for (const row of parsedRows) {
+    const isin = getColumnValue(row, ImportFormat.ISIN)?.trim().toUpperCase();
+    const exchangeMic = mapImportedExchangeMic(getColumnValue(row, ImportFormat.EXCHANGE));
+    if (!isin || !exchangeMic) continue;
+
+    const existing = preferredExchangeMicByIsin.get(isin);
+    if (!existing || exchangeMic === "XNSE") {
+      preferredExchangeMicByIsin.set(isin, exchangeMic);
+    }
+  }
+
   return parsedRows.flatMap((row, rowIndex): DraftActivity[] => {
     // Rows skipped in the mapping step are left out, keeping later rows' indexes
     if (skippedRows.has(rowIndex)) return [];
@@ -803,6 +833,7 @@ export function createDraftActivities(
       : getColumnValue(row, ImportFormat.UNIT_PRICE);
     const rawAmount = getColumnValue(row, ImportFormat.AMOUNT);
     const rawCurrency = getColumnValue(row, ImportFormat.CURRENCY);
+    const rawExchange = ignoresAssetFields ? undefined : getColumnValue(row, ImportFormat.EXCHANGE);
     const rawFee = getColumnValue(row, ImportFormat.FEE);
     const rawTax = getColumnValue(row, ImportFormat.TAX);
     const rawComment = getColumnValue(row, ImportFormat.COMMENT);
@@ -852,6 +883,11 @@ export function createDraftActivities(
       providerId: mappedProviderId,
       providerSymbol: mappedProviderSymbol,
     } = mapSymbol(rawSymbol, symbolMappings, symbolMappingMeta);
+    const importedExchangeMic = mapImportedExchangeMic(rawExchange);
+    const preferredExchangeMic = rawIsin
+      ? preferredExchangeMicByIsin.get(rawIsin.trim().toUpperCase())
+      : undefined;
+    const exchangeMic = mappedExchangeMic ?? preferredExchangeMic ?? importedExchangeMic;
 
     // Parse typed symbol prefixes (e.g., "bond:US037833DU14")
     const { symbol: prefixParsedSymbol, instrumentType: prefixInstrumentType } =
@@ -951,7 +987,7 @@ export function createDraftActivities(
       activityType,
       symbol,
       isin: rawIsin?.trim() || undefined,
-      exchangeMic: mappedExchangeMic,
+      exchangeMic,
       symbolName: mappedSymbolName,
       quoteCcy: mappedQuoteCcy,
       instrumentType: resolvedInstrumentType,
@@ -966,7 +1002,7 @@ export function createDraftActivities(
               instrumentType: resolvedInstrumentType,
               quoteMode: mappedQuoteMode,
               quoteCcy: mappedQuoteCcy || assetResolutionCurrency,
-              exchangeMic: mappedExchangeMic,
+              exchangeMic,
               isin: rawIsin?.trim() || undefined,
             })
           : undefined,
